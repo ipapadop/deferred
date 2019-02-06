@@ -44,5 +44,7 @@ if(BUILD_DOCUMENTATION)
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
 endif()
 
+add_subdirectory(examples)
+
 enable_testing()
 add_subdirectory(test)
