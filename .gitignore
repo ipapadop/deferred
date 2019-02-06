@@ -36,3 +36,4 @@ build*
 
 # IDEs
 *kdev4*
+.vscode/
