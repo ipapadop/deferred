@@ -55,6 +55,13 @@ std::string type_name()
   return r;
 }
 
+/// @copydoc type_name()
+template<typename T>
+std::string type_name(T&& t)
+{
+  return type_name<decltype(t)>();
+}
+
 } // namespace deferred
 
 #endif
