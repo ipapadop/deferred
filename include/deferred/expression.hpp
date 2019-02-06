@@ -107,13 +107,26 @@ struct is_deferred_datatype
 template<typename T>
 using is_deferred_datatype_t = typename is_deferred_datatype<T>::type;
 
+/**
+ * Checks if any of the types @p T is a @c deferred data type.
+ */
+template<typename... T>
+using any_deferred_datatypes_t = disjunction<is_deferred_datatype_t<std::decay_t<T>>...>;
+
+/**
+ * Transforms @p T into a @c deferred data type if it is not already.
+ */
+template<typename T>
+using make_datatype_t =
+  std::conditional_t<
+    is_deferred_datatype_t<std::decay_t<T>>::value,
+    T,
+    constant_<T>>;
+
 template<typename Operator, typename Expression>
 auto make_expression(Operator&& op, Expression&& ex)
 {
-  using T = std::conditional_t<
-              is_deferred_datatype<std::decay_t<Expression>>{},
-              Expression,
-              constant_<Expression>>;
+  using T = make_datatype_t<Expression>;
 
   return expression_<Operator, T>{std::forward<Operator>(op),
                                   std::forward<Expression>(ex)};
@@ -125,15 +138,8 @@ auto make_expression(Operator&& op, Expression&& ex)
 template<typename Operator, typename Expression1, typename Expression2>
 auto make_expression(Operator&& op, Expression1&& ex1, Expression2&& ex2)
 {
-  using T = std::conditional_t<
-              is_deferred_datatype<std::decay_t<Expression1>>{},
-              Expression1,
-              constant_<Expression1>>;
-
-  using U = std::conditional_t<
-              is_deferred_datatype<std::decay_t<Expression2>>{},
-              Expression2,
-              constant_<Expression2>>;
+  using T = make_datatype_t<Expression1>;
+  using U = make_datatype_t<Expression2>;
 
   return expression_<Operator, T, U>{std::forward<Operator>(op),
                                      std::forward<Expression1>(ex1),
@@ -143,4 +149,3 @@ auto make_expression(Operator&& op, Expression1&& ex1, Expression2&& ex2)
 } // namespace deferred
 
 #endif
-

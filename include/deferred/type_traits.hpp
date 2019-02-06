@@ -15,19 +15,18 @@
 namespace deferred
 {
 
-template<typename...>
+namespace detail
+{
+
+template<bool...>
+struct bool_pack
+{};
+
+} // namespace detail
+
+template<typename... T>
 struct conjunction
-  : public std::true_type
-{};
-
-template<typename B>
-struct conjunction<B>
-  : public B
-{};
-
-template<typename B, typename... Bn>
-struct conjunction<B, Bn...>
-  : public std::conditional_t<bool(B::value), conjunction<Bn...>, B>
+  : public std::is_same<detail::bool_pack<true, T::value...>, detail::bool_pack<T::value..., true>>
 {};
 
 
