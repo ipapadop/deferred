@@ -11,8 +11,8 @@
 #define DEFERRED_DEFERRED_HPP
 
 #include "constant.hpp"
+#include "variable.hpp"
 #include "expression.hpp"
 #include "operators.hpp"
-#include "type_traits.hpp"
 
 #endif

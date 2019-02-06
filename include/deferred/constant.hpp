@@ -16,7 +16,7 @@ namespace deferred
 {
 
 /**
- * TODO
+ * Holds a constant value.
  */
 template<typename T>
 class constant_
@@ -24,11 +24,17 @@ class constant_
   T m_t;
 
 public:
+  /**
+   * Constructs a constant_ from @p u.
+   */
   template<typename U>
   constexpr constant_(U&& u)
     : m_t(std::forward<U>(u))
   {}
 
+  /**
+   * Returns the stored value.
+   */
   constexpr const T& operator()() const noexcept
   {
     return m_t;

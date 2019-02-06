@@ -92,13 +92,14 @@ struct is_expression<expression_<U...>>
 {};
 
 /**
- * Checks if @p T is a @ref constant_ or @ref expression_.
+ * Checks if @p T is a @ref constant_, @ref expression_ or @ref variable_.
  */
 template<typename T>
 struct is_deferred_datatype
   : public disjunction<
       is_constant<T>,
-      is_expression<T>>
+      is_expression<T>,
+      is_variable<T>>
 {};
 
 /**

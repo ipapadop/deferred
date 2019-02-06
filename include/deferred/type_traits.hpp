@@ -24,9 +24,12 @@ struct bool_pack
 
 } // namespace detail
 
-template<typename... T>
+/**
+ * Forms the logical conjunction of the type traits @p B... .
+ */
+template<typename... B>
 struct conjunction
-  : public std::is_same<detail::bool_pack<true, T::value...>, detail::bool_pack<T::value..., true>>
+  : public std::is_same<detail::bool_pack<true, B::value...>, detail::bool_pack<B::value..., true>>
 {};
 
 
@@ -40,12 +43,17 @@ struct disjunction<B>
   : public B
 {};
 
+/**
+ * Forms the logical disjunction of the type traits <tt>B,Bn...</tt>.
+ */
 template<typename B, typename... Bn>
 struct disjunction<B, Bn...>
   : public std::conditional_t<bool(B::value), B, disjunction<Bn...>>
 {};
 
-
+/**
+ * Forms the logical negation of type trait @p B.
+ */
 template<typename B>
 struct negation
   : public std::integral_constant<bool, !bool(B::value)>

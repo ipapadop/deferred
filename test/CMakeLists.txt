@@ -1,7 +1,8 @@
 set(SOURCES
   constant.cpp
   main.cpp
-  operators.cpp)
+  operators.cpp
+  variable.cpp)
 
 add_executable(test_deferred ${SOURCES})
 
