@@ -173,10 +173,93 @@ TEST_CASE("operators", "[operators]")
   }
 
   SECTION("logical")
-  {}
+  {
+    auto b1 = true;
+    auto b2 = false;
+    auto b3 = b1;
+
+    auto cb1 = deferred::constant(b1);
+    auto cb2 = deferred::constant(b2);
+    auto cb3 = deferred::constant(b3);
+
+    SECTION("x&&y")
+    {
+      auto e1 = cb1 && cb2;
+      CHECK(e1() == (b1 && b2));
+
+      auto e2 = cb2 && cb1;
+      CHECK(e2() == (b2 && b1));
+
+      auto e3 = cb1 && cb3;
+      CHECK(e3() == (b1 && b3));
+    }
+
+    SECTION("x||y")
+    {
+      auto e1 = cb1 || cb2;
+      CHECK(e1() == (b1 || b2));
+
+      auto e2 = cb2 || cb1;
+      CHECK(e2() == (b2 || b1));
+
+      auto e3 = cb1 || cb3;
+      CHECK(e3() == (b1 || b3));
+    }
+
+    SECTION("!x")
+    {
+      auto e1 = !cb1;
+      CHECK(e1() == !b1);
+
+      auto e2 = !cb2;
+      CHECK(e2() == !b2);
+
+      auto e3 = !!cb2;
+      CHECK(e3() == b2);
+    }
+  }
 
   SECTION("bitwise")
-  {}
+  {
+    SECTION("x&y")
+    {
+      auto e1 = c1 & c2;
+      CHECK(e1() == (i & j));
+
+      auto e2 = c2 & c1;
+      CHECK(e2() == (j & i));
+    }
+
+    SECTION("x|y")
+    {
+      auto e1 = c1 | c2;
+      CHECK(e1() == (i | j));
+
+      auto e2 = c2 | c1;
+      CHECK(e2() == (j | i));
+    }
+
+    SECTION("x^y")
+    {
+      auto e1 = c1 ^ c2;
+      CHECK(e1() == (i ^ j));
+
+      auto e2 = c2 ^ c1;
+      CHECK(e2() == (j ^ i));
+    }
+
+    SECTION("~x")
+    {
+      auto e1 = ~c1;
+      CHECK(e1() == ~i);
+
+      auto e2 = ~c2;
+      CHECK(e2() == ~j);
+
+      auto e3 = ~~c1;
+      CHECK(e3() == i);
+    }
+  }
 
   SECTION("compound assignment")
   {}

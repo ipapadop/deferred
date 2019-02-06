@@ -127,7 +127,7 @@ constexpr auto operator||(T&& t, U&& u)
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_datatype_t<T>::value>>
+         typename = std::enable_if_t<is_deferred_datatype_t<std::decay_t<T>>::value>>
 constexpr auto operator!(T&& t)
 {
   return make_expression(std::logical_not<>{}, std::forward<T>(t));
@@ -155,14 +155,14 @@ constexpr auto operator^(T&& t, U&& u)
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_datatype_t<T>::value>>
+         typename = std::enable_if_t<is_deferred_datatype_t<std::decay_t<T>>::value>>
 constexpr auto operator~(T&& t)
 {
   return make_expression(std::bit_not<>{}, std::forward<T>(t));
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_datatype<T>::value>>
+         typename = std::enable_if_t<is_deferred_datatype<std::decay_t<T>>::value>>
 std::ostream& operator<<(std::ostream& os, T const& t)
 {
   return os << t();
