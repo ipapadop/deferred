@@ -263,60 +263,27 @@ TEST_CASE("operators", "[operators]")
 
   SECTION("compound assignment")
   {}
-}
-
-
-TEST_CASE("operators2", "[operators2]")
-{
-  auto const i = 41;
-  auto const j = 3;
-  auto const sum  = i + j;
-  auto const diff = i - j;
-
-  auto c1 = deferred::constant(i);
-  auto c2 = deferred::constant(j);
-
-  SECTION("expressions with constants")
-  {
-    SECTION("adding rvalue constants")
-    {
-      auto e1 = deferred::constant(i) + deferred::constant(j);
-      CHECK(e1() == sum);
-    }
-
-    SECTION("subtracting rvalue constants")
-    {
-      auto e1 = deferred::constant(i) - deferred::constant(j);
-      CHECK(e1() == diff);
-    }
-
-    SECTION("adding lvalue constants")
-    {
-      auto e1 = c1 + c2;
-      CHECK(e1() == sum);
-    }
-
-    SECTION("adding rvalue and lvalue constants")
-    {
-      auto e1 = c1 + deferred::constant(j);
-      CHECK(e1() == sum);
-    }
-
-    SECTION("adding constant and literal")
-    {
-      auto e1 = i + c2;
-      CHECK(e1() == sum);
-
-      auto e2 = c1 + j;
-      CHECK(e2() == sum);
-    }
-  }
 
   SECTION("complex expressions")
   {
-    auto e1 = c1 + deferred::constant(5);
-    auto e2 = e1 + e1;
-    auto e3 = e2 - e2;
-    CHECK(e3() == 0);
+    SECTION("multiple expressions")
+    {
+      auto e1 = c1 + deferred::constant(5);
+      auto e2 = e1 + e1;
+      auto e3 = e2 - e2;
+      CHECK(e3() == 0);
+    }
+
+    SECTION("prvalue constants")
+    {
+      auto e1 = deferred::constant(i) + deferred::constant(j);
+      CHECK(e1() == i + j);
+    }
+
+    SECTION("literals")
+    {
+      auto e1 = deferred::constant(i) * 4;
+      CHECK(e1() == i * 4);
+    }
   }
 }
