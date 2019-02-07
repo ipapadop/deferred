@@ -10,6 +10,7 @@
 #ifndef DEFERRED_DEFERRED_HPP
 #define DEFERRED_DEFERRED_HPP
 
+#include "conditional.hpp"
 #include "constant.hpp"
 #include "expression.hpp"
 #include "invoke.hpp"

@@ -1,8 +1,10 @@
 set(SOURCES
+  conditional.cpp
   constant.cpp
   expressions.cpp
   invoke.cpp
   main.cpp
+  make_deferred.cpp
   operators.cpp
   variable.cpp)
 
