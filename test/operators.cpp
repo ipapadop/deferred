@@ -8,7 +8,8 @@
 
 #include <catch2/catch.hpp>
 
-#include "deferred/deferred.hpp"
+#include "deferred/constant.hpp"
+#include "deferred/operators.hpp"
 
 TEST_CASE("operators", "[operators]")
 {
@@ -281,27 +282,4 @@ TEST_CASE("operators", "[operators]")
 
   SECTION("compound assignment")
   {}
-
-  SECTION("complex expressions")
-  {
-    SECTION("multiple expressions")
-    {
-      auto e1 = c1 + deferred::constant(5);
-      auto e2 = e1 + e1;
-      auto e3 = e2 - e2;
-      CHECK(e3() == 0);
-    }
-
-    SECTION("prvalue constants")
-    {
-      auto e1 = deferred::constant(i) + deferred::constant(j);
-      CHECK(e1() == i + j);
-    }
-
-    SECTION("literals")
-    {
-      auto e1 = deferred::constant(i) * 4;
-      CHECK(e1() == i * 4);
-    }
-  }
 }

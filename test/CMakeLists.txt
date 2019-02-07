@@ -1,5 +1,6 @@
 set(SOURCES
   constant.cpp
+  expressions.cpp
   main.cpp
   operators.cpp
   variable.cpp)

@@ -8,7 +8,8 @@
 
 #include <catch2/catch.hpp>
 
-#include "deferred/deferred.hpp"
+#include "deferred/operators.hpp"
+#include "deferred/variable.hpp"
 
 TEST_CASE("variables", "[variables]")
 {
