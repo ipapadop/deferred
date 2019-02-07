@@ -60,7 +60,7 @@ public:
   }
 
   template<typename Visitor>
-  constexpr auto visit(Visitor&& v) const
+  constexpr decltype(auto) visit(Visitor&& v) const
   {
     return std::forward<Visitor>(v)(*this);
   }

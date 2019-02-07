@@ -24,55 +24,33 @@ namespace deferred
 /**
  * TODO
  */
-template<typename...>
-class expression_;
-
-template<typename Operator, typename Expression>
-class expression_<Operator, Expression>
+template<typename Operator, typename... Expression>
+class expression_
   : private Operator,
-    private std::tuple<Expression>
+    private std::tuple<Expression...>
 {
 public:
-  template<typename Op, typename Ex>
-  constexpr expression_(Op&& op, Ex&& ex)
+  template<typename Op, typename... Ex>
+  constexpr expression_(Op&& op, Ex&&... ex)
     : Operator(std::forward<Op>(op)),
-      std::tuple<Expression>(std::forward<Ex>(ex))
+      std::tuple<Expression...>(std::forward<Ex>(ex)...)
   {}
 
-  constexpr auto operator()() const
+private:
+  template<std::size_t... I>
+  constexpr decltype(auto) call(std::index_sequence<I...>) const
   {
-    return Operator::operator()(std::get<0>(*this)());
+    return Operator::operator()(std::get<I>(*this)()...);
+  }
+
+public:
+  constexpr decltype(auto) operator()() const
+  {
+    return call(std::index_sequence_for<Expression...>{});
   }
 
   template<typename Visitor>
-  constexpr auto visit(Visitor&& v) const
-  {
-    return std::forward<Visitor>(v)(*this);
-  }
-};
-
-
-template<typename Operator, typename Expression1, typename Expression2>
-class expression_<Operator, Expression1, Expression2>
-  : private Operator,
-    private std::tuple<Expression1, Expression2>
-{
-public:
-  template<typename Op, typename Ex1, typename Ex2>
-  constexpr expression_(Op&& op, Ex1&& ex1, Ex2&& ex2)
-    : Operator(std::forward<Op>(op)),
-      std::tuple<Expression1, Expression2>(
-        std::forward<Ex1>(ex1),
-        std::forward<Ex2>(ex2))
-  {}
-
-  constexpr auto operator()() const
-  {
-    return Operator::operator()(std::get<0>(*this)(), std::get<1>(*this)());
-  }
-
-  template<typename Visitor>
-  constexpr auto visit(Visitor&& v) const
+  constexpr decltype(auto) visit(Visitor&& v) const
   {
     return std::forward<Visitor>(v)(*this);
   }
