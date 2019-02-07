@@ -10,12 +10,10 @@
 #ifndef DEFERRED_EXPRESSION_HPP
 #define DEFERRED_EXPRESSION_HPP
 
-#include <ostream>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
-#include "constant.hpp"
 #include "type_traits.hpp"
 
 namespace deferred
@@ -59,13 +57,13 @@ public:
 /**
  * Checks if @p T is an @ref expression_.
  */
-template<typename... T>
+template<typename...>
 struct is_expression
   : public std::false_type
 {};
 
-template<typename... U>
-struct is_expression<expression_<U...>>
+template<typename... T>
+struct is_expression<expression_<T...>>
   : public std::true_type
 {};
 
@@ -73,26 +71,6 @@ template<typename... T>
 struct is_deferred<expression_<T...>>
   : public std::true_type
 {};
-
-/**
- * Transforms @p T into a @c deferred data type if it is not already.
- */
-template<typename T>
-using make_datatype_t =
-  std::conditional_t<
-    is_deferred_t<std::decay_t<T>>::value,
-    T,
-    constant_<T>>;
-
-/**
- * TODO
- */
-template<typename Operator, typename... Expression>
-constexpr auto make_expression(Operator&& op, Expression&&... ex)
-{
-  using expression_type = expression_<Operator, make_datatype_t<Expression>...>;
-  return expression_type(std::forward<Operator>(op), std::forward<Expression>(ex)...);
-}
 
 } // namespace deferred
 

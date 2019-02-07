@@ -87,7 +87,7 @@ constexpr auto variable(T&& t)
 /**
  * @brief Checks if @p T is a @ref variable_.
  */
-template<typename... T>
+template<typename...>
 struct is_variable
   : public std::false_type
 {};
@@ -97,8 +97,8 @@ struct is_variable<variable_<T>>
   : public std::true_type
 {};
 
-template<typename... T>
-struct is_deferred<variable_<T...>>
+template<typename T>
+struct is_deferred<variable_<T>>
   : public std::true_type
 {};
 

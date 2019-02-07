@@ -63,7 +63,7 @@ constexpr auto constant(T&& t)
 /**
  * @brief Checks if @p T is a @ref constant_.
  */
-template<typename... T>
+template<typename>
 struct is_constant
   : public std::false_type
 {};
