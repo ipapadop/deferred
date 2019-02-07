@@ -6,11 +6,14 @@
  *
  * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
  */
+
 #ifndef DEFERRED_CONSTANT_HPP
 #define DEFERRED_CONSTANT_HPP
 
 #include <type_traits>
 #include <utility>
+
+#include "type_traits.hpp"
 
 namespace deferred
 {
@@ -52,9 +55,8 @@ public:
  */
 template<typename T>
 constexpr auto constant(T&& t)
-  -> constant_<T>
 {
-  return {std::forward<T>(t)};
+  return constant_<T>(std::forward<T>(t));
 }
 
 
@@ -68,6 +70,11 @@ struct is_constant
 
 template<typename T>
 struct is_constant<constant_<T>>
+  : public std::true_type
+{};
+
+template<typename T>
+struct is_deferred<constant_<T>>
   : public std::true_type
 {};
 

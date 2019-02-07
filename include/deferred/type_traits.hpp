@@ -25,7 +25,7 @@ struct bool_pack
 } // namespace detail
 
 /**
- * Forms the logical conjunction of the type traits @p B... .
+ * Forms the logical conjunction of the type traits @p B....
  */
 template<typename... B>
 struct conjunction
@@ -58,6 +58,24 @@ template<typename B>
 struct negation
   : public std::integral_constant<bool, !bool(B::value)>
 {};
+
+/**
+ * Checks if @p T is a type from @c deferred.
+ */
+template<typename T>
+struct is_deferred
+  : public std::false_type
+{};
+
+/// Alias for @c is_deferred_datatype::type.
+template<typename T>
+using is_deferred_t = typename is_deferred<T>::type;
+
+/**
+ * Checks if any of @p T... satisfies @ref is_deferred.
+ */
+template<typename... T>
+using any_deferred_t = disjunction<is_deferred_t<std::decay_t<T>>...>;
 
 } // namespace deferred
 

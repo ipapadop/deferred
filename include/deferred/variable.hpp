@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "type_traits.hpp"
+
 namespace deferred
 {
 
@@ -92,6 +94,11 @@ struct is_variable
 
 template<typename T>
 struct is_variable<variable_<T>>
+  : public std::true_type
+{};
+
+template<typename... T>
+struct is_deferred<variable_<T...>>
   : public std::true_type
 {};
 
