@@ -36,14 +36,14 @@ constexpr auto operator-(T&& t, U&& u)
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_datatype_t<std::decay_t<T>>::value>>
+         typename = std::enable_if_t<is_deferred_datatype<std::decay_t<T>>::value>>
 constexpr auto operator+(T&& t)
 {
   return make_expression([](auto x) { return +x; }, std::forward<T>(t));
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_datatype_t<std::decay_t<T>>::value>>
+         typename = std::enable_if_t<is_deferred_datatype<std::decay_t<T>>::value>>
 constexpr auto operator-(T&& t)
 {
   return make_expression(std::negate<>{}, std::forward<T>(t));
@@ -127,7 +127,7 @@ constexpr auto operator||(T&& t, U&& u)
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_datatype_t<std::decay_t<T>>::value>>
+         typename = std::enable_if_t<is_deferred_datatype<std::decay_t<T>>::value>>
 constexpr auto operator!(T&& t)
 {
   return make_expression(std::logical_not<>{}, std::forward<T>(t));
@@ -155,17 +155,24 @@ constexpr auto operator^(T&& t, U&& u)
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_datatype_t<std::decay_t<T>>::value>>
+         typename = std::enable_if_t<is_deferred_datatype<std::decay_t<T>>::value>>
 constexpr auto operator~(T&& t)
 {
   return make_expression(std::bit_not<>{}, std::forward<T>(t));
 }
 
-template<typename T,
-         typename = std::enable_if_t<is_deferred_datatype<std::decay_t<T>>::value>>
-std::ostream& operator<<(std::ostream& os, T const& t)
+template<typename T, typename U,
+         typename = std::enable_if_t<any_deferred_datatypes_t<T, U>::value>>
+constexpr auto operator<<(T&& t, U&& u)
 {
-  return os << t();
+  return make_expression([](auto x, auto y) { return x << y; }, std::forward<T>(t), std::forward<U>(u));
+}
+
+template<typename T, typename U,
+         typename = std::enable_if_t<any_deferred_datatypes_t<T, U>::value>>
+constexpr auto operator>>(T&& t, U&& u)
+{
+  return make_expression([](auto x, auto y) { return x >> y; }, std::forward<T>(t), std::forward<U>(u));
 }
 
 } // namespace deferred

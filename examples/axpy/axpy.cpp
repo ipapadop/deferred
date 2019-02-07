@@ -26,7 +26,14 @@ int main()
   y = 1.0;
 
   std::cout << "Expression: " << type_name(z) << '\n';
-  std::cout << z() << '\n';
+  std::cout << "Result: " << z() << '\n';
+
+#if 0
+  // FIXME
+  std::cout << "Deferred result: ";
+  auto out = std::cout << z() << '\n';
+  out();
+#endif
 
   return 0;
 }

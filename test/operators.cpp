@@ -259,6 +259,24 @@ TEST_CASE("operators", "[operators]")
       auto e3 = ~~c1;
       CHECK(e3() == i);
     }
+
+    SECTION("x<<y")
+    {
+      auto e1 = c1 << c2;
+      CHECK(e1() == (i << j));
+
+      auto e2 = c2 << c1;
+      CHECK(e2() == (j << i));
+    }
+
+    SECTION("x>>y")
+    {
+      auto e1 = c1 >> c2;
+      CHECK(e1() == (i >> j));
+
+      auto e2 = c2 >> c1;
+      CHECK(e2() == (j >> i));
+    }
   }
 
   SECTION("compound assignment")
