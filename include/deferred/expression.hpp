@@ -29,7 +29,7 @@ class expression_
 {
 public:
   template<typename Op, typename... Ex>
-  constexpr expression_(Op&& op, Ex&&... ex)
+  constexpr explicit expression_(Op&& op, Ex&&... ex)
     : Operator(std::forward<Op>(op)),
       std::tuple<Expression...>(std::forward<Ex>(ex)...)
   {}
@@ -54,10 +54,7 @@ public:
   }
 };
 
-
-/**
- * Checks if @p T is an @ref expression_.
- */
+/// Checks if @p T is an @ref expression_.
 template<typename...>
 struct is_expression
   : public std::false_type
