@@ -27,7 +27,7 @@ class constant_
 public:
   /// Constructs a constant_ from @p u.
   template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
-  constexpr constant_(U&& u)
+  constexpr explicit constant_(U&& u)
     : m_t(std::forward<U>(u))
   {}
 

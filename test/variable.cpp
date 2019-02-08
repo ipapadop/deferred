@@ -13,27 +13,27 @@
 
 TEST_CASE("empty variable", "[variable-empty]")
 {
-  auto v1 = deferred::variable<int>();
-  CHECK(v1() == int{});
+  auto v = deferred::variable<int>();
+  CHECK(v() == int{});
 
   SECTION("assignment")
   {
-    v1 = 42;
-    CHECK(v1() == 42);
+    v = 42;
+    CHECK(v() == 42);
   }
 }
 
 TEST_CASE("initialized variable", "[variable-init]")
 {
-  auto v1 = deferred::variable(42);
-  CHECK(v1() == 42);
+  auto v = deferred::variable(42);
+  CHECK(v() == 42);
 }
 
 #if 0
 // this intentionally should not work; you need to capture a variable
 TEST_CASE("uncaptured variable", "[variable-no-capture]")
 {
-  auto e1 = deferred::variable<int>() + deferred::constant(10);
-  CHECK(e1() == 10);
+  auto ex = deferred::variable<int>() + deferred::constant(10);
+  CHECK(ex() == 10);
 }
 #endif

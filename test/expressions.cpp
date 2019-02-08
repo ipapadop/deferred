@@ -18,22 +18,22 @@ TEST_CASE("simple expressions", "[expressions-simple]")
   SECTION("multiple expressions")
   {
     auto c1 = deferred::constant(i);
-    auto e1 = c1 + deferred::constant(j);
-    auto e2 = e1 + e1;
-    auto e3 = e2 - e2;
-    CHECK(e3() == 0);
+    auto ex1 = c1 + deferred::constant(j);
+    auto ex2 = ex1 + ex1;
+    auto ex3 = ex2 - ex2;
+    CHECK(ex3() == 0);
   }
 
   SECTION("prvalue constants")
   {
-    auto e1 = deferred::constant(i) + deferred::constant(j);
-    CHECK(e1() == i + j);
+    auto ex = deferred::constant(i) + deferred::constant(j);
+    CHECK(ex() == i + j);
   }
 
   SECTION("literals")
   {
-    auto e1 = deferred::constant(i) * j;
-    CHECK(e1() == i * j);
+    auto ex = deferred::constant(i) * j;
+    CHECK(ex() == i * j);
   }
 }
 
@@ -41,9 +41,9 @@ TEST_CASE("constexpr expressions", "[expressions-constexpr]")
 {
   SECTION("operations on constants")
   {
-    constexpr auto e1 = deferred::constant(5) * deferred::constant(4);
-    static_assert(e1() == 5 * 4, "could not create constexpr");
-    CHECK(e1() == 5 * 4);
+    constexpr auto ex = deferred::constant(5) * deferred::constant(4);
+    static_assert(ex() == 5 * 4, "could not create constexpr");
+    CHECK(ex() == 5 * 4);
   }
 }
 
@@ -51,10 +51,10 @@ TEST_CASE("expressions with variables", "[expression-variable]")
 {
   SECTION("variable + constant")
   {
-    auto v1 = deferred::variable<int>();
-    auto e1 = v1 + deferred::constant(10);
-    v1 = 42;
-    CHECK(e1() == 52);
+    auto v = deferred::variable<int>();
+    auto ex = v + deferred::constant(10);
+    v = 42;
+    CHECK(ex() == 52);
   }
 
   SECTION("variable + variable")
@@ -64,10 +64,10 @@ TEST_CASE("expressions with variables", "[expression-variable]")
     auto i = 10;
     auto d = 23.3;
 
-    auto e1 = v1 + v2;
+    auto ex = v1 + v2;
     v1 = i;
     v2 = d;
 
-    CHECK(e1() == i + d);
+    CHECK(ex() == i + d);
   }
 }

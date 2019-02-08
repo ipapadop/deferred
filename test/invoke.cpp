@@ -8,9 +8,12 @@
 
 #include <catch2/catch.hpp>
 
+#include <functional>
+
 #include "deferred/constant.hpp"
 #include "deferred/invoke.hpp"
-#include <functional>
+#include "deferred/operators.hpp"
+#include "deferred/variable.hpp"
 
 namespace
 {
@@ -30,46 +33,122 @@ constexpr int constexpr_return_int(int i)
   return i;
 }
 
+struct get_int_t
+{
+  constexpr int operator()() const noexcept
+  {
+    return 42;
+  }
+
+  constexpr int operator()(int i) const noexcept
+  {
+    return i;
+  }
+};
+
 } // namespace
 
-TEST_CASE("invoke", "[invoke]")
+TEST_CASE("invoke functions", "[invoke-function]")
 {
-  SECTION("functions")
+  SECTION("no arguments")
   {
-    SECTION("no arguments")
-    {
-      auto ex1 = deferred::invoke(get_int);
-      CHECK(ex1() == get_int());
-    }
-
-    SECTION("one argument")
-    {
-      auto ex1 = deferred::invoke(return_int, 42);
-      CHECK(ex1() == return_int(42));
-    }
-
-    SECTION("constexpr")
-    {
-      constexpr auto ex1 = deferred::invoke(constexpr_return_int, 42);
-      static_assert(ex1() == constexpr_return_int(42), "constexpr failed");
-      CHECK(ex1() == constexpr_return_int(42));
-    }
+    auto ex = deferred::invoke(get_int);
+    CHECK(ex() == get_int());
   }
 
-  SECTION("function objects")
+  SECTION("literal")
   {
-    SECTION("addition")
-    {
-      auto v1 = 10;
-      auto v2 = 10;
-      auto c1 = deferred::constant(v1);
-      auto c2 = deferred::constant(v2);
-
-      auto ex1 = deferred::invoke(std::plus<>{}, c1, c2);
-      auto ex2 = deferred::invoke(std::plus<>{}, v1, v2);
-
-      CHECK(ex1() == std::plus<>{}(v1, v2));
-      CHECK(ex2() == std::plus<>{}(v1, v2));
-    }
+    auto ex = deferred::invoke(return_int, 2);
+    CHECK(ex() == return_int(2));
   }
+
+  SECTION("constant")
+  {
+    auto i = 42;
+    auto c = deferred::constant(i);
+    auto ex = deferred::invoke(return_int, c);
+    CHECK(ex() == return_int(i));
+  }
+
+  SECTION("immediate constant")
+  {
+    auto i = 42;
+    auto ex = deferred::invoke(return_int, deferred::constant(i));
+    CHECK(ex() == return_int(i));
+  }
+
+  SECTION("variable")
+  {
+    auto i = 42;
+    auto v = deferred::variable<int>();
+    auto ex = deferred::invoke(return_int, v);
+    v = i;
+    CHECK(ex() == return_int(i));
+  }
+
+  SECTION("constexpr")
+  {
+    constexpr auto ex = deferred::invoke(constexpr_return_int, 42);
+    static_assert(ex() == constexpr_return_int(42), "constexpr failed");
+    CHECK(ex() == constexpr_return_int(42));
+  }
+}
+
+TEST_CASE("invoke function objects", "[invoke-function-objects]")
+{
+  SECTION("no arguments")
+  {
+    auto ex = deferred::invoke(get_int_t{});
+    CHECK(ex() == get_int_t{}());
+  }
+
+  SECTION("literal")
+  {
+    auto ex = deferred::invoke(get_int_t{}, 2);
+    CHECK(ex() == get_int_t{}(2));
+  }
+
+  SECTION("constant")
+  {
+    auto i = 42;
+    auto c = deferred::constant(i);
+    auto ex = deferred::invoke(get_int_t{}, c);
+    CHECK(ex() == get_int_t{}(i));
+  }
+
+  SECTION("immediate constant")
+  {
+    auto i = 42;
+    auto ex = deferred::invoke(get_int_t{}, deferred::constant(i));
+    CHECK(ex() == get_int_t{}(i));
+  }
+
+  SECTION("variable")
+  {
+    auto i = 42;
+    auto v = deferred::variable<int>();
+    auto ex = deferred::invoke(get_int_t{}, v);
+    v = i;
+    CHECK(ex() == get_int_t{}(i));
+  }
+
+  SECTION("constexpr")
+  {
+    constexpr auto ex = deferred::invoke(get_int_t{}, 42);
+    static_assert(ex() == get_int_t{}(42), "constexpr failed");
+    CHECK(ex() == get_int_t{}(42));
+  }
+}
+
+TEST_CASE("invoke expressions", "[invoke-expression]")
+{
+  auto v = deferred::variable<int>();
+  auto c = deferred::constant(10);
+
+  auto ex1 = v + c;
+  auto ex2 = deferred::invoke(ex1);
+
+  v = 11;
+  CHECK(ex1() == 21);
+  CHECK(ex2() == 21);
 }
