@@ -27,7 +27,7 @@ int foo(int, bool)
 
 } // namespace
 
-TEST_CASE("make_deferred constants", "[make-deferred-constants]")
+TEST_CASE("make_deferred from constants", "[make-deferred-constants]")
 {
   SECTION("int")
   {
@@ -41,14 +41,14 @@ TEST_CASE("make_deferred constants", "[make-deferred-constants]")
     CHECK(std::is_same<type, deferred::constant_<int&>>::value);
   }
 
-  SECTION("constant with literal")
+  SECTION("constant from literal")
   {
     auto c = deferred::constant(10);
     using type = deferred::make_deferred_t<decltype(c)>;
     CHECK(std::is_same<type, deferred::constant_<int>>::value);
   }
 
-  SECTION("constant with reference")
+  SECTION("constant from lvalue")
   {
     auto i = 10;
     auto c = deferred::constant(i);
@@ -57,7 +57,7 @@ TEST_CASE("make_deferred constants", "[make-deferred-constants]")
   }
 }
 
-TEST_CASE("make_deferred expresssions", "[make-deferred-expressions]")
+TEST_CASE("make_deferred from expresssions", "[make-deferred-expressions]")
 {
   SECTION("lambda")
   {
@@ -65,16 +65,13 @@ TEST_CASE("make_deferred expresssions", "[make-deferred-expressions]")
     using type = deferred::make_deferred_t<decltype(f)>;
     CHECK(std::is_same<type, deferred::expression_<decltype(f)>>::value);
   }
-  foo(3, false);
-#if 0
-  // FAILS
+
   SECTION("function")
   {
     using type = deferred::make_deferred_t<decltype(foo)>;
     printf("%s\n", deferred::type_name<type>().c_str());
     CHECK(std::is_same<type, deferred::expression_<decltype(foo)>>::value);
   }
-#endif
 }
 
 TEST_CASE("make_deferred variables", "[make-deferred-variables]")

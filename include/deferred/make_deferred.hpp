@@ -26,7 +26,7 @@ using make_deferred_t =
     is_deferred_v<std::decay_t<T>>,
     T,
     std::conditional_t<
-      std::is_invocable_v<std::decay_t<T>> || std::is_function_v<T>,
+      std::is_invocable_v<T> || std::is_function_v<T>,
       expression_<T>,
       constant_<T>
     >

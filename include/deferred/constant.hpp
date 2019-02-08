@@ -73,13 +73,13 @@ struct is_deferred<constant_<T>>
 
 /// Forms a @ref constant_ from @p T.
 template<typename T>
-using make_constant_t = std::conditional_t<is_constant_v<T>, T, constant_<T>>;
+using make_constant_t = std::conditional_t<is_constant_v<std::decay_t<T>>, T, constant_<T>>;
 
 /// Creates a new @ref constant_ from @p t.
 template<typename T>
 constexpr auto constant(T&& t)
 {
-  using result_type = make_constant_t<std::decay_t<T>>;
+  using result_type = make_constant_t<T>;
   return result_type(std::forward<T>(t));
 }
 

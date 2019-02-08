@@ -73,6 +73,14 @@ using is_expression_t = typename is_expression<T>::type;
 template<typename T>
 inline constexpr bool is_expression_v = is_expression<T>::value;
 
+// Transforms T into an expression_ if it is not a deferred data type.
+template<typename T, typename... Args>
+using make_expression_t =
+  std::conditional_t<
+    is_expression_v<std::decay_t<T>>,
+    T,
+    expression_<T, Args...>>;
+
 template<typename... T>
 struct is_deferred<expression_<T...>>
   : public std::true_type

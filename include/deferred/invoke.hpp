@@ -24,21 +24,13 @@ namespace deferred
 namespace detail
 {
 
-// Transforms T into a constant_ if it is not a deferred data type.
-template<typename T>
-using make_datatype_t =
-  std::conditional_t<
-    is_deferred_v<std::decay_t<T>>,
-    T,
-    constant_<T>>;
-
 // Transforms T into an expression_ if it is not a deferred data type.
 template<typename T, typename... Args>
-using make_expression_t =
+using make_invocable_expression_t =
   std::conditional_t<
     is_expression_v<std::decay_t<T>>,
     T,
-    expression_<T, make_datatype_t<Args>...>>;
+    expression_<T, make_deferred_t<Args>...>>;
 
 
 // Transforms function pointer F to a function object
@@ -67,7 +59,7 @@ constexpr auto invoke(T* f, Args&&... args)
 template<typename F, typename... Args>
 constexpr auto invoke(F&& f, Args&&... args)
 {
-  using expression_type = detail::make_expression_t<F, Args...>;
+  using expression_type = detail::make_invocable_expression_t<F, Args...>;
   return expression_type(std::forward<F>(f), std::forward<Args>(args)...);
 }
 
