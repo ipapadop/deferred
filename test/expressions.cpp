@@ -10,7 +10,7 @@
 
 #include "deferred/deferred.hpp"
 
-TEST_CASE("expressions", "[expressions]")
+TEST_CASE("simple expressions", "[expressions-simple]")
 {
   auto i = 41;
   auto j = 3;
@@ -44,5 +44,30 @@ TEST_CASE("constexpr expressions", "[expressions-constexpr]")
     constexpr auto e1 = deferred::constant(5) * deferred::constant(4);
     static_assert(e1() == 5 * 4, "could not create constexpr");
     CHECK(e1() == 5 * 4);
+  }
+}
+
+TEST_CASE("expressions with variables", "[expression-variable]")
+{
+  SECTION("variable + constant")
+  {
+    auto v1 = deferred::variable<int>();
+    auto e1 = v1 + deferred::constant(10);
+    v1 = 42;
+    CHECK(e1() == 52);
+  }
+
+  SECTION("variable + variable")
+  {
+    auto v1 = deferred::variable<int>();
+    auto v2 = deferred::variable<double>();
+    auto i = 10;
+    auto d = 23.3;
+
+    auto e1 = v1 + v2;
+    v1 = i;
+    v2 = d;
+
+    CHECK(e1() == i + d);
   }
 }

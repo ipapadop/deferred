@@ -15,9 +15,7 @@
 namespace deferred
 {
 
-/**
- * Checks if @p T is a type from @c deferred.
- */
+/// Checks if @p T is a type from @c deferred.
 template<typename T>
 struct is_deferred
   : public std::false_type
@@ -31,9 +29,7 @@ using is_deferred_t = typename is_deferred<T>::type;
 template<typename T>
 inline constexpr bool is_deferred_v = is_deferred<T>::value;
 
-/**
- * Checks if any of @p T... satisfies @ref is_deferred.
- */
+/// Checks if any of @p T... satisfies @ref is_deferred.
 template<typename... T>
 using any_deferred_t = std::disjunction<is_deferred_t<std::decay_t<T>>...>;
 

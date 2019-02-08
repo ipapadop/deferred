@@ -17,9 +17,7 @@
 namespace deferred
 {
 
-/**
- * Holds a variable value.
- */
+/// Holds a variable value.
 template<typename T>
 class [[nodiscard]] variable_
 {
@@ -37,7 +35,7 @@ public:
   {}
 
   variable_(variable_ const&) = delete;
-  variable_(variable_&&) = default;
+  variable_(variable_&&) = delete;
 
   variable_& operator=(variable_ const&) = delete;
   variable_& operator=(variable_&&) = delete;
@@ -66,27 +64,21 @@ public:
   }
 };
 
-/**
- * Creates a new @ref variable_ that holds a @p T.
- */
+/// Creates a new @ref variable_ that holds a @p T.
 template<typename T>
 constexpr variable_<T> variable() noexcept
 {
   return {};
 }
 
-/**
- * Creates a new @ref variable_ that is initialized with @p t.
- */
+/// Creates a new @ref variable_ that is initialized with @p t.
 template<typename T>
 constexpr auto variable(T&& t)
 {
   return variable_<std::decay_t<T>>(std::forward<T>(t));
 }
 
-/**
- * @brief Checks if @p T is a @ref variable_.
- */
+/// @brief Checks if @p T is a @ref variable_.
 template<typename...>
 struct is_variable
   : public std::false_type

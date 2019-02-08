@@ -11,44 +11,29 @@
 #include "deferred/operators.hpp"
 #include "deferred/variable.hpp"
 
-TEST_CASE("variables", "[variables]")
+TEST_CASE("empty variable", "[variable-empty]")
 {
-  SECTION("empty variable")
-  {
-    auto v1 = deferred::variable<int>();
-    CHECK(v1() == int{});
-
-    v1 = 42;
-    CHECK(v1() == 42);
-  }
-
-  SECTION("initialization")
-  {
-    auto v1 = deferred::variable(42);
-    CHECK(v1() == 42);
-  }
+  auto v1 = deferred::variable<int>();
+  CHECK(v1() == int{});
 
   SECTION("assignment")
   {
-    auto v1 = deferred::variable<int>();
     v1 = 42;
     CHECK(v1() == 42);
   }
+}
 
-  SECTION("expression")
-  {
-    auto v1 = deferred::variable<int>();
-    auto e1 = v1 + deferred::constant(10);
-    v1 = 42;
-    CHECK(e1() == 52);
-  }
+TEST_CASE("initialized variable", "[variable-init]")
+{
+  auto v1 = deferred::variable(42);
+  CHECK(v1() == 42);
+}
 
 #if 0
-  // this intentionally should not work; you need to capture a variable
-  SECTION("incorrect expression")
-  {
-    auto e1 = deferred::variable<int>() + deferred::constant(10);
-    CHECK(e1() == 10);
-  }
-#endif
+// this intentionally should not work; you need to capture a variable
+TEST_CASE("uncaptured variable", "[variable-no-capture]")
+{
+  auto e1 = deferred::variable<int>() + deferred::constant(10);
+  CHECK(e1() == 10);
 }
+#endif
