@@ -1,6 +1,7 @@
 set(SOURCES
   constant.cpp
   expressions.cpp
+  fail_to_compile.cpp
   invoke.cpp
   main.cpp
   operators.cpp

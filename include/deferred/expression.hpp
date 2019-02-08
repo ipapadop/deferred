@@ -22,16 +22,16 @@ namespace deferred
 /**
  * TODO
  */
-template<typename Operator, typename... Expression>
+template<typename Operator, typename... Expressions>
 class expression_
   : private Operator,
-    private std::tuple<Expression...>
+    private std::tuple<Expressions...>
 {
 public:
   template<typename Op, typename... Ex>
   constexpr explicit expression_(Op&& op, Ex&&... ex)
     : Operator(std::forward<Op>(op)),
-      std::tuple<Expression...>(std::forward<Ex>(ex)...)
+      std::tuple<Expressions...>(std::forward<Ex>(ex)...)
   {}
 
 private:
@@ -44,7 +44,7 @@ private:
 public:
   constexpr decltype(auto) operator()() const
   {
-    return call(std::index_sequence_for<Expression...>{});
+    return call(std::index_sequence_for<Expressions...>{});
   }
 
   template<typename Visitor>
