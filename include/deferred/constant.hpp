@@ -18,26 +18,23 @@
 namespace deferred
 {
 
-/**
- * Holds a constant value.
- */
+/// Holds a constant value.
 template<typename T>
 class constant_
 {
   T m_t;
 
 public:
-  /**
-   * Constructs a constant_ from @p u.
-   */
-  template<typename U>
+  /// Constructs a constant_ from @p u.
+  template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
   constexpr constant_(U&& u)
     : m_t(std::forward<U>(u))
   {}
 
-  /**
-   * Returns the stored value.
-   */
+  constant_(constant_ const&) = default;
+  constant_(constant_&&) = default;
+
+  /// Returns the stored value.
   constexpr const T& operator()() const noexcept
   {
     return m_t;
@@ -50,19 +47,7 @@ public:
   }
 };
 
-/**
- * Creates a new @ref constant_ from @p t.
- */
-template<typename T>
-constexpr auto constant(T&& t)
-{
-  return constant_<T>(std::forward<T>(t));
-}
-
-
-/**
- * @brief Checks if @p T is a @ref constant_.
- */
+/// Checks if @p T is a @ref constant_.
 template<typename>
 struct is_constant
   : public std::false_type
@@ -86,7 +71,18 @@ struct is_deferred<constant_<T>>
   : public std::true_type
 {};
 
+/// Forms a @ref constant_ from @p T.
+template<typename T>
+using make_constant_t = std::conditional_t<is_constant_v<T>, T, constant_<T>>;
+
+/// Creates a new @ref constant_ from @p t.
+template<typename T>
+constexpr auto constant(T&& t)
+{
+  using result_type = make_constant_t<std::decay_t<T>>;
+  return result_type(std::forward<T>(t));
+}
+
 } // namespace deferred
 
 #endif
-

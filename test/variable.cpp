@@ -44,7 +44,7 @@ TEST_CASE("variables", "[variables]")
   }
 
 #if 0
-  // this should never work
+  // this intentionally should not work; you need to capture a variable
   SECTION("incorrect expression")
   {
     auto e1 = deferred::variable<int>() + deferred::constant(10);

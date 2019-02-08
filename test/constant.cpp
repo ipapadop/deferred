@@ -39,3 +39,12 @@ TEST_CASE("constant from xvalue", "[constant_xvalue]")
   auto c = deferred::constant(std::move(v));
   CHECK(c() == v2);
 }
+
+TEST_CASE("unwrapping constant", "[constant_unwrap]")
+{
+  auto i = 4;
+  auto c1 = deferred::constant(i);
+  auto c2 = deferred::constant(c1);
+  static_assert(std::is_same_v<decltype(c1), decltype(c2)>, "copy created nested type");
+  CHECK(c2() == i);
+}
