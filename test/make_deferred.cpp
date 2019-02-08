@@ -17,6 +17,16 @@
 
 #include "deferred/type_name.hpp"
 
+namespace
+{
+
+int foo(int, bool)
+{
+  return 0;
+}
+
+} // namespace
+
 TEST_CASE("make_deferred constants", "[make-deferred-constants]")
 {
   SECTION("int")
@@ -53,10 +63,18 @@ TEST_CASE("make_deferred expresssions", "[make-deferred-expressions]")
   {
     auto f = [] { return 4; };
     using type = deferred::make_deferred_t<decltype(f)>;
-    printf("%s\n", deferred::type_name(f).c_str());
-    printf("%s\n", deferred::type_name<type>().c_str());
     CHECK(std::is_same<type, deferred::expression_<decltype(f)>>::value);
   }
+  foo(3, false);
+#if 0
+  // FAILS
+  SECTION("function")
+  {
+    using type = deferred::make_deferred_t<decltype(foo)>;
+    printf("%s\n", deferred::type_name<type>().c_str());
+    CHECK(std::is_same<type, deferred::expression_<decltype(foo)>>::value);
+  }
+#endif
 }
 
 TEST_CASE("make_deferred variables", "[make-deferred-variables]")

@@ -20,14 +20,13 @@ TEST_CASE("conditionals", "[conditionals]")
     ex1();
     CHECK(true);
   }
-#if 0
-  // broken
+
   SECTION("if with lambda")
   {
     auto i = 0;
-    auto ex1 = deferred::if_([&i] { printf("boo\n"); i = 1; });
+    auto ex1 = deferred::if_([&i] { i = 1; });
+    CHECK(i == 0);
     ex1();
     CHECK(i == 1);
   }
-#endif
 }

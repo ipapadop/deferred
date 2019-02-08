@@ -23,10 +23,10 @@ namespace deferred
 template<typename T>
 using make_deferred_t =
   std::conditional_t<
-    is_deferred_t<std::decay_t<T>>::value,
+    is_deferred_v<std::decay_t<T>>,
     T,
     std::conditional_t<
-      is_invocable<std::decay_t<T>>::value,
+      std::is_invocable_v<std::decay_t<T>> || std::is_function_v<T>,
       expression_<T>,
       constant_<T>
     >

@@ -50,7 +50,7 @@ constexpr auto invoke(T* f, Args&&... args)
 template<typename F, typename... Args>
 constexpr auto invoke(F&& f, Args&&... args)
 {
-  using expression_type = expression_<F, make_deferred_t<Args>...>;
+  using expression_type = expression_<std::decay_t<F>, make_deferred_t<Args>...>;
   return expression_type(std::forward<F>(f), std::forward<Args>(args)...);
 }
 
