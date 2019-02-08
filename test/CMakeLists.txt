@@ -2,6 +2,7 @@ set(SOURCES
   conditional.cpp
   constant.cpp
   expressions.cpp
+  fail_to_compile.cpp
   invoke.cpp
   main.cpp
   make_deferred.cpp

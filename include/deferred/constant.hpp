@@ -71,15 +71,26 @@ struct is_deferred<constant_<T>>
   : public std::true_type
 {};
 
-/// Forms a @ref constant_ from @p T.
-template<typename T>
-using make_constant_t = std::conditional_t<is_constant_v<std::decay_t<T>>, T, constant_<T>>;
+namespace detail
+{
 
-/// Creates a new @ref constant_ from @p t.
+// Checks if T is a value or another constant.
 template<typename T>
+inline constexpr bool is_constant_or_value_v =
+  std::disjunction_v<std::negation<is_deferred_t<T>>, is_constant_t<T>>;
+
+} // namespace detail
+
+/**
+ * Creates a new @ref constant_ from @p t.
+ * 
+ * @warning This function will only accept values or @ref constant_.
+ */
+template<typename T,
+         std::enable_if_t<detail::is_constant_or_value_v<std::decay_t<T>>>* = nullptr>
 constexpr auto constant(T&& t)
 {
-  using result_type = make_constant_t<T>;
+  using result_type = std::conditional_t<is_constant_v<std::decay_t<T>>, T, constant_<T>>;
   return result_type(std::forward<T>(t));
 }
 

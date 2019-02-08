@@ -28,12 +28,3 @@ TEST_CASE("initialized variable", "[variable-init]")
   auto v = deferred::variable(42);
   CHECK(v() == 42);
 }
-
-#if 0
-// this intentionally should not work; you need to capture a variable
-TEST_CASE("uncaptured variable", "[variable-no-capture]")
-{
-  auto ex = deferred::variable<int>() + deferred::constant(10);
-  CHECK(ex() == 10);
-}
-#endif
