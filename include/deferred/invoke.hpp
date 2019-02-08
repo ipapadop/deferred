@@ -27,7 +27,7 @@ namespace detail
 template<typename T>
 using make_datatype_t =
   std::conditional_t<
-    is_deferred_t<std::decay_t<T>>::value,
+    is_deferred_v<std::decay_t<T>>,
     T,
     constant_<T>>;
 

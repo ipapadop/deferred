@@ -19,7 +19,7 @@ target_sources(deferred
 target_include_directories(deferred
   SYSTEM INTERFACE
     $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
-target_compile_features(deferred INTERFACE cxx_std_14)
+target_compile_features(deferred INTERFACE cxx_std_17)
 
 # add a target to generate API documentation with Doxygen
 find_package(Doxygen)

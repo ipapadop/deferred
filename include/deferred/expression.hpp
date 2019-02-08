@@ -67,6 +67,14 @@ struct is_expression<expression_<T...>>
   : public std::true_type
 {};
 
+/// Alias for @c is_expression::type.
+template<typename T>
+using is_expression_t = typename is_expression<T>::type;
+
+/// Alias for @c is_expression::value.
+template<typename T>
+inline constexpr bool is_expression_v = is_expression<T>::value;
+
 template<typename... T>
 struct is_deferred<expression_<T...>>
   : public std::true_type
