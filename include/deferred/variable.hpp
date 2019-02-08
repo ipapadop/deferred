@@ -21,7 +21,7 @@ namespace deferred
  * Holds a variable value.
  */
 template<typename T>
-class variable_
+class [[nodiscard]] variable_
 {
   T m_t{};
 
@@ -96,6 +96,14 @@ template<typename T>
 struct is_variable<variable_<T>>
   : public std::true_type
 {};
+
+/// Alias for @c is_variable::type.
+template<typename T>
+using is_variable_t = typename is_variable<T>::type;
+
+/// Alias for @c is_variable::value.
+template<typename T>
+inline constexpr bool is_variable_v = is_variable<T>::value;
 
 template<typename T>
 struct is_deferred<variable_<T>>

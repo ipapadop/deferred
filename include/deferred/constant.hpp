@@ -73,6 +73,14 @@ struct is_constant<constant_<T>>
   : public std::true_type
 {};
 
+/// Alias for @c is_constant::type.
+template<typename T>
+using is_constant_t = typename is_constant<T>::type;
+
+/// Alias for @c is_constant::value.
+template<typename T>
+inline constexpr bool is_constant_v = is_constant<T>::value;
+
 template<typename T>
 struct is_deferred<constant_<T>>
   : public std::true_type

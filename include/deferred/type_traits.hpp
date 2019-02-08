@@ -15,74 +15,6 @@
 namespace deferred
 {
 
-namespace detail
-{
-
-template<bool...>
-struct bool_pack
-{};
-
-} // namespace detail
-
-/// Forms the logical conjunction of the type traits @p B....
-template<typename... B>
-struct conjunction
-  : public std::is_same<detail::bool_pack<true, B::value...>, detail::bool_pack<B::value..., true>>
-{};
-
-
-template<typename...>
-struct disjunction
-  : public std::false_type
-{};
-
-template<typename B>
-struct disjunction<B>
-  : public B
-{};
-
-/// Forms the logical disjunction of the type traits <tt>B,Bn...</tt>.
-template<typename B, typename... Bn>
-struct disjunction<B, Bn...>
-  : public std::conditional_t<bool(B::value), B, disjunction<Bn...>>
-{};
-
-
-/// Forms the logical negation of type trait @p B.
-template<typename B>
-struct negation
-  : public std::integral_constant<bool, !bool(B::value)>
-{};
-
-
-/// Maps sequence of types to @c void.
-template<typename...>
-using void_t = void;
-
-
-namespace detail
-{
-
-template<typename, typename = void>
-struct is_invocable
-  : public std::false_type
-{};
- 
-template<typename F, typename... Args>
-struct is_invocable<F(Args...), void_t<std::result_of_t<F(Args...)>>>
-  : public std::true_type
-{};
-
-} // namespace detail
- 
-template<typename T>
-struct is_invocable
-  : public detail::is_invocable<T>
-{};
-
-template<typename T>
-using is_invocable_t = typename is_invocable<T>::type;
-
 /**
  * Checks if @p T is a type from @c deferred.
  */
@@ -95,11 +27,19 @@ struct is_deferred
 template<typename T>
 using is_deferred_t = typename is_deferred<T>::type;
 
+/// Alias for @c is_deferred::value.
+template<typename T>
+inline constexpr bool is_deferred_v = is_deferred<T>::value;
+
 /**
  * Checks if any of @p T... satisfies @ref is_deferred.
  */
 template<typename... T>
-using any_deferred_t = disjunction<is_deferred_t<std::decay_t<T>>...>;
+using any_deferred_t = std::disjunction<is_deferred_t<std::decay_t<T>>...>;
+
+/// Alias for @c any_deferred_t::value.
+template<typename... T>
+inline constexpr bool any_deferred_v = any_deferred_t<T...>::value;
 
 } // namespace deferred
 
