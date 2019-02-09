@@ -26,7 +26,8 @@ class constant_
 
 public:
   /// Constructs a constant_ from @p u.
-  template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
+  template<typename U,
+           std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
   constexpr explicit constant_(U&& u)
     : m_t(std::forward<U>(u))
   {}
@@ -84,7 +85,7 @@ inline constexpr bool is_constant_or_value_v =
 /**
  * Creates a new @ref constant_ from @p t.
  * 
- * @warning This function will only accept values or @ref constant_.
+ * @warning This function accepts non @c deferred objects and @ref constant_.
  */
 template<typename T,
          std::enable_if_t<detail::is_constant_or_value_v<std::decay_t<T>>>* = nullptr>

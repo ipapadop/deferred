@@ -1,11 +1,12 @@
 set(SOURCES
   constant.cpp
+  constant_expressions.cpp
   expressions.cpp
-  fail_to_compile.cpp
   invoke.cpp
   main.cpp
   operators.cpp
-  variable.cpp)
+  variable.cpp
+  variable_expressions.cpp)
 
 add_executable(test_deferred ${SOURCES})
 
