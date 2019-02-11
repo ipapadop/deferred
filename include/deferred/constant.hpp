@@ -15,6 +15,7 @@
 
 #include "type_traits/is_constant.hpp"
 #include "type_traits/is_constant_expression.hpp"
+#include "type_traits/is_expression.hpp"
 
 namespace deferred
 {
@@ -36,10 +37,20 @@ public:
   constant_(constant_ const&) = default;
   constant_(constant_&&) = default;
 
+  constant_& operator=(constant_ const&) = delete;
+  constant_& operator=(constant_&&) = delete;
+
   /// Returns the stored value.
-  constexpr const T& operator()() const noexcept
+  constexpr decltype(auto) operator()() const noexcept
   {
-    return m_t;
+    if constexpr (is_expression_v<std::decay_t<T>>)
+    {
+      return m_t();
+    }
+    else
+    {
+      return m_t;
+    }
   }
 
   template<typename Visitor>

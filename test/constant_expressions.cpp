@@ -10,7 +10,7 @@
 
 #include "deferred/deferred.hpp"
 
-#if 0
+#if 1
 
 #include "deferred/type_name.hpp"
 
@@ -22,11 +22,11 @@ TEST_CASE("constant from expression",
   auto ex = deferred::constant(i) * 2;
   auto c = deferred::constant(ex);
   printf("--> %s\n", deferred::type_name<decltype(c)>().c_str());
-  //CHECK(c() == 20);
+  CHECK(c() == 20);
 }
 #endif
 
-#if 0
+#if 1
 // cannot create constant from expression with variable
 TEST_CASE("constant from expression with variable",
           "[constant-from-non-constant-expression]")
@@ -35,5 +35,6 @@ TEST_CASE("constant from expression with variable",
   auto ex = deferred::constant(4) * v;
   auto c  = deferred::constant(ex);
   CHECK(c() == 8);
+  FAIL("Cannot create constant from expression with a variable");
 }
 #endif

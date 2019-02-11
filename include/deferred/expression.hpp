@@ -28,6 +28,8 @@ class expression_
     private std::tuple<Expressions...>
 {
 public:
+  using subexpression_types = std::tuple<Expressions...>;
+
   template<typename Op, typename... Ex>
   constexpr explicit expression_(Op&& op, Ex&&... ex)
     : Operator(std::forward<Op>(op)),

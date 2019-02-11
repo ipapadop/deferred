@@ -18,12 +18,28 @@
 namespace deferred
 {
 
+namespace detail
+{
+
+template<typename T, typename = std::void_t<>>
+struct all_sub_expressions_constant
+  : public std::false_type
+{};
+
+template<typename T>
+struct all_sub_expressions_constant<T, std::void_t<typename T::subexpression_types>>
+  : public std::true_type
+{};
+
+} // namespace detail
+
 /// Checks if @p T is a constant.
 template<typename T>
 struct is_constant_expression
   : public std::disjunction<
+      is_constant_t<T>,
       std::negation<is_deferred_t<T>>,
-      is_constant_t<T>>
+      detail::all_sub_expressions_constant<T>>
 {};
 
 /// Alias for @c is_constant::type.

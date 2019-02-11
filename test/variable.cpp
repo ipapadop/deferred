@@ -29,21 +29,19 @@ TEST_CASE("initialized variable", "[variable-init]")
 }
 
 #if 0
-// cannot create unbound variable
 TEST_CASE("unbound variable", "[variable-no-bind]")
 {
   deferred::variable<int>();
-  CHECK(false);
+  FAIL("Should not be able to create unbound variable");
 }
 #endif
 
 #if 0
-// cannot create duplicate variable
 TEST_CASE("duplicate variable", "[variable-duplicate]")
 {
   auto v1 = deferred::variable<int>();
   auto v2 = v1;
   v1 = 10;
-  CHECK(v1() == v2());
+  FAIL("Should not be able to duplicate variable");
 }
 #endif
