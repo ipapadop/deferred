@@ -15,7 +15,7 @@
 #include <utility>
 
 #include "invoke.hpp"
-#include "type_traits.hpp"
+#include "type_traits/is_deferred.hpp"
 
 namespace deferred
 {

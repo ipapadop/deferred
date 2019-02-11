@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "type_traits.hpp"
+#include "type_traits/is_variable.hpp"
 
 namespace deferred
 {
@@ -63,30 +63,6 @@ public:
     return std::forward<Visitor>(v)(*this);
   }
 };
-
-/// @brief Checks if @p T is a @ref variable_.
-template<typename...>
-struct is_variable
-  : public std::false_type
-{};
-
-template<typename T>
-struct is_variable<variable_<T>>
-  : public std::true_type
-{};
-
-/// Alias for @c is_variable::type.
-template<typename T>
-using is_variable_t = typename is_variable<T>::type;
-
-/// Alias for @c is_variable::value.
-template<typename T>
-inline constexpr bool is_variable_v = is_variable<T>::value;
-
-template<typename T>
-struct is_deferred<variable_<T>>
-  : public std::true_type
-{};
 
 /// Creates a new @ref variable_ that holds a @p T.
 template<typename T>

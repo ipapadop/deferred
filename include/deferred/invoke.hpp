@@ -15,7 +15,6 @@
 
 #include "constant.hpp"
 #include "expression.hpp"
-#include "type_traits.hpp"
 
 namespace deferred
 {
