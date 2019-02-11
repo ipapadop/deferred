@@ -64,20 +64,6 @@ public:
   }
 };
 
-/// Creates a new @ref variable_ that holds a @p T.
-template<typename T>
-constexpr variable_<T> variable() noexcept
-{
-  return {};
-}
-
-/// Creates a new @ref variable_ that is initialized with @p t.
-template<typename T>
-constexpr auto variable(T&& t)
-{
-  return variable_<std::decay_t<T>>(std::forward<T>(t));
-}
-
 /// @brief Checks if @p T is a @ref variable_.
 template<typename...>
 struct is_variable
@@ -101,6 +87,20 @@ template<typename T>
 struct is_deferred<variable_<T>>
   : public std::true_type
 {};
+
+/// Creates a new @ref variable_ that holds a @p T.
+template<typename T>
+constexpr variable_<T> variable() noexcept
+{
+  return {};
+}
+
+/// Creates a new @ref variable_ that is initialized with @p t.
+template<typename T>
+constexpr auto variable(T&& t)
+{
+  return variable_<std::decay_t<T>>(std::forward<T>(t));
+}
 
 } // namespace deferred
 
