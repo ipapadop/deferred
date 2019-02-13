@@ -80,23 +80,41 @@ constexpr variable_<T> variable() noexcept
  */
 template<typename Expression,
          std::enable_if_t<
-           is_deferred_v<std::decay_t<Expression>>
-           && is_constant_expression_v<std::decay_t<Expression>>
+           is_deferred_v<Expression>
+           && is_constant_expression_v<Expression>
          >* = nullptr>
 constexpr auto variable(Expression&& ex)
 {
-  using result_type = std::decay_t<decltype(std::forward<Expression>(ex)())>;
-  return variable_<result_type>(std::forward<Expression>(ex)());
+  using internal_type = std::decay_t<decltype(std::forward<Expression>(ex)())>;
+  return variable_<internal_type>(std::forward<Expression>(ex)());
 }
 
 /// Creates a new @ref variable_ that is initialized with @p t.
 template<typename T,
          std::enable_if_t<
-           !is_deferred_v<std::decay_t<T>>
+           !is_deferred_v<T>
+           && !std::is_invocable_v<T>
          >* = nullptr>
 constexpr auto variable(T&& t)
 {
-  return variable_<std::decay_t<T>>(std::forward<T>(t));
+  using internal_type = std::decay_t<T>;
+  return variable_<internal_type>(std::forward<T>(t));
+}
+
+/**
+ * Creates a new @ref constant_ that is initialized from a callable @p f.
+ * 
+ * @warning This function will force <tt>f()</tt>.
+ */
+template<typename F,
+         std::enable_if_t<
+           !is_deferred_v<F>
+           && std::is_invocable_v<F>
+         >* = nullptr>
+constexpr auto variable(F&& f)
+{
+  using internal_type = decltype(std::forward<F>(f)());
+  return variable_<internal_type>(std::forward<F>(f)());
 }
 
 } // namespace deferred

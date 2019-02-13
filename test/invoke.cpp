@@ -48,6 +48,9 @@ struct get_int_t
 
 } // namespace
 
+#include "deferred/type_name.hpp"
+
+
 TEST_CASE("invoke functions", "[invoke-function]")
 {
   SECTION("no arguments")
@@ -140,7 +143,16 @@ TEST_CASE("invoke function objects", "[invoke-function-objects]")
   }
 }
 
-TEST_CASE("invoke expressions", "[invoke-expression]")
+TEST_CASE("invoke lambda", "[invoke-lambda]")
+{
+  auto i = 0;
+  auto ex = deferred::invoke([&] { ++i; return 10; });
+  CHECK(i == 0);
+  CHECK(ex() == 10);
+  CHECK(i == 1);
+}
+
+TEST_CASE("invoke expression", "[invoke-expression]")
 {
   auto v = deferred::variable<int>();
   auto c = deferred::constant(10);
@@ -151,4 +163,52 @@ TEST_CASE("invoke expressions", "[invoke-expression]")
   v = 11;
   CHECK(ex1() == 21);
   CHECK(ex2() == 21);
+}
+
+TEST_CASE("invoke expressions", "[invoke-expressions]")
+{
+  auto v = deferred::variable<int>();
+  auto c = deferred::constant(10) + deferred::constant(20);
+    
+  auto ex1 = v + c;
+  auto ex2 = deferred::invoke([](auto x, auto y) { return x + y; }, ex1, v);
+  v = 3;
+
+  CHECK(ex2() == 36);
+}
+
+TEST_CASE("invoke with conditionals", "[invoke-conditionals]")
+{
+  auto cond = deferred::constant(false);
+  auto c    = deferred::constant(10) + deferred::constant(20);
+  auto v    = deferred::variable<int>();
+
+  auto ex = deferred::invoke([](auto cond, auto x, auto y) { return cond ? x : y; },
+                             cond, c, v);
+
+  v = 10;
+
+  CHECK(ex() == 10);
+}
+
+TEST_CASE("invoke with deferred conditionals", "[invoke-deferred-conditionals]")
+{
+  auto i = 0;
+  auto j = 0;
+  auto k = 0;
+
+  auto cond = deferred::invoke([&] { ++i; return false; });
+  auto res1 = deferred::invoke([&] { ++j; return 10; });
+  auto res2 = deferred::invoke([&] { ++k; return 20; });
+  auto ex = deferred::invoke([](auto cond, auto x, auto y) { return cond ? x : y; },
+                             cond, res1, res2);
+  
+  CHECK(i == 0);
+  CHECK(j == 0);
+  CHECK(k == 0);
+  CHECK(ex() == 20);
+  // all branches are evaluated; that's why proper conditionals are needed
+  CHECK(i == 1);
+  CHECK(j == 1);
+  CHECK(k == 1);
 }
