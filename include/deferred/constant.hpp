@@ -61,16 +61,29 @@ public:
 };
 
 /**
- * Creates a new @ref constant_ from @p t.
+ * Creates a new @ref constant_ that is initialized from a constant expression.
  * 
- * @warning This function accepts non @c deferred objects and @ref constant_.
+ * @warning This function will force <tt>ex()</tt>.
  */
+template<typename Expression,
+         std::enable_if_t<
+           is_deferred_v<std::decay_t<Expression>>
+           && is_constant_expression_v<std::decay_t<Expression>>
+         >* = nullptr>
+constexpr auto constant(Expression&& ex)
+{
+  using result_type = std::decay_t<decltype(std::forward<Expression>(ex)())>;
+  return constant_<result_type>(std::forward<Expression>(ex)());
+}
+
+/// Creates a new @ref variable_ that is initialized with @p t.
 template<typename T,
-         std::enable_if_t<is_constant_expression_v<std::decay_t<T>>>* = nullptr>
+         std::enable_if_t<
+           !is_deferred_v<std::decay_t<T>>
+         >* = nullptr>
 constexpr auto constant(T&& t)
 {
-  using result_type = std::conditional_t<is_constant_v<std::decay_t<T>>, T, constant_<T>>;
-  return result_type(std::forward<T>(t));
+  return constant_<std::decay_t<T>>(std::forward<T>(t));
 }
 
 } // namespace deferred

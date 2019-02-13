@@ -14,14 +14,17 @@ TEST_CASE("constant from expression",
           "[constant-from-constant-expression]")
 {
   auto i = 10;
-  CHECK(deferred::is_constant_expression_v<decltype(i)>);
+  static_assert(deferred::is_constant_expression_v<decltype(i)>);
 
   auto ex = deferred::constant(i) * 2;
-  CHECK(deferred::is_constant_expression_v<decltype(ex)>);
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
 
   auto c = deferred::constant(ex);
-  CHECK(deferred::is_constant_expression_v<decltype(c)>);
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
 
+  // constant() from constant expression forces evaluation
+  static_assert(std::is_same_v<decltype(c), decltype(deferred::constant(i))>);
+  
   CHECK(c() == 20);
 }
 
@@ -29,16 +32,16 @@ TEST_CASE("constant from chained constant expressions",
           "[constant-from-chained-constant-expressions]")
 {
   auto c1 = deferred::constant(1);
-  CHECK(deferred::is_constant_expression_v<std::decay_t<decltype(c1)>>);
+  static_assert(deferred::is_constant_expression_v<std::decay_t<decltype(c1)>>);
 
   auto ex1 = c1 + deferred::constant(2);
-  CHECK(deferred::is_constant_expression_v<std::decay_t<decltype(ex1)>>);
+  static_assert(deferred::is_constant_expression_v<std::decay_t<decltype(ex1)>>);
 
   auto ex2 = ex1 + ex1;
-  CHECK(deferred::is_constant_expression_v<std::decay_t<decltype(ex2)>>);
+  static_assert(deferred::is_constant_expression_v<std::decay_t<decltype(ex2)>>);
 
   auto ex3 = ex2 - ex2;
-  CHECK(deferred::is_constant_expression_v<std::decay_t<decltype(ex3)>>);
+  static_assert(deferred::is_constant_expression_v<std::decay_t<decltype(ex3)>>);
 
   CHECK(ex3() == 0);
 }

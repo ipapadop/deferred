@@ -29,6 +29,7 @@ namespace detail
 {
 
 // Check is std::tuple<T...> consists of types that satisfy is_constant.
+// TODO: is this the best way to do it?
 template<typename... T>
 struct is_constant_expression_tuple;
 

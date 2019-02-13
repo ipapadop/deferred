@@ -38,7 +38,7 @@ TEST_CASE("variable from constant", "[variable-from-constant]")
   auto c = deferred::constant(i);
   auto v = deferred::variable(c);
 
-  static_assert(std::is_same_v<decltype(v), deferred::variable_<int>>, "unexpected type");
+  static_assert(std::is_same_v<decltype(v), decltype(deferred::variable(10))>);
   CHECK(v() == i);
 }
 
