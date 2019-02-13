@@ -7,8 +7,8 @@
  * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef DEFERRED_TYPE_TRAITS_HPP
-#define DEFERRED_TYPE_TRAITS_HPP
+#ifndef DEFERRED_TYPE_TRAITS_IS_DEFERRED_HPP
+#define DEFERRED_TYPE_TRAITS_IS_DEFERRED_HPP
 
 #include <type_traits>
 
@@ -29,6 +29,7 @@ using is_deferred_t = typename is_deferred<T>::type;
 template<typename T>
 inline constexpr bool is_deferred_v = is_deferred<T>::value;
 
+
 /// Checks if any of @p T... satisfies @ref is_deferred.
 template<typename... T>
 using any_deferred_t = std::disjunction<is_deferred_t<std::decay_t<T>>...>;
@@ -40,4 +41,3 @@ inline constexpr bool any_deferred_v = any_deferred_t<T...>::value;
 } // namespace deferred
 
 #endif
-

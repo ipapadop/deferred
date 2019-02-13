@@ -42,10 +42,9 @@ TEST_CASE("constant from xvalue", "[constant-from-xvalue]")
 
 TEST_CASE("constant from constant", "[constant-from-constant]")
 {
-  auto i = 4;
-  auto c1 = deferred::constant(i);
-  auto c2 = deferred::constant(c1);
+  constexpr auto c1 = deferred::constant(4);
+  constexpr auto c2 = deferred::constant(c1);
   static_assert(std::is_same_v<decltype(c1), decltype(c2)>,
                 "copy created nested type");
-  CHECK(c2() == i);
+  CHECK(c2() == 4);
 }

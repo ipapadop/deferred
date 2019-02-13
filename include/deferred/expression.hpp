@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "type_traits.hpp"
+#include "type_traits/is_expression.hpp"
 
 namespace deferred
 {
@@ -28,6 +28,8 @@ class expression_
     private std::tuple<Expressions...>
 {
 public:
+  using subexpression_types = std::tuple<Expressions...>;
+
   template<typename Op, typename... Ex>
   constexpr explicit expression_(Op&& op, Ex&&... ex)
     : Operator(std::forward<Op>(op)),
@@ -53,38 +55,6 @@ public:
     return std::forward<Visitor>(v)(*this);
   }
 };
-
-/// Checks if @p T is an @ref expression_.
-template<typename...>
-struct is_expression
-  : public std::false_type
-{};
-
-template<typename... T>
-struct is_expression<expression_<T...>>
-  : public std::true_type
-{};
-
-/// Alias for @c is_expression::type.
-template<typename T>
-using is_expression_t = typename is_expression<T>::type;
-
-/// Alias for @c is_expression::value.
-template<typename T>
-inline constexpr bool is_expression_v = is_expression<T>::value;
-
-// Transforms T into an expression_ if it is not a deferred data type.
-template<typename T, typename... Args>
-using make_expression_t =
-  std::conditional_t<
-    is_expression_v<std::decay_t<T>>,
-    T,
-    expression_<T, Args...>>;
-
-template<typename... T>
-struct is_deferred<expression_<T...>>
-  : public std::true_type
-{};
 
 } // namespace deferred
 

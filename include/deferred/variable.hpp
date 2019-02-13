@@ -12,7 +12,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "type_traits.hpp"
+#include "type_traits/is_constant_expression.hpp"
+#include "type_traits/is_expression.hpp"
+#include "type_traits/is_variable.hpp"
 
 namespace deferred
 {
@@ -64,30 +66,6 @@ public:
   }
 };
 
-/// @brief Checks if @p T is a @ref variable_.
-template<typename...>
-struct is_variable
-  : public std::false_type
-{};
-
-template<typename T>
-struct is_variable<variable_<T>>
-  : public std::true_type
-{};
-
-/// Alias for @c is_variable::type.
-template<typename T>
-using is_variable_t = typename is_variable<T>::type;
-
-/// Alias for @c is_variable::value.
-template<typename T>
-inline constexpr bool is_variable_v = is_variable<T>::value;
-
-template<typename T>
-struct is_deferred<variable_<T>>
-  : public std::true_type
-{};
-
 /// Creates a new @ref variable_ that holds a @p T.
 template<typename T>
 constexpr variable_<T> variable() noexcept
@@ -95,8 +73,27 @@ constexpr variable_<T> variable() noexcept
   return {};
 }
 
+/**
+ * Creates a new @ref variable_ that is initialized from a constant expression.
+ * 
+ * @warning This function will force <tt>ex()</tt>.
+ */
+template<typename Expression,
+         std::enable_if_t<
+           is_deferred_v<std::decay_t<Expression>>
+           && is_constant_expression_v<std::decay_t<Expression>>
+         >* = nullptr>
+constexpr auto variable(Expression&& ex)
+{
+  using result_type = std::decay_t<decltype(std::forward<Expression>(ex)())>;
+  return variable_<result_type>(std::forward<Expression>(ex)());
+}
+
 /// Creates a new @ref variable_ that is initialized with @p t.
-template<typename T>
+template<typename T,
+         std::enable_if_t<
+           !is_deferred_v<std::decay_t<T>>
+         >* = nullptr>
 constexpr auto variable(T&& t)
 {
   return variable_<std::decay_t<T>>(std::forward<T>(t));
