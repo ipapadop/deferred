@@ -32,30 +32,19 @@ TEST_CASE("operation of variable with variable", "[variable-op-variable]")
   CHECK(ex() == i + d);
 }
 
-#if 0
-#include "deferred/type_name.hpp"
-
-// FIXME
 TEST_CASE("variable from constant", "[variable-from-constant]")
 {
   auto i = 10;
   auto c = deferred::constant(i);
   auto v = deferred::variable(c);
-  printf("--> %s\n", deferred::type_name<decltype(v)>().c_str());
-  printf("%d\n", v());
-  CHECK(v() == 30);
+
+  static_assert(std::is_same_v<decltype(v), deferred::variable_<int>>, "unexpected type");
+  CHECK(v() == i);
 }
 
-#endif
-
-#if 0
-#include "deferred/type_name.hpp"
-
-// FIXME
-TEST_CASE("variable from expression", "[variable-from-expression]")
+TEST_CASE("variable from constant expression", "[variable-from-constant-expression]")
 {
   auto ex = deferred::constant(10) + deferred::constant(20);
   auto v  = deferred::variable(ex);
   CHECK(v() == 30);
 }
-#endif
