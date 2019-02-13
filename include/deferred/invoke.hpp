@@ -26,7 +26,7 @@ namespace detail
 template<typename T>
 using make_datatype_t =
   std::conditional_t<
-    is_deferred_v<std::decay_t<T>>,
+    is_deferred_v<T>,
     T,
     constant_<T>>;
 
@@ -34,7 +34,7 @@ using make_datatype_t =
 template<typename T, typename... Args>
 using make_expression_t =
   std::conditional_t<
-    is_expression_v<std::decay_t<T>>,
+    is_expression_v<T>,
     T,
     expression_<T, make_datatype_t<Args>...>>;
 

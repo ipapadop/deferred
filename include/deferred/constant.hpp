@@ -60,8 +60,8 @@ public:
  */
 template<typename Expression,
          std::enable_if_t<
-           is_deferred_v<std::decay_t<Expression>>
-           && is_constant_expression_v<std::decay_t<Expression>>
+           is_deferred_v<Expression>
+           && is_constant_expression_v<Expression>
          >* = nullptr>
 constexpr auto constant(Expression&& ex)
 {
@@ -72,11 +72,29 @@ constexpr auto constant(Expression&& ex)
 /// Creates a new @ref variable_ that is initialized with @p t.
 template<typename T,
          std::enable_if_t<
-           !is_deferred_v<std::decay_t<T>>
+           !is_deferred_v<T>
+           && !std::is_invocable_v<T>
          >* = nullptr>
 constexpr auto constant(T&& t)
 {
-  return constant_<std::decay_t<T>>(std::forward<T>(t));
+  using result_type = std::decay_t<T>;
+  return constant_<result_type>(std::forward<T>(t));
+}
+
+/**
+ * Creates a new @ref constant_ that is initialized from a callable @p f.
+ * 
+ * @warning This function will force <tt>f()</tt>.
+ */
+template<typename F,
+         std::enable_if_t<
+           !is_deferred_v<F>
+           && std::is_invocable_v<F>
+         >* = nullptr>
+constexpr auto constant(F&& f)
+{
+  using result_type = decltype(std::forward<F>(f)());
+  return constant_<result_type>(std::forward<F>(f)());
 }
 
 } // namespace deferred

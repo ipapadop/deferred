@@ -19,14 +19,28 @@
 namespace deferred
 {
 
-/// Checks if @p T is a constant.
+namespace detail
+{
+
+// Checks if T is a constant expression.
 template<typename T, typename = void>
 struct is_constant_expression
   : public std::false_type
 {};
 
-namespace detail
-{
+// Non-deferred data types are considered constant expressions.
+template<typename T>
+struct is_constant_expression<T,
+                              std::enable_if_t<!is_deferred_v<T>>>
+  : public std::true_type
+{};
+
+// constant_ is a constant expression.
+template<typename T>
+struct is_constant_expression<T,
+                              std::enable_if_t<is_constant_v<T>>>
+  : public std::true_type
+{};
 
 // Check is std::tuple<T...> consists of types that satisfy is_constant.
 // TODO: is this the best way to do it?
@@ -38,24 +52,19 @@ struct is_constant_expression_tuple<std::tuple<T...>>
   : public std::conjunction<is_constant_expression<std::decay_t<T>>...>
 {};
 
-} // namespace detail
-
-template<typename T>
-struct is_constant_expression<T,
-                              std::enable_if_t<!is_deferred_v<T>>>
-  : public std::true_type
-{};
-
-template<typename T>
-struct is_constant_expression<T,
-                              std::enable_if_t<is_constant_v<T>>>
-  : public std::true_type
-{};
-
+// check all the subexpressions of an expression_
 template<typename T>
 struct is_constant_expression<T,
                               std::enable_if_t<is_expression_v<T>>>
-  : public detail::is_constant_expression_tuple<typename T::subexpression_types>
+  : public is_constant_expression_tuple<typename T::subexpression_types>
+{};
+
+} // namespace detail
+
+/// Checks if @p T is a constant.
+template<typename T>
+struct is_constant_expression
+  : public detail::is_constant_expression<std::decay_t<T>>
 {};
 
 /// Alias for @c is_constant::type.

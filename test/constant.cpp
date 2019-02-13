@@ -48,3 +48,27 @@ TEST_CASE("constant from constant", "[constant-from-constant]")
                 "copy created nested type");
   CHECK(c2() == 4);
 }
+
+TEST_CASE("constant from lambda", "[constant-from-lambda]")
+{
+  auto i = 0;
+  auto c = deferred::constant([&] { ++i; return 10; });
+  CHECK(i == 1);
+  CHECK(c() == 10);
+}
+
+namespace
+{
+
+int function()
+{
+  return 10;
+}
+
+} // namespace
+
+TEST_CASE("constant from function", "[constant-from-function]")
+{
+  auto c = deferred::constant(&function);
+  CHECK(c() == 10);
+}

@@ -80,8 +80,8 @@ constexpr variable_<T> variable() noexcept
  */
 template<typename Expression,
          std::enable_if_t<
-           is_deferred_v<std::decay_t<Expression>>
-           && is_constant_expression_v<std::decay_t<Expression>>
+           is_deferred_v<Expression>
+           && is_constant_expression_v<Expression>
          >* = nullptr>
 constexpr auto variable(Expression&& ex)
 {
@@ -92,7 +92,7 @@ constexpr auto variable(Expression&& ex)
 /// Creates a new @ref variable_ that is initialized with @p t.
 template<typename T,
          std::enable_if_t<
-           !is_deferred_v<std::decay_t<T>>
+           !is_deferred_v<T>
          >* = nullptr>
 constexpr auto variable(T&& t)
 {

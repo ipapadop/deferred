@@ -12,15 +12,15 @@
 
 #include <type_traits>
 
-#include "is_deferred.hpp"
-
 namespace deferred
 {
 
 template<typename, typename...>
 class expression_;
 
-/// Checks if @p T is an @ref expression_.
+namespace detail
+{
+
 template<typename...>
 struct is_expression
   : public std::false_type
@@ -31,6 +31,14 @@ struct is_expression<expression_<T...>>
   : public std::true_type
 {};
 
+} // namespace detail
+
+/// Checks if @p T is an @ref expression_.
+template<typename T>
+struct is_expression
+  : public detail::is_expression<std::decay_t<T>>
+{};
+
 /// Alias for @c is_expression::type.
 template<typename T>
 using is_expression_t = typename is_expression<T>::type;
@@ -38,12 +46,6 @@ using is_expression_t = typename is_expression<T>::type;
 /// Alias for @c is_expression::value.
 template<typename T>
 inline constexpr bool is_expression_v = is_expression<T>::value;
-
-
-template<typename... T>
-struct is_deferred<expression_<T...>>
-  : public std::true_type
-{};
 
 } // namespace deferred
 

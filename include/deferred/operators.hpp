@@ -35,14 +35,14 @@ constexpr decltype(auto) operator-(T&& t, U&& u)
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_v<std::decay_t<T>>>>
+         typename = std::enable_if_t<is_deferred_v<T>>>
 constexpr decltype(auto) operator+(T&& t)
 {
   return invoke([](auto x) { return +x; }, std::forward<T>(t));
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_v<std::decay_t<T>>>>
+         typename = std::enable_if_t<is_deferred_v<T>>>
 constexpr decltype(auto) operator-(T&& t)
 {
   return invoke(std::negate<>{}, std::forward<T>(t));
@@ -126,7 +126,7 @@ constexpr decltype(auto) operator||(T&& t, U&& u)
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_v<std::decay_t<T>>>>
+         typename = std::enable_if_t<is_deferred_v<T>>>
 constexpr decltype(auto) operator!(T&& t)
 {
   return invoke(std::logical_not<>{}, std::forward<T>(t));
@@ -154,7 +154,7 @@ constexpr decltype(auto) operator^(T&& t, U&& u)
 }
 
 template<typename T,
-         typename = std::enable_if_t<is_deferred_v<std::decay_t<T>>>>
+         typename = std::enable_if_t<is_deferred_v<T>>>
 constexpr decltype(auto) operator~(T&& t)
 {
   return invoke(std::bit_not<>{}, std::forward<T>(t));
