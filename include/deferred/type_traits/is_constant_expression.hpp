@@ -14,32 +14,47 @@
 
 #include "is_deferred.hpp"
 #include "is_constant.hpp"
+#include "is_expression.hpp"
 
 namespace deferred
 {
 
-namespace detail
-{
-
-template<typename T, typename = std::void_t<>>
-struct all_sub_expressions_constant
+/// Checks if @p T is a constant.
+template<typename T, typename = void>
+struct is_constant_expression
   : public std::false_type
 {};
 
-template<typename T>
-struct all_sub_expressions_constant<T, std::void_t<typename T::subexpression_types>>
-  : public std::true_type
+namespace detail
+{
+
+// Check is std::tuple<T...> consists of types that satisfy is_constant.
+template<typename... T>
+struct is_constant_expression_tuple;
+
+template<typename... T>
+struct is_constant_expression_tuple<std::tuple<T...>>
+  : public std::conjunction<is_constant<T>...>
 {};
 
 } // namespace detail
 
-/// Checks if @p T is a constant.
 template<typename T>
-struct is_constant_expression
-  : public std::disjunction<
-      is_constant_t<T>,
-      std::negation<is_deferred_t<T>>,
-      detail::all_sub_expressions_constant<T>>
+struct is_constant_expression<T,
+                              std::enable_if_t<!is_deferred_v<T>>>
+  : public std::true_type
+{};
+
+template<typename T>
+struct is_constant_expression<T,
+                              std::enable_if_t<is_constant_v<T>>>
+  : public std::true_type
+{};
+
+template<typename T>
+struct is_constant_expression<T,
+                              std::enable_if_t<is_expression_v<T>>>
+  : public detail::is_constant_expression_tuple<typename T::subexpression_types>
 {};
 
 /// Alias for @c is_constant::type.

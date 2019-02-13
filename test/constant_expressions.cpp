@@ -10,23 +10,16 @@
 
 #include "deferred/deferred.hpp"
 
-#if 1
-
-#include "deferred/type_name.hpp"
-
-// FIXME
 TEST_CASE("constant from expression",
           "[constant-from-constant-expression]")
 {
   auto i = 10;
   auto ex = deferred::constant(i) * 2;
   auto c = deferred::constant(ex);
-  printf("--> %s\n", deferred::type_name<decltype(c)>().c_str());
   CHECK(c() == 20);
 }
-#endif
 
-#if 1
+#if 0
 // cannot create constant from expression with variable
 TEST_CASE("constant from expression with variable",
           "[constant-from-non-constant-expression]")
