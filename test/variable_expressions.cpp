@@ -10,6 +10,28 @@
 
 #include "deferred/deferred.hpp"
 
+TEST_CASE("operation of variable with constant", "[variable-op-constant]")
+{
+  auto v = deferred::variable<int>();
+  auto ex = v + deferred::constant(10);
+  v = 42;
+  CHECK(ex() == 52);
+}
+
+TEST_CASE("operation of variable with variable", "[variable-op-variable]")
+{
+  auto v1 = deferred::variable<int>();
+  auto v2 = deferred::variable<double>();
+  auto i = 10;
+  auto d = 23.3;
+
+  auto ex = v1 + v2;
+  v1 = i;
+  v2 = d;
+
+  CHECK(ex() == i + d);
+}
+
 #if 0
 #include "deferred/type_name.hpp"
 

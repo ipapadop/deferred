@@ -34,7 +34,7 @@ struct is_constant_expression_tuple;
 
 template<typename... T>
 struct is_constant_expression_tuple<std::tuple<T...>>
-  : public std::conjunction<is_constant<T>...>
+  : public std::conjunction<is_constant_expression<std::decay_t<T>>...>
 {};
 
 } // namespace detail
