@@ -12,7 +12,9 @@
 
 #include <utility>
 
-#include "make_deferred.hpp"
+#include "constant.hpp"
+#include "expression.hpp"
+#include "type_traits/make_deferred.hpp"
 
 namespace deferred
 {
@@ -20,19 +22,29 @@ namespace deferred
 /**
  * TODO
  */
-template<typename Expression>
-class if_expression_
-  : private Expression
+template<typename IfExpression, typename ThenExpression, typename ElseExpression>
+class if_then_else_
+  : private std::tuple<IfExpression, ThenExpression, ElseExpression>
 {
 public:
-  template<typename Ex>
-  constexpr explicit if_expression_(Ex&& ex)
-    : Expression(std::forward<Ex>(ex))
+  template<typename IfEx, typename ThenEx, typename ElseEx>
+  constexpr explicit if_then_else_(IfEx&& if_, ThenEx&& then_, ElseEx&& else_)
+    : std::tuple<IfExpression, ThenExpression, ElseExpression>(
+        std::forward<IfEx>(if_),
+        std::forward<ThenEx>(then_),
+        std::forward<ElseEx>(else_))
   {}
 
-  constexpr void operator()() const
+  constexpr decltype(auto) operator()() const
   {
-    Expression::operator()();
+    if (std::get<0>(*this)())
+    {
+      return std::get<1>(*this)();
+    }
+    else
+    {
+      return std::get<2>(*this)();
+    }
   }
 
   template<typename Visitor>
@@ -45,11 +57,16 @@ public:
 /**
  * TODO
  */
-template<typename Expression>
-constexpr auto if_(Expression&& ex)
+template<typename IfExpression, typename ThenExpression, typename ElseExpression>
+constexpr auto if_then_else(IfExpression&& if_, ThenExpression&& then_, ElseExpression&& else_)
 {
-  using expression_type = make_deferred_t<std::decay_t<Expression>>;
-  return if_expression_<expression_type>(std::forward<Expression>(ex));
+  using if_expression   = make_deferred_t<IfExpression>;
+  using then_expression = make_deferred_t<ThenExpression>;
+  using else_expression = make_deferred_t<ElseExpression>;
+  using result_type     = if_then_else_<if_expression, then_expression, else_expression>;
+  return result_type(std::forward<IfExpression>(if_),
+                     std::forward<ThenExpression>(then_),
+                     std::forward<ElseExpression>(else_));
 }
 
 } // namespace deferred

@@ -7,29 +7,28 @@
  * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef DEFERRED_MAKE_DEFERRED_HPP
-#define DEFERRED_MAKE_DEFERRED_HPP
+#ifndef DEFERRED_TYPE_TRAITS_MAKE_DEFERRED_HPP
+#define DEFERRED_TYPE_TRAITS_MAKE_DEFERRED_HPP
 
 #include <type_traits>
 
-#include "constant.hpp"
-#include "expression.hpp"
-#include "type_traits.hpp"
+#include "is_constant.hpp"
+#include "is_constant_expression.hpp"
+#include "is_expression.hpp"
 
 namespace deferred
 {
 
-// Transforms T into a deferred data type.
+/// Transforms @p T into a @c deferred data type.
 template<typename T>
 using make_deferred_t =
   std::conditional_t<
     is_deferred_v<std::decay_t<T>>,
     T,
     std::conditional_t<
-      std::is_invocable_v<T> || std::is_function_v<T>,
-      expression_<T>,
-      constant_<T>
-    >
+      is_constant_expression_v<std::decay_t<T>>,
+      constant_<T>,
+      expression_<T>>
   >;
 
 } // namespace deferred
