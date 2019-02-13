@@ -65,8 +65,8 @@ template<typename Expression,
          >* = nullptr>
 constexpr auto constant(Expression&& ex)
 {
-  using result_type = std::decay_t<decltype(std::forward<Expression>(ex)())>;
-  return constant_<result_type>(std::forward<Expression>(ex)());
+  using internal_type = std::decay_t<decltype(std::forward<Expression>(ex)())>;
+  return constant_<internal_type>(std::forward<Expression>(ex)());
 }
 
 /// Creates a new @ref variable_ that is initialized with @p t.
@@ -77,8 +77,8 @@ template<typename T,
          >* = nullptr>
 constexpr auto constant(T&& t)
 {
-  using result_type = std::decay_t<T>;
-  return constant_<result_type>(std::forward<T>(t));
+  using internal_type = std::decay_t<T>;
+  return constant_<internal_type>(std::forward<T>(t));
 }
 
 /**
@@ -93,8 +93,8 @@ template<typename F,
          >* = nullptr>
 constexpr auto constant(F&& f)
 {
-  using result_type = decltype(std::forward<F>(f)());
-  return constant_<result_type>(std::forward<F>(f)());
+  using internal_type = decltype(std::forward<F>(f)());
+  return constant_<internal_type>(std::forward<F>(f)());
 }
 
 } // namespace deferred

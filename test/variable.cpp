@@ -28,6 +28,30 @@ TEST_CASE("initialized variable", "[variable-init]")
   CHECK(v() == 42);
 }
 
+TEST_CASE("variable from lambda", "[variable-from-lambda]")
+{
+  auto i = 0;
+  auto v = deferred::variable([&] { ++i; return 10; });
+  CHECK(i == 1);
+  CHECK(v() == 10);
+}
+
+namespace
+{
+
+int function()
+{
+  return 10;
+}
+
+} // namespace
+
+TEST_CASE("variable from function", "[variable-from-function]")
+{
+  auto v = deferred::variable(&function);
+  CHECK(v() == 10);
+}
+
 #if 0
 TEST_CASE("unbound variable", "[variable-no-bind]")
 {
