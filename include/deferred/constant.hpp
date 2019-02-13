@@ -43,14 +43,7 @@ public:
   /// Returns the stored value.
   constexpr decltype(auto) operator()() const noexcept
   {
-    if constexpr (is_expression_v<std::decay_t<T>>)
-    {
-      return m_t();
-    }
-    else
-    {
-      return m_t;
-    }
+    return m_t;
   }
 
   template<typename Visitor>
