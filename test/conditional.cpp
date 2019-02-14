@@ -10,11 +10,15 @@
 
 #include "deferred/conditional.hpp"
 
+#if 0
+
 TEST_CASE("conditional with literal", "[conditional-literal]")
 {
   auto ex = deferred::if_then_else(true, 42, 10);
   CHECK(ex() == 42);
 }
+
+#endif
 
 TEST_CASE("conditional with lambda", "[conditional-lambdas]")
 {

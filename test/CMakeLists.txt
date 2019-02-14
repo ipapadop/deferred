@@ -1,10 +1,10 @@
 set(SOURCES
   conditional.cpp
+  conditional_expressions.cpp
   constant.cpp
   constant_expressions.cpp
   invoke.cpp
   main.cpp
-  make_deferred.cpp
   operators.cpp
   variable.cpp
   variable_expressions.cpp)
