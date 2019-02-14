@@ -14,13 +14,16 @@
 #include <type_traits>
 #include <utility>
 
+#include "constant.hpp"
+#include "type_traits/is_deferred.hpp"
 #include "type_traits/is_expression.hpp"
 
 namespace deferred
 {
 
 /**
- * TODO
+ * Deferred expression that is composed of an operator @p Operator applied to 
+ * subexpressions @p Expressions....
  */
 template<typename Operator, typename... Expressions>
 class expression_
@@ -55,6 +58,27 @@ public:
     return std::forward<Visitor>(v)(*this);
   }
 };
+
+namespace detail
+{
+
+// Transforms T into a constant_ if it is not a deferred data type.
+template<typename T>
+using make_expression_arg_t =
+  std::conditional_t<
+    is_deferred_v<T>,
+    T,
+    constant_<T>>;
+
+} // namespace detail
+
+/// Transforms @p T into an @ref expression_ if it is not a deferred data type.
+template<typename T, typename... Args>
+using make_expression_t =
+  std::conditional_t<
+    is_expression_v<T>,
+    T,
+    expression_<T, detail::make_expression_arg_t<Args>...>>;
 
 } // namespace deferred
 
