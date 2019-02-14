@@ -17,6 +17,7 @@
 #include "constant.hpp"
 #include "type_traits/is_deferred.hpp"
 #include "type_traits/is_expression.hpp"
+#include "type_traits/make_function_object.hpp"
 
 namespace deferred
 {
@@ -78,7 +79,7 @@ using make_expression_t =
   std::conditional_t<
     is_expression_v<T>,
     T,
-    expression_<T, detail::make_expression_arg_t<Args>...>>;
+    expression_<make_function_object_t<T>, detail::make_expression_arg_t<Args>...>>;
 
 } // namespace deferred
 
