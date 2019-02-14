@@ -15,6 +15,8 @@ TEST_CASE("operation of variable with constant", "[variable-op-constant]")
   auto v = deferred::variable<int>();
   auto ex = v + deferred::constant(10);
   v = 42;
+
+  static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == 52);
 }
 
@@ -29,6 +31,7 @@ TEST_CASE("operation of variable with variable", "[variable-op-variable]")
   v1 = i;
   v2 = d;
 
+  static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == i + d);
 }
 
@@ -46,5 +49,7 @@ TEST_CASE("variable from constant expression", "[variable-from-constant-expressi
 {
   auto ex = deferred::constant(10) + deferred::constant(20);
   auto v  = deferred::variable(ex);
+
+  static_assert(!deferred::is_constant_expression_v<decltype(v)>);
   CHECK(v() == 30);
 }
