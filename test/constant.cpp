@@ -53,6 +53,8 @@ TEST_CASE("constant from lambda", "[constant-from-lambda]")
 {
   auto i = 0;
   auto c = deferred::constant([&] { ++i; return 10; });
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
   CHECK(i == 1);
   CHECK(c() == 10);
 }
@@ -70,5 +72,7 @@ int function()
 TEST_CASE("constant from function", "[constant-from-function]")
 {
   auto c = deferred::constant(&function);
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
   CHECK(c() == 10);
 }
