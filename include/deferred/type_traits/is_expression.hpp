@@ -18,6 +18,9 @@ namespace deferred
 template<typename, typename...>
 class expression_;
 
+template<typename, typename, typename>
+class if_then_else_;
+
 namespace detail
 {
 
@@ -28,6 +31,11 @@ struct is_expression
 
 template<typename... T>
 struct is_expression<expression_<T...>>
+  : public std::true_type
+{};
+
+template<typename T, typename U, typename V>
+struct is_expression<if_then_else_<T, U, V>>
   : public std::true_type
 {};
 

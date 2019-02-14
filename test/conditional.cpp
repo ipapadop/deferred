@@ -10,32 +10,30 @@
 
 #include "deferred/conditional.hpp"
 
-#if 0
-
 TEST_CASE("conditional with literal", "[conditional-literal]")
 {
   auto ex = deferred::if_then_else(true, 42, 10);
+
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == 42);
 }
-
-#endif
 
 TEST_CASE("conditional with lambda", "[conditional-lambdas]")
 {
   auto i = 0;
-  auto ex = deferred::if_then_else([] { return true; }, [&] { ++i; return 42; }, [&] { ++i; return 10; });
+  auto j = 0;
+  auto k = 0;
+  auto ex = deferred::if_then_else([&] { ++i; return true; },
+                                   [&] { ++j; return 42; },
+                                   [&] { ++k; return 10; });
+
+  // hmm, it does not seem to detect functions with side-effects
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(i == 0);
+  CHECK(j == 0);
+  CHECK(k == 0);
   CHECK(ex() == 42);
   CHECK(i == 1);
+  CHECK(j == 1);
+  CHECK(k == 0);
 }
-
-#if 0
-TEST_CASE("if with literal", "[conditional-lambda]")
-{
-  auto i = 0;
-  auto ex1 = deferred::if_([&i] { i = 1; });
-  CHECK(i == 0);
-  ex1();
-  CHECK(i == 1);
-}
-#endif

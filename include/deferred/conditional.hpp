@@ -13,7 +13,9 @@
 #include <tuple>
 #include <utility>
 
-#include "invoke.hpp"
+#include "expression.hpp"
+#include "constant.hpp"
+#include "type_traits/is_deferred.hpp"
 
 namespace deferred
 {
@@ -55,19 +57,37 @@ public:
   }
 };
 
+namespace detail
+{
+
+// Transforms T into an expression_ if it is not a deferred data type for use with if_then_else_.
+template<typename T>
+using make_conditional_expression_t =
+  std::conditional_t<
+    is_deferred_v<T>,
+    T,
+    std::conditional_t<
+      std::is_invocable_v<T>,
+      make_expression_t<T>,
+      constant_<T>
+    >
+  >;
+
+} // namespace detail
+
 /**
  * TODO
  */
 template<typename IfExpression, typename ThenExpression, typename ElseExpression>
 constexpr auto if_then_else(IfExpression&& if_, ThenExpression&& then_, ElseExpression&& else_)
 {
-  using if_expression   = decltype(invoke(std::forward<IfExpression>(if_)));
-  using then_expression = decltype(invoke(std::forward<ThenExpression>(then_)));
-  using else_expression = decltype(invoke(std::forward<ElseExpression>(else_)));
-  using result_type     = if_then_else_<if_expression, then_expression, else_expression>;
-  return result_type(invoke(std::forward<IfExpression>(if_)),
-                     invoke(std::forward<ThenExpression>(then_)),
-                     invoke(std::forward<ElseExpression>(else_)));
+  using if_expression   = detail::make_conditional_expression_t<IfExpression>;
+  using then_expression = detail::make_conditional_expression_t<ThenExpression>;
+  using else_expression = detail::make_conditional_expression_t<ElseExpression>;
+  using expression_type = if_then_else_<if_expression, then_expression, else_expression>;
+  return expression_type(std::forward<IfExpression>(if_),
+                         std::forward<ThenExpression>(then_),
+                         std::forward<ElseExpression>(else_));
 }
 
 } // namespace deferred
