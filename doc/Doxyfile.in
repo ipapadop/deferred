@@ -1,0 +1,21 @@
+PROJECT_NAME           = "@CMAKE_PROJECT_NAME@"
+PROJECT_NUMBER         = @VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@
+STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@ \
+                         @PROJECT_BINARY_DIR@
+INPUT                  = @doxy_main_page@ \
+                         @PROJECT_SOURCE_DIR@ \
+                         @PROJECT_BINARY_DIR@
+FILE_PATTERNS          = *.hpp *.cpp
+EXCLUDE_PATTERNS       = */external/* */test/*
+USE_MDFILE_AS_MAINPAGE = @doxy_main_page@
+
+CLASS_GRAPH            = NO
+COLLABORATION_GRAPH    = NO
+EXTRACT_PRIVATE        = NO
+HIDE_UNDOC_CLASSES     = YES
+HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_RELATIONS   = YES
+INTERNAL_DOCS          = NO
+JAVADOC_AUTOBRIEF      = YES
+RECURSIVE              = YES
+SHOW_FILES             = YES
