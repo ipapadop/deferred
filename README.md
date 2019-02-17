@@ -30,28 +30,26 @@ Generate documentation with ``make documentation`` from your build directory.
 Usage
 ------------
 
-.. code:: C++
-
-    // examples/trivial/main.cpp
-    #include <iostream>
-    #include <deferred/deferred.hpp>
+```C++
+// examples/trivial/main.cpp
+#include <iostream>
+#include <deferred/deferred.hpp>
     
-    int main()
-    {
-      auto v = deferred::variable<int>();
-      auto x = deferred::constant(2);
-      auto y = deferred::constant(3);
-      
-      auto expression = (v * x) + y;
-      
-      v = 10;
-      
-      auto res = expression();
-      
-      std::cout << res << "==" << (10 * 2) + 3 << '\n';
-      
-      return 0;
-    }
+int main()
+{
+  auto v = deferred::variable<int>();
+  auto x = deferred::constant(2);
+  auto y = deferred::constant(3);
+
+  auto expression = (v * x) + y;
+  
+  v = 10;
+  
+  auto res = expression();
+  std::cout << res << "==" << (10 * 2) + 3 << '\n';
+  return 0;
+}
+```
 
 Examples can be found in the ``examples/`` directory. They are compiled by default.
 
