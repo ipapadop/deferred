@@ -24,7 +24,7 @@ template<typename T>
 class constant_
 {
 public:
-  using is_constant_expression = std::true_type;
+  using constant_expression = std::true_type;
 
 private:
   T m_t;

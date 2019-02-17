@@ -16,13 +16,15 @@
 #include <functional> // std::invoke
 #include <tuple>      // std::tuple
 
-template<size_t Index = 0, // start iteration at 0 index
-         typename TTuple,  // the tuple type
-         size_t Size = std::tuple_size_v<std::remove_reference_t<TTuple>>, // tuple
-                                                                           // size
-         typename TCallable, // the callable to bo invoked for each tuple item
-         typename... TArgs   // other arguments to be passed to the callable
-         >
+// from
+// https://stackoverflow.com/questions/1198260/how-can-you-iterate-over-the-elements-of-an-stdtuple
+template<
+  size_t Index = 0,
+  typename TTuple,
+  size_t Size = std::tuple_size_v<std::remove_reference_t<TTuple>>,
+  typename TCallable,
+  typename... TArgs
+  >
 void for_each(TTuple&& tuple, TCallable&& callable, TArgs&&... args)
 {
   if constexpr (Index < Size)
@@ -87,20 +89,6 @@ int main()
 {
   using namespace deferred;
 
-  auto v = deferred::variable<int>();
-  auto x = deferred::constant(2);
-  auto y = deferred::constant(3);
-
-  auto expression = (v * x) + y;
-
-  v = 10;
-
-  auto res = expression();
-
-  std::cout << res << "==" << (10 * 2) + 3 << '\n';
-
-  return 0;
-#if 0
   auto a = 2.0f;
   std::valarray<float> x(0.1f, 10);
   std::valarray<float> y(0.2f, 10);
@@ -113,31 +101,21 @@ int main()
   std::cout << "\n\n";
 
   auto da = constant(a);
-  //  std::cout << deferred::type_name<decltype(da)>().c_str() << '\n';
-  //  std::cout << deferred::type_name<decltype(da())>().c_str() << '\n';
   auto dx = constant(x);
-  //  std::cout << deferred::type_name<decltype(dx)>().c_str() << '\n';
-  //  std::cout << deferred::type_name<decltype(dx())>().c_str() << '\n';
   auto dy = constant(y);
-  //  std::cout << deferred::type_name<decltype(dy)>().c_str() << '\n';
-  //  std::cout << deferred::type_name<decltype(dy())>().c_str() << '\n';
 
-#if 1
+  // this is fine
   auto partial_dres = da * dx;
-  // std::cout << deferred::type_name<decltype(partial_dres)>().c_str() << '\n';
+
   std::valarray<float> partial_eval_res = partial_dres();
   std::cout << "partial deferred result: ";
   std::copy(std::cbegin(partial_eval_res),
             std::cend(partial_eval_res),
             std::ostream_iterator<float>(std::cout, " "));
   std::cout << "\n\n";
-#endif
 
-  // partial_dres.visit(print_visitor{});
-
+  // FIXME this is not
   auto dres = partial_dres + dy;
-  // std::cout << deferred::type_name<decltype(dres)>().c_str() << '\n';
-  // std::cout << deferred::type_name<decltype(dres())>().c_str() << '\n';
 
   dres.visit(print_visitor{});
 
@@ -147,6 +125,6 @@ int main()
             std::cend(eval_res),
             std::ostream_iterator<float>(std::cout, " "));
   std::cout << '\n';
-#endif
+
   return 0;
 }

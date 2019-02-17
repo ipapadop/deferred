@@ -22,7 +22,7 @@ template<typename T>
 class [[nodiscard]] variable_
 {
 public:
-  using is_constant_expression = std::false_type;
+  using constant_expression = std::false_type;
 
 private:
   T m_t{};

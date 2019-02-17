@@ -30,7 +30,7 @@ class if_then_else_ :
   private std::tuple<IfExpression, ThenExpression, ElseExpression>
 {
 public:
-  using is_constant_expression =
+  using constant_expression =
     std::conjunction<is_constant_expression<IfExpression>,
                      is_constant_expression<ThenExpression>,
                      is_constant_expression<ElseExpression>>;

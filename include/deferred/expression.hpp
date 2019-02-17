@@ -30,7 +30,7 @@ template<typename Operator, typename... Expressions>
 class expression_ : private Operator, private std::tuple<Expressions...>
 {
 public:
-  using is_constant_expression =
+  using constant_expression =
     std::conjunction<is_constant_expression<Expressions>...>;
 
   using operator_type       = Operator;

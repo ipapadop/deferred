@@ -18,21 +18,23 @@ namespace detail {
 
 // Checks if T is a constant expression.
 template<typename T, typename = std::void_t<>>
-struct is_constant_expression : public std::true_type {};
+struct is_constant_expression : public std::true_type
+{};
 
 // If is_constant_expression is defined, then it is a deferred data type that is
 // potentially a constant expression
 template<typename T>
-struct is_constant_expression<T,
-                              std::void_t<typename T::is_constant_expression>> :
-  public T::is_constant_expression {};
+struct is_constant_expression<T, std::void_t<typename T::constant_expression>> :
+  public T::constant_expression
+{};
 
 } // namespace detail
 
 /// Checks if @p T is a constant expression.
 template<typename T>
 struct is_constant_expression :
-  public detail::is_constant_expression<std::decay_t<T>> {};
+  public detail::is_constant_expression<std::decay_t<T>>
+{};
 
 /// Alias for @c is_constant::type.
 template<typename T>
