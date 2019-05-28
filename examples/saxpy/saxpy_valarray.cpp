@@ -95,8 +95,8 @@ int main()
   std::valarray<float> res = a * x + y;
 
   std::cout << "valarray result: ";
-  std::copy(std::cbegin(res),
-            std::cend(res),
+  std::copy(std::begin(res),
+            std::end(res),
             std::ostream_iterator<float>(std::cout, " "));
   std::cout << "\n\n";
 
@@ -109,8 +109,8 @@ int main()
 
   std::valarray<float> partial_eval_res = partial_dres();
   std::cout << "partial deferred result: ";
-  std::copy(std::cbegin(partial_eval_res),
-            std::cend(partial_eval_res),
+  std::copy(std::begin(partial_eval_res),
+            std::end(partial_eval_res),
             std::ostream_iterator<float>(std::cout, " "));
   std::cout << "\n\n";
 
@@ -121,8 +121,8 @@ int main()
 
   std::valarray<float> eval_res = dres();
   std::cout << "deferred result: ";
-  std::copy(std::cbegin(eval_res),
-            std::cend(eval_res),
+  std::copy(std::begin(eval_res),
+            std::end(eval_res),
             std::ostream_iterator<float>(std::cout, " "));
   std::cout << '\n';
 
