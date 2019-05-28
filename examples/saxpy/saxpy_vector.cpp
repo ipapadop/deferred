@@ -6,8 +6,8 @@
  * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
  */
 
-#include <iterator>
 #include <iostream>
+#include <iterator>
 #include <vector>
 
 #include "deferred/deferred.hpp"
@@ -36,10 +36,12 @@ int main()
   std::vector<float> x(10, 0.1f);
   std::vector<float> y(10, 0.2f);
   auto mult = multiply_scalar_vector(a, x);
-  auto res = add_vectors(std::move(mult), y);
+  auto res  = add_vectors(std::move(mult), y);
 
   std::cout << "vector result:   ";
-  std::copy(std::cbegin(res), std::cend(res), std::ostream_iterator<float>(std::cout, " "));
+  std::copy(std::begin(res),
+            std::end(res),
+            std::ostream_iterator<float>(std::cout, " "));
   std::cout << '\n';
 
   auto da    = constant(a);
@@ -50,7 +52,9 @@ int main()
 
   auto eval_res = dres();
   std::cout << "deferred result: ";
-  std::copy(std::cbegin(eval_res), std::cend(eval_res), std::ostream_iterator<float>(std::cout, " "));
+  std::copy(std::begin(eval_res),
+            std::end(eval_res),
+            std::ostream_iterator<float>(std::cout, " "));
   std::cout << '\n';
 
   return 0;
