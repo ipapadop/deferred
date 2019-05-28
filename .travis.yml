@@ -25,7 +25,7 @@ matrix:
 
     # Xcode 9.1
     - os: osx
-      env: UNIT_TESTS=true COMPILER=clang++-7
+      env: UNIT_TESTS=true
       osx_image: xcode9.1
 
 install:
@@ -34,7 +34,7 @@ install:
   - mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
 
   # compiler
-  - export CXX=${COMPILER}
+  - if [[ "${COMPILER}" != "" ]]; then export CXX=${COMPILER}; fi
   - ${CXX} --version
 
   # cmake
