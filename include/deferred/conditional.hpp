@@ -65,18 +65,6 @@ public:
   }
 };
 
-namespace detail {
-
-// Transforms T into an expression_ if it is not a deferred data type for use
-// with if_then_else_.
-template<typename T>
-using make_conditional_expression_t = std::conditional_t<
-  is_deferred_v<T>,
-  T,
-  std::conditional_t<std::is_invocable_v<T>, make_expression_t<T>, constant_<T>>>;
-
-} // namespace detail
-
 /**
  * Creates a new deferred conditional that evaluates @p then_ if @p if_
  * evaluates to @c true, otherwise it evaluates @p else_.
@@ -85,9 +73,9 @@ template<typename IfExpression, typename ThenExpression, typename ElseExpression
 constexpr auto
 if_then_else(IfExpression&& if_, ThenExpression&& then_, ElseExpression&& else_)
 {
-  using if_expression   = detail::make_conditional_expression_t<IfExpression>;
-  using then_expression = detail::make_conditional_expression_t<ThenExpression>;
-  using else_expression = detail::make_conditional_expression_t<ElseExpression>;
+  using if_expression   = make_expression_t<IfExpression>;
+  using then_expression = make_expression_t<ThenExpression>;
+  using else_expression = make_expression_t<ElseExpression>;
   using expression_type =
     if_then_else_<if_expression, then_expression, else_expression>;
   return expression_type(std::forward<IfExpression>(if_),

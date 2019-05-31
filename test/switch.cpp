@@ -12,11 +12,9 @@
 
 TEST_CASE("switch with literal", "[switch-literal]")
 {
-  auto ex =
-    deferred::switch_(
-      2,
-      deferred::case_(1, [] { return 0; }),
-      deferred::case_(2, [] { return 10; }));
+  auto ex = deferred::switch_(2,
+                              deferred::case_(1, [] { return 0; }),
+                              deferred::case_(2, [] { return 10; }));
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == 10);
@@ -24,12 +22,18 @@ TEST_CASE("switch with literal", "[switch-literal]")
 
 TEST_CASE("switch with literal and default", "[switch-literal-default]")
 {
-  auto ex =
-    deferred::switch_(
-      3,
-      deferred::case_(1, [] { return 0; }),
-      deferred::case_(2, [] { return 10; }),
-      deferred::default_([] { return 100; }));
+  auto ex = deferred::switch_(3,
+                              deferred::case_(1, [] { return 0; }),
+                              deferred::case_(2, [] { return 10; }),
+                              deferred::default_([] { return 100; }));
+
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  CHECK(ex() == 100);
+}
+
+TEST_CASE("switch with case constants", "[switch-case-constant]")
+{
+  auto ex = deferred::switch_(3, 0, 10, 100);
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == 100);
