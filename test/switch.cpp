@@ -10,6 +10,26 @@
 
 #include "deferred/switch.hpp"
 
+TEST_CASE("case with literal", "[case-literal]")
+{
+  auto ex = deferred::case_(2, 0);  
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  CHECK(ex.compare(1) == false);
+  CHECK(ex.compare(2) == true);
+  CHECK(ex() == 0);
+}
+
+TEST_CASE("case with lambda", "[case-lambda]")
+{
+  auto ex = deferred::case_([] { return 2; }, [] { return 0; });  
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  CHECK(ex.compare(1) == false);
+  CHECK(ex.compare(2) == true);
+  CHECK(ex() == 0);
+}
+
+# if 0
+
 TEST_CASE("switch with literal", "[switch-literal]")
 {
   auto ex = deferred::switch_(2,
@@ -38,3 +58,5 @@ TEST_CASE("switch with case constants", "[switch-case-constant]")
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == 100);
 }
+
+#endif
