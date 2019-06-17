@@ -105,6 +105,7 @@ private:
 public:
   using constant_expression =
     std::conjunction<is_constant_expression<SwitchExpression>,
+                     is_constant_expression<DefaultExpression>,
                      is_constant_expression<CaseExpression>...>;
 
   using result_type =
@@ -120,33 +121,37 @@ public:
       std::forward<CaseEx>(cs)...)
   {}
 
+private:
+  /**
+   * Traverses the cases until one matches.
+   *
+   * If none does, the default (@c 0) is returned.
+   */
   template<std::size_t I, typename T>
-  constexpr decltype(auto) compare(T&& t) const
-  {
-    return std::get<I>(static_cast<subexpression_types const&>(*this))
-      .compare(std::forward<T>(t));
-  }
-
-  template<typename T>
   constexpr result_type choose_case(T&& t) const
   {
-    // TODO iterate over all
-    if (compare<2>(t))
+    if constexpr (I == std::tuple_size<subexpression_types>::value)
     {
-      return std::get<2>(static_cast<subexpression_types const&>(*this))();
+      // return default case
+      return std::get<1>(static_cast<subexpression_types const&>(*this))();
     }
-    if (compare<3>(t))
+    else
     {
-      return std::get<3>(static_cast<subexpression_types const&>(*this))();
-    }
+      if (std::get<I>(static_cast<subexpression_types const&>(*this))
+            .compare(std::forward<T>(t)))
+      {
+        return std::get<I>(static_cast<subexpression_types const&>(*this))();
+      }
 
-    // return default
-    return std::get<1>(static_cast<subexpression_types const&>(*this))();
+      return choose_case<I + 1>(std::forward<T>(t));
+    }
   }
 
+public:
   constexpr result_type operator()() const
   {
-    return choose_case(
+    // start from second case, as first is the default
+    return choose_case<2>(
       std::get<0>(static_cast<subexpression_types const&>(*this))());
   }
 
