@@ -127,10 +127,9 @@ public:
       .compare(std::forward<T>(t));
   }
 
-  constexpr result_type operator()() const
+  template<typename T>
+  constexpr result_type choose_case(T&& t) const
   {
-    auto&& t = std::get<0>(static_cast<subexpression_types const&>(*this))();
-
     // TODO iterate over all
     if (compare<2>(t))
     {
@@ -143,6 +142,12 @@ public:
 
     // return default
     return std::get<1>(static_cast<subexpression_types const&>(*this))();
+  }
+
+  constexpr result_type operator()() const
+  {
+    return choose_case(
+      std::get<0>(static_cast<subexpression_types const&>(*this))());
   }
 
   template<typename Visitor>
