@@ -60,7 +60,7 @@ public:
     return static_cast<Operator const&>(*this);
   }
 
-  subexpression_types const& subexpressions() const noexcept
+  decltype(auto) subexpressions() const noexcept
   {
     return static_cast<subexpression_types const&>(*this);
   }

@@ -29,14 +29,18 @@ template<typename IfExpression, typename ThenExpression, typename ElseExpression
 class if_then_else_ :
   private std::tuple<IfExpression, ThenExpression, ElseExpression>
 {
+private:
+  using subexpression_types =
+    std::tuple<IfExpression, ThenExpression, ElseExpression>;
+
 public:
   using constant_expression =
     std::conjunction<is_constant_expression<IfExpression>,
                      is_constant_expression<ThenExpression>,
                      is_constant_expression<ElseExpression>>;
-
-  using subexpression_types =
-    std::tuple<IfExpression, ThenExpression, ElseExpression>;
+  using result_type =
+    std::common_type_t<decltype(std::declval<ThenExpression>()()),
+                       decltype(std::declval<ElseExpression>()())>;
 
   template<typename IfEx, typename ThenEx, typename ElseEx>
   constexpr explicit if_then_else_(IfEx&& if_, ThenEx&& then_, ElseEx&& else_) :
@@ -46,7 +50,7 @@ public:
       std::forward<ElseEx>(else_))
   {}
 
-  constexpr decltype(auto) operator()() const
+  constexpr result_type operator()() const
   {
     if (std::get<0>(static_cast<subexpression_types const&>(*this))())
     {
@@ -68,6 +72,9 @@ public:
 /**
  * Creates a new deferred conditional that evaluates @p then_ if @p if_
  * evaluates to @c true, otherwise it evaluates @p else_.
+ *
+ * The result type of <tt>if_then_else(...)()</tt> is the @c std::common_type of
+ * the result types of @p then_ and @p else_.
  */
 template<typename IfExpression, typename ThenExpression, typename ElseExpression>
 constexpr auto
