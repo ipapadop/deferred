@@ -1,18 +1,16 @@
 set(SOURCES
   conditional.cpp
   constant.cpp
-  invoke.cpp
   main.cpp
-  operators.cpp
   switch.cpp
   variable.cpp)
 
-add_executable(deferred_unit_tests ${SOURCES})
+add_executable(deferred_integration_tests ${SOURCES})
 
-target_compile_options(deferred_unit_tests
+target_compile_options(deferred_integration_tests
   PRIVATE
     -Wall -Wpedantic -Werror)
-target_link_libraries(deferred_unit_tests
+target_link_libraries(deferred_integration_tests
   PRIVATE
     deferred
     Catch2::Catch2)
@@ -20,6 +18,6 @@ target_link_libraries(deferred_unit_tests
 include(CTest)
 add_test(
   NAME
-    UnitTests
+    IntegrationTests
   COMMAND
-    deferred_unit_tests)
+    deferred_integration_tests)
