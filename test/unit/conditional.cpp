@@ -18,6 +18,15 @@ TEST_CASE("conditional with literal", "[conditional-literal]")
   CHECK(ex() == 42);
 }
 
+TEST_CASE("conditional with constexpr", "[conditional-constexpr]")
+{
+  constexpr auto ex = deferred::if_then_else(true, 42, 10);
+
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  static_assert(ex() == 42, "constexpr failed");
+  CHECK(ex() == 42);
+}
+
 TEST_CASE("conditional with different result types", "[conditional-diff-types]")
 {
   auto ex = deferred::if_then_else(true, 42, false);
@@ -53,5 +62,28 @@ TEST_CASE("conditional with lambda", "[conditional-lambdas]")
   CHECK(ex() == 42);
   CHECK(i == 1);
   CHECK(j == 1);
+  CHECK(k == 0);
+}
+
+TEST_CASE("conditional with mutable lambda", "[conditional-mutable-lambdas]")
+{
+  auto i  = 0;
+  auto j  = 0;
+  auto k  = 0;
+  auto ex = deferred::if_then_else([i]() mutable { return i++ == 1; },
+                                   [j]() mutable { return ++j; },
+                                   [k]() mutable {
+                                     ++k;
+                                     return ++k;
+                                   });
+
+  // it cannot detect functions with side-effects
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  CHECK(i == 0);
+  CHECK(j == 0);
+  CHECK(k == 0);
+  CHECK(ex() == 2);
+  CHECK(i == 0);
+  CHECK(j == 0);
   CHECK(k == 0);
 }

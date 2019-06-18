@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "constant.hpp"
+#include "apply.hpp"
 #include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 #include "type_traits/is_expression.hpp"
@@ -42,17 +43,16 @@ public:
                                       std::forward<Ex>(ex)...)
   {}
 
-private:
-  template<std::size_t... I>
-  constexpr decltype(auto) call(std::index_sequence<I...>) const
-  {
-    return Operator::operator()(std::get<I> (*this)()...);
-  }
-
-public:
   constexpr decltype(auto) operator()() const
   {
-    return call(std::index_sequence_for<Expressions...>{});
+    return deferred::apply(static_cast<Operator const&>(*this),
+                           static_cast<subexpression_types const&>(*this));
+  }
+
+  constexpr decltype(auto) operator()()
+  {
+    return deferred::apply(static_cast<Operator&>(*this),
+                           static_cast<subexpression_types&>(*this));
   }
 
   operator_type const& operator_() const noexcept

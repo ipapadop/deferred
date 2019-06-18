@@ -24,8 +24,14 @@ TEST_CASE("empty variable", "[variable-empty]")
 
 TEST_CASE("initialized variable", "[variable-init]")
 {
-  auto v = deferred::variable(42);
+  constexpr auto v = deferred::variable(42);
   CHECK(v() == 42);
+}
+
+TEST_CASE("constexpr variable", "[variable-constexpr]")
+{
+  constexpr auto v = deferred::variable(42);
+  static_assert(v() == 42);
 }
 
 TEST_CASE("variable from lambda", "[variable-from-lambda]")
@@ -37,6 +43,13 @@ TEST_CASE("variable from lambda", "[variable-from-lambda]")
   });
   CHECK(i == 1);
   CHECK(v() == 10);
+}
+
+TEST_CASE("variable from mutable lambda", "[variable-from-mutable-lambda]")
+{
+  auto v = deferred::variable([i = 0]() mutable { return ++i; });
+  CHECK(v() == 1);
+  CHECK(v() == 1);
 }
 
 namespace {

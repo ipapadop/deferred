@@ -13,7 +13,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "type_traits/is_constant.hpp"
 #include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 

@@ -154,6 +154,13 @@ TEST_CASE("invoke lambda", "[invoke-lambda]")
   CHECK(i == 1);
 }
 
+TEST_CASE("invoke mutable lambda", "[invoke-mutable-lambda]")
+{
+  auto ex = deferred::invoke([i = 0]() mutable { return ++i; });
+  CHECK(ex() == 1);
+  CHECK(ex() == 2);
+}
+
 TEST_CASE("invoke expression", "[invoke-expression]")
 {
   auto v = deferred::variable<int>();

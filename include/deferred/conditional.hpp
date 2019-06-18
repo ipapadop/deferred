@@ -14,38 +14,41 @@
 #include <type_traits>
 #include <utility>
 
-#include "constant.hpp"
 #include "expression.hpp"
 #include "type_traits/is_constant_expression.hpp"
-#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
 
 /**
- * Deferred conditional that evaluates @p ThenExpression if @p IfExpression
- * evaluates to @c true, otherwise it evaluates @p ElseExpression.
+ * Deferred conditional that evaluates @p ThenExpression if @p
+ * ConditionExpression evaluates to @c true, otherwise it evaluates @p
+ * ElseExpression.
  */
-template<typename IfExpression, typename ThenExpression, typename ElseExpression>
-class if_then_else_ :
-  private std::tuple<IfExpression, ThenExpression, ElseExpression>
+template<typename ConditionExpression,
+         typename ThenExpression,
+         typename ElseExpression>
+class if_then_else_expression :
+  private std::tuple<ConditionExpression, ThenExpression, ElseExpression>
 {
 private:
   using subexpression_types =
-    std::tuple<IfExpression, ThenExpression, ElseExpression>;
+    std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
 
 public:
   using constant_expression =
-    std::conjunction<is_constant_expression<IfExpression>,
+    std::conjunction<is_constant_expression<ConditionExpression>,
                      is_constant_expression<ThenExpression>,
                      is_constant_expression<ElseExpression>>;
   using result_type =
     std::common_type_t<decltype(std::declval<ThenExpression>()()),
                        decltype(std::declval<ElseExpression>()())>;
 
-  template<typename IfEx, typename ThenEx, typename ElseEx>
-  constexpr explicit if_then_else_(IfEx&& if_, ThenEx&& then_, ElseEx&& else_) :
-    std::tuple<IfExpression, ThenExpression, ElseExpression>(
-      std::forward<IfEx>(if_),
+  template<typename Condition, typename ThenEx, typename ElseEx>
+  constexpr explicit if_then_else_expression(Condition&& condition,
+                                             ThenEx&& then_,
+                                             ElseEx&& else_) :
+    std::tuple<ConditionExpression, ThenExpression, ElseExpression>(
+      std::forward<Condition>(condition),
       std::forward<ThenEx>(then_),
       std::forward<ElseEx>(else_))
   {}
@@ -62,6 +65,18 @@ public:
     }
   }
 
+  constexpr result_type operator()()
+  {
+    if (std::get<0>(static_cast<subexpression_types&>(*this))())
+    {
+      return std::get<1>(static_cast<subexpression_types&>(*this))();
+    }
+    else
+    {
+      return std::get<2>(static_cast<subexpression_types&>(*this))();
+    }
+  }
+
   template<typename Visitor>
   constexpr decltype(auto) visit(Visitor&& v) const
   {
@@ -70,11 +85,11 @@ public:
 };
 
 /**
- * Creates a new deferred conditional that evaluates @p then_ if @p if_
+ * Creates a new deferred conditional that evaluates @p then_ if @p condition
  * evaluates to @c true, otherwise it evaluates @p else_.
  *
- * The result type of <tt>if_then_else(...)()</tt> is the @c std::common_type of
- * the result types of @p then_ and @p else_.
+ * The result type of <tt>if_then_else_expression(...)()</tt> is the @c
+ * std::common_type of the result types of @p then_ and @p else_.
  *
  * Example:
  * @code
@@ -84,18 +99,22 @@ public:
  * assert(v() == 42);
  * @endcode
  */
-template<typename IfExpression, typename ThenExpression, typename ElseExpression>
-constexpr auto
-if_then_else(IfExpression&& if_, ThenExpression&& then_, ElseExpression&& else_)
+template<typename ConditionExpression,
+         typename ThenExpression,
+         typename ElseExpression>
+constexpr auto if_then_else(ConditionExpression&& condition,
+                            ThenExpression&& then_,
+                            ElseExpression&& else_)
 {
-  using if_expression   = make_expression_t<IfExpression>;
-  using then_expression = make_expression_t<ThenExpression>;
-  using else_expression = make_expression_t<ElseExpression>;
-  using expression_type =
-    if_then_else_<if_expression, then_expression, else_expression>;
-  return expression_type(std::forward<IfExpression>(if_),
-                         std::forward<ThenExpression>(then_),
-                         std::forward<ElseExpression>(else_));
+  using condition_expression = make_expression_t<ConditionExpression>;
+  using then_expression      = make_expression_t<ThenExpression>;
+  using else_expression      = make_expression_t<ElseExpression>;
+  return if_then_else_expression<condition_expression,
+                                 then_expression,
+                                 else_expression>(
+    std::forward<ConditionExpression>(condition),
+    std::forward<ThenExpression>(then_),
+    std::forward<ElseExpression>(else_));
 }
 
 } // namespace deferred

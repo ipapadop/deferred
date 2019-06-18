@@ -13,10 +13,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "constant.hpp"
 #include "expression.hpp"
 #include "type_traits/is_constant_expression.hpp"
-#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
 
@@ -92,19 +90,19 @@ struct is_valid_case<case_expression<T, U>> : public std::true_type
 /**
  * Deferred switch
  */
-template<typename SwitchExpression,
+template<typename ConditionExpression,
          typename DefaultExpression,
          typename... CaseExpression>
 class switch_expression :
-  private std::tuple<SwitchExpression, DefaultExpression, CaseExpression...>
+  private std::tuple<ConditionExpression, DefaultExpression, CaseExpression...>
 {
 private:
   using subexpression_types =
-    std::tuple<SwitchExpression, DefaultExpression, CaseExpression...>;
+    std::tuple<ConditionExpression, DefaultExpression, CaseExpression...>;
 
 public:
   using constant_expression =
-    std::conjunction<is_constant_expression<SwitchExpression>,
+    std::conjunction<is_constant_expression<ConditionExpression>,
                      is_constant_expression<DefaultExpression>,
                      is_constant_expression<CaseExpression>...>;
 
@@ -112,14 +110,14 @@ public:
     std::common_type_t<decltype(std::declval<DefaultExpression>()()),
                        decltype(std::declval<CaseExpression>()())...>;
 
-  template<typename SwitchEx, typename DefaultEx, typename... CaseEx>
-  constexpr explicit switch_expression(SwitchEx&& sw,
-                                       DefaultEx&& df,
-                                       CaseEx&&... cs) :
-    std::tuple<SwitchExpression, DefaultEx, CaseExpression...>(
-      std::forward<SwitchEx>(sw),
-      std::forward<DefaultEx>(df),
-      std::forward<CaseEx>(cs)...)
+  template<typename Condition, typename Default, typename... Case>
+  constexpr explicit switch_expression(Condition&& condition,
+                                       Default&& df,
+                                       Case&&... cs) :
+    std::tuple<ConditionExpression, Default, CaseExpression...>(
+      std::forward<Condition>(condition),
+      std::forward<Default>(df),
+      std::forward<Case>(cs)...)
   {}
 
 private:
@@ -150,12 +148,41 @@ private:
     }
   }
 
+  /// @copydoc choose_case(T&&) const
+  template<std::size_t I, typename T>
+  constexpr result_type choose_case(T&& t)
+  {
+    if constexpr (I < std::tuple_size<subexpression_types>::value)
+    {
+      auto& case_ex = std::get<I>(static_cast<subexpression_types&>(*this));
+      if (case_ex.compare(std::forward<T>(t)))
+      {
+        return case_ex();
+      }
+
+      return choose_case<I + 1>(std::forward<T>(t));
+    }
+    else
+    {
+      auto& default_ex =
+        std::get<DefaultExpression>(static_cast<subexpression_types&>(*this));
+      return default_ex();
+    }
+  }
+
 public:
   constexpr result_type operator()() const
   {
     // start from second case, as first is the default
-    return choose_case<2>(std::get<SwitchExpression>(
+    return choose_case<2>(std::get<ConditionExpression>(
       static_cast<subexpression_types const&>(*this))());
+  }
+
+  constexpr result_type operator()()
+  {
+    // start from second case, as first is the default
+    return choose_case<2>(std::get<ConditionExpression>(
+      static_cast<subexpression_types&>(*this))());
   }
 
   template<typename Visitor>
@@ -165,7 +192,7 @@ public:
   }
 };
 
-/// Creates a default case for use with @ref switch_.
+/// Creates a default case for use with @ref switch_().
 template<typename Expression>
 auto default_(Expression&& ex)
 {
@@ -173,7 +200,7 @@ auto default_(Expression&& ex)
   return default_expression<expression>(std::forward<Expression>(ex));
 }
 
-/// Creates a case for use with @ref switch_.
+/// Creates a case for use with @ref switch_().
 template<typename LabelExpression, typename BodyExpression>
 auto case_(LabelExpression&& label, BodyExpression&& body)
 {
@@ -184,10 +211,10 @@ auto case_(LabelExpression&& label, BodyExpression&& body)
 }
 
 /**
- * Creates a new @ref switch_expression that checks @p sw against the list of
- * cases @p ex.
+ * Creates a new @ref switch_expression that checks @p condition against the
+ * list of cases @p case_.
  *
- * If none of @p ex matches, it returns the result of @p df.
+ * If none of @p case_ matches, it returns the result of @p default_.
  *
  * Example:
  * @code
@@ -200,12 +227,12 @@ auto case_(LabelExpression&& label, BodyExpression&& body)
  *                         [] { return "result of foo"; }));
  * @endcode
  */
-template<typename SwitchExpression,
+template<typename ConditionExpression,
          typename DefaultExpression,
          typename... CaseExpressions>
-auto switch_(SwitchExpression&& sw,
-             DefaultExpression&& df,
-             CaseExpressions&&... ex)
+constexpr auto switch_(ConditionExpression&& condition,
+                       DefaultExpression&& default_,
+                       CaseExpressions&&... case_)
 {
   static_assert(
     std::conjunction_v<detail::is_valid_default<std::decay_t<DefaultExpression>>>,
@@ -213,12 +240,12 @@ auto switch_(SwitchExpression&& sw,
   static_assert(
     std::conjunction_v<detail::is_valid_case<std::decay_t<CaseExpressions>>...>,
     "One or more cases are not valid deferred case expressions");
-  return switch_expression<make_expression_t<SwitchExpression>,
+  return switch_expression<make_expression_t<ConditionExpression>,
                            std::decay_t<DefaultExpression>,
                            std::decay_t<CaseExpressions>...>(
-    std::forward<SwitchExpression>(sw),
-    std::forward<DefaultExpression>(df),
-    std::forward<CaseExpressions>(ex)...);
+    std::forward<ConditionExpression>(condition),
+    std::forward<DefaultExpression>(default_),
+    std::forward<CaseExpressions>(case_)...);
 }
 
 } // namespace deferred
