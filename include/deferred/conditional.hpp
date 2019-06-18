@@ -75,6 +75,14 @@ public:
  *
  * The result type of <tt>if_then_else(...)()</tt> is the @c std::common_type of
  * the result types of @p then_ and @p else_.
+ *
+ * Example:
+ * @code
+ * auto v = variable<bool>();
+ * auto ex = if_then_else(v, constant(42), constant(10));
+ * v = true;
+ * assert(v() == 42);
+ * @endcode
  */
 template<typename IfExpression, typename ThenExpression, typename ElseExpression>
 constexpr auto

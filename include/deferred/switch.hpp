@@ -52,8 +52,8 @@ public:
   template<typename T>
   constexpr decltype(auto) compare(T&& t) const
   {
-    return std::forward<T>(t)
-           == std::get<0>(static_cast<subexpression_types const&>(*this))();
+    auto& ex = std::get<0>(static_cast<subexpression_types const&>(*this));
+    return std::forward<T>(t) == ex();
   }
 
   /// Returns the result of the body expression.
@@ -109,7 +109,8 @@ public:
                      is_constant_expression<CaseExpression>...>;
 
   using result_type =
-    std::common_type_t<decltype(std::declval<CaseExpression>()())...>;
+    std::common_type_t<decltype(std::declval<DefaultExpression>()()),
+                       decltype(std::declval<CaseExpression>()())...>;
 
   template<typename SwitchEx, typename DefaultEx, typename... CaseEx>
   constexpr explicit switch_expression(SwitchEx&& sw,
@@ -125,25 +126,27 @@ private:
   /**
    * Traverses the cases until one matches.
    *
-   * If none does, the default (@c 0) is returned.
+   * If none does, the default (@c std::tuple_element<1>) is returned.
    */
   template<std::size_t I, typename T>
   constexpr result_type choose_case(T&& t) const
   {
-    if constexpr (I == std::tuple_size<subexpression_types>::value)
+    if constexpr (I < std::tuple_size<subexpression_types>::value)
     {
-      // return default case
-      return std::get<1>(static_cast<subexpression_types const&>(*this))();
-    }
-    else
-    {
-      if (std::get<I>(static_cast<subexpression_types const&>(*this))
-            .compare(std::forward<T>(t)))
+      auto& case_ex =
+        std::get<I>(static_cast<subexpression_types const&>(*this));
+      if (case_ex.compare(std::forward<T>(t)))
       {
-        return std::get<I>(static_cast<subexpression_types const&>(*this))();
+        return case_ex();
       }
 
       return choose_case<I + 1>(std::forward<T>(t));
+    }
+    else
+    {
+      auto& default_ex = std::get<DefaultExpression>(
+        static_cast<subexpression_types const&>(*this));
+      return default_ex();
     }
   }
 
@@ -151,8 +154,8 @@ public:
   constexpr result_type operator()() const
   {
     // start from second case, as first is the default
-    return choose_case<2>(
-      std::get<0>(static_cast<subexpression_types const&>(*this))());
+    return choose_case<2>(std::get<SwitchExpression>(
+      static_cast<subexpression_types const&>(*this))());
   }
 
   template<typename Visitor>
@@ -162,6 +165,7 @@ public:
   }
 };
 
+/// Creates a default case for use with @ref switch_.
 template<typename Expression>
 auto default_(Expression&& ex)
 {
@@ -169,6 +173,7 @@ auto default_(Expression&& ex)
   return default_expression<expression>(std::forward<Expression>(ex));
 }
 
+/// Creates a case for use with @ref switch_.
 template<typename LabelExpression, typename BodyExpression>
 auto case_(LabelExpression&& label, BodyExpression&& body)
 {
@@ -178,6 +183,23 @@ auto case_(LabelExpression&& label, BodyExpression&& body)
     std::forward<LabelExpression>(label), std::forward<BodyExpression>(body));
 }
 
+/**
+ * Creates a new @ref switch_expression that checks @p sw against the list of
+ * cases @p ex.
+ *
+ * If none of @p ex matches, it returns the result of @p df.
+ *
+ * Example:
+ * @code
+ * auto var = variable<int>();
+ * auto ex = switch_(var,
+ *                   default_("unknown"),
+ *                   case_(10,
+ *                         [] { return "10"; }),
+ *                   case_([] { return foo(); },
+ *                         [] { return "result of foo"; }));
+ * @endcode
+ */
 template<typename SwitchExpression,
          typename DefaultExpression,
          typename... CaseExpressions>
