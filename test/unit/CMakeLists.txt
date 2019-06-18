@@ -5,7 +5,8 @@ set(SOURCES
   main.cpp
   operators.cpp
   switch.cpp
-  variable.cpp)
+  variable.cpp
+  while.cpp)
 
 add_executable(deferred_unit_tests ${SOURCES})
 

@@ -33,12 +33,26 @@ TEST_CASE("conditional with variable", "[conditional-variable]")
   CHECK(ex() == 42);
 }
 
-
 TEST_CASE("conditional chain", "[conditional-chain]")
 {
   auto v   = deferred::variable<bool>();
   auto ex1 = deferred::if_then_else(v, 42, 10);
   auto ex2 = deferred::if_then_else(ex1 == 42, 1337, 0);
+
+  static_assert(!deferred::is_constant_expression_v<decltype(ex2)>);
+
+  v = true;
+  CHECK(ex2() == 1337);
+
+  v = false;
+  CHECK(ex2() == 0);
+}
+
+TEST_CASE("conditional with nested deferred", "[conditional-deferred]")
+{
+  auto v   = deferred::variable<bool>();
+  auto ex1 = deferred::if_then_else(v, 42, 10);
+  auto ex2 = deferred::if_then_else([&] { return ex1 == 42; }, 1337, 0);
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex2)>);
 

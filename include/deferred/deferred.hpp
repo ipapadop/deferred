@@ -18,5 +18,6 @@
 #include "operators.hpp"
 #include "switch.hpp"
 #include "variable.hpp"
+#include "while.hpp"
 
 #endif

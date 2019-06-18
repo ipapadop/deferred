@@ -4,7 +4,8 @@ set(SOURCES
   constant.cpp
   main.cpp
   switch.cpp
-  variable.cpp)
+  variable.cpp
+  while.cpp)
 
 add_executable(deferred_integration_tests ${SOURCES})
 
