@@ -13,6 +13,7 @@
 #include <type_traits>
 
 namespace deferred {
+
 namespace detail {
 
 // Wraps a function pointer

@@ -14,9 +14,16 @@
 
 TEST_CASE("constant from lvalue", "[constantf-from-lvalue]")
 {
-  auto i = 4;
-  auto c = deferred::constant(i);
+  auto const i = 4;
+  auto c       = deferred::constant(i);
   CHECK(c() == i);
+
+  SECTION("constexpr")
+  {
+    constexpr auto c2 = deferred::constant(i);
+    CHECK(c2() == 4);
+    static_assert(c2() == 4, "constexpr failed");
+  }
 }
 
 TEST_CASE("constant from prvalue", "[constant-from-prvalue]")
@@ -46,6 +53,7 @@ TEST_CASE("constant from constant", "[constant-from-constant]")
   constexpr auto c2 = deferred::constant(c1);
   static_assert(std::is_same_v<decltype(c1), decltype(c2)>,
                 "copy created nested type");
+  static_assert(c2() == 4, "constexpr failed");
   CHECK(c2() == 4);
 }
 
@@ -60,6 +68,15 @@ TEST_CASE("constant from lambda", "[constant-from-lambda]")
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
   CHECK(i == 1);
   CHECK(c() == 10);
+}
+
+TEST_CASE("constant from mutable lambda", "[constant-from-mutable-lambda]")
+{
+  auto c = deferred::constant([i = 0]() mutable { return ++i; });
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
+  CHECK(c() == 1);
+  CHECK(c() == 1);
 }
 
 namespace {

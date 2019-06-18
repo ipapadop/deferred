@@ -54,6 +54,11 @@ public:
     return *this;
   }
 
+  constexpr T const& operator()() const& noexcept
+  {
+    return m_t;
+  }
+
   constexpr T& operator()() & noexcept
   {
     return m_t;
