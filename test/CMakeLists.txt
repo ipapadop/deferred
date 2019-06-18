@@ -6,6 +6,8 @@ set(SOURCES
   invoke.cpp
   main.cpp
   operators.cpp
+  switch.cpp
+  switch_expressions.cpp
   variable.cpp
   variable_expressions.cpp)
 

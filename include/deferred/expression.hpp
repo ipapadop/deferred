@@ -60,7 +60,7 @@ public:
     return static_cast<Operator const&>(*this);
   }
 
-  subexpression_types const& subexpressions() const noexcept
+  decltype(auto) subexpressions() const noexcept
   {
     return static_cast<subexpression_types const&>(*this);
   }
@@ -76,18 +76,31 @@ namespace detail {
 
 // Transforms T into a constant_ if it is not a deferred data type.
 template<typename T>
-using make_expression_arg_t =
+using make_callable_arg_t =
   std::conditional_t<is_deferred_v<T>, T, constant_<T>>;
 
 } // namespace detail
 
-/// Transforms @p T into an @ref expression_ if it is not a deferred data type.
-template<typename T, typename... Args>
-using make_expression_t =
-  std::conditional_t<is_expression_v<T>,
-                     T,
-                     expression_<make_function_object_t<T>,
-                                 detail::make_expression_arg_t<Args>...>>;
+/**
+ * @brief Transforms @p Callable into an @ref expression_ if it is not a
+ * deferred data type.
+ */
+template<typename Callable, typename... Args>
+using make_callable_t =
+  std::conditional_t<is_expression_v<Callable>,
+                     Callable,
+                     expression_<make_function_object_t<Callable>,
+                                 detail::make_callable_arg_t<Args>...>>;
+
+/**
+ * @brief Transforms @p T into an @ref expression_ if it is not a deferred data
+ * type.
+ */
+template<typename T>
+using make_expression_t = std::conditional_t<
+  is_deferred_v<T>,
+  T,
+  std::conditional_t<std::is_invocable_v<T>, make_callable_t<T>, constant_<T>>>;
 
 } // namespace deferred
 

@@ -25,7 +25,7 @@ namespace deferred {
 template<typename F, typename... Args>
 constexpr auto invoke(F&& f, Args&&... args)
 {
-  using expression_type = make_expression_t<F, Args...>;
+  using expression_type = make_callable_t<F, Args...>;
   return expression_type(std::forward<F>(f), std::forward<Args>(args)...);
 }
 

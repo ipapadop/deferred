@@ -15,6 +15,7 @@
 #include "expression.hpp"
 #include "invoke.hpp"
 #include "operators.hpp"
+#include "switch.hpp"
 #include "variable.hpp"
 
 #endif

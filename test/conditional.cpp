@@ -18,6 +18,14 @@ TEST_CASE("conditional with literal", "[conditional-literal]")
   CHECK(ex() == 42);
 }
 
+TEST_CASE("conditional with different result types", "[conditional-diff-types]")
+{
+  auto ex = deferred::if_then_else(true, 42, false);
+
+  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  CHECK(ex() == 42);
+}
+
 TEST_CASE("conditional with lambda", "[conditional-lambdas]")
 {
   auto i  = 0;
