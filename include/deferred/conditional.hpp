@@ -106,9 +106,9 @@ constexpr auto if_then_else(ConditionExpression&& condition,
                             ThenExpression&& then_,
                             ElseExpression&& else_)
 {
-  using condition_expression = make_expression_t<ConditionExpression>;
-  using then_expression      = make_expression_t<ThenExpression>;
-  using else_expression      = make_expression_t<ElseExpression>;
+  using condition_expression = make_deferred_t<ConditionExpression>;
+  using then_expression      = make_deferred_t<ThenExpression>;
+  using else_expression      = make_deferred_t<ElseExpression>;
   return if_then_else_expression<condition_expression,
                                  then_expression,
                                  else_expression>(

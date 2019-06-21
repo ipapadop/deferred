@@ -33,7 +33,6 @@ TEST_CASE("conditional with variable", "[conditional-variable]")
   CHECK(ex() == 42);
 }
 
-
 TEST_CASE("conditional chain", "[conditional-chain]")
 {
   auto v   = deferred::variable<bool>();

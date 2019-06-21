@@ -20,6 +20,9 @@ class expression_;
 template<typename, typename, typename>
 class if_then_else_expression;
 
+template<typename, typename, typename...>
+class switch_expression;
+
 namespace detail {
 
 template<typename...>
@@ -30,6 +33,9 @@ struct is_expression<expression_<T...>> : public std::true_type {};
 
 template<typename T, typename U, typename V>
 struct is_expression<if_then_else_expression<T, U, V>> : public std::true_type {};
+
+template<typename T, typename U, typename... V>
+struct is_expression<switch_expression<T, U, V...>> : public std::true_type {};
 
 } // namespace detail
 

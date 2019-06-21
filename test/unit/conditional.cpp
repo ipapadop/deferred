@@ -40,29 +40,19 @@ TEST_CASE("conditional with lambda", "[conditional-lambdas]")
   auto i  = 0;
   auto j  = 0;
   auto k  = 0;
-  auto ex = deferred::if_then_else(
-    [&] {
-      ++i;
-      return true;
-    },
-    [&] {
-      ++j;
-      return 42;
-    },
-    [&] {
-      ++k;
-      return 10;
-    });
+  auto ex = deferred::if_then_else([&] { return i++ == 1; },
+                                   [&] { return ++j; },
+                                   [&] { return k += 2; });
 
   // it cannot detect functions with side-effects
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(i == 0);
   CHECK(j == 0);
   CHECK(k == 0);
-  CHECK(ex() == 42);
+  CHECK(ex() == 2);
   CHECK(i == 1);
-  CHECK(j == 1);
-  CHECK(k == 0);
+  CHECK(j == 0);
+  CHECK(k == 2);
 }
 
 TEST_CASE("conditional with mutable lambda", "[conditional-mutable-lambdas]")
@@ -72,10 +62,7 @@ TEST_CASE("conditional with mutable lambda", "[conditional-mutable-lambdas]")
   auto k  = 0;
   auto ex = deferred::if_then_else([i]() mutable { return i++ == 1; },
                                    [j]() mutable { return ++j; },
-                                   [k]() mutable {
-                                     ++k;
-                                     return ++k;
-                                   });
+                                   [k]() mutable { return k += 2; });
 
   // it cannot detect functions with side-effects
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
