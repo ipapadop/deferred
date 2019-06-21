@@ -196,7 +196,7 @@ public:
 template<typename Expression>
 auto default_(Expression&& ex)
 {
-  using expression = make_expression_t<Expression>;
+  using expression = make_deferred_t<Expression>;
   return default_expression<expression>(std::forward<Expression>(ex));
 }
 
@@ -204,8 +204,8 @@ auto default_(Expression&& ex)
 template<typename LabelExpression, typename BodyExpression>
 auto case_(LabelExpression&& label, BodyExpression&& body)
 {
-  using label_expression = make_expression_t<LabelExpression>;
-  using body_expression  = make_expression_t<BodyExpression>;
+  using label_expression = make_deferred_t<LabelExpression>;
+  using body_expression  = make_deferred_t<BodyExpression>;
   return case_expression<label_expression, body_expression>(
     std::forward<LabelExpression>(label), std::forward<BodyExpression>(body));
 }
@@ -240,7 +240,9 @@ constexpr auto switch_(ConditionExpression&& condition,
   static_assert(
     std::conjunction_v<detail::is_valid_case<std::decay_t<CaseExpressions>>...>,
     "One or more cases are not valid deferred case expressions");
-  return switch_expression<make_expression_t<ConditionExpression>,
+
+  using condition_expression = make_deferred_t<ConditionExpression>;
+  return switch_expression<condition_expression,
                            std::decay_t<DefaultExpression>,
                            std::decay_t<CaseExpressions>...>(
     std::forward<ConditionExpression>(condition),

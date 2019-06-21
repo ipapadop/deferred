@@ -18,7 +18,7 @@
 
 namespace deferred {
 
-/// Holds a constant value.
+/// Stores a constant.
 template<typename T>
 class constant_
 {
@@ -74,7 +74,7 @@ constexpr auto constant(Expression&& ex)
   return constant_<internal_type>(std::forward<Expression>(ex)());
 }
 
-/// Creates a new @ref variable_ that is initialized with @p t.
+/// Creates a new @ref constant_ that is initialized with @p t.
 template<
   typename T,
   std::enable_if_t<!is_deferred_v<T> && !std::is_invocable_v<T>>* = nullptr>

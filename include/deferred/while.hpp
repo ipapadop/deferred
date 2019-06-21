@@ -102,8 +102,8 @@ public:
 template<typename ConditionExpression, typename BodyExpression>
 constexpr auto while_(ConditionExpression&& condition, BodyExpression&& body)
 {
-  using condition_expression = make_expression_t<ConditionExpression>;
-  using body_expression      = make_expression_t<BodyExpression>;
+  using condition_expression = make_deferred_t<ConditionExpression>;
+  using body_expression      = make_deferred_t<BodyExpression>;
   return while_expression<condition_expression, body_expression>(
     std::forward<ConditionExpression>(condition),
     std::forward<BodyExpression>(body));

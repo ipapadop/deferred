@@ -14,8 +14,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "constant.hpp"
 #include "apply.hpp"
+#include "constant.hpp"
 #include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 #include "type_traits/is_expression.hpp"
@@ -82,7 +82,7 @@ using make_callable_arg_t =
 } // namespace detail
 
 /**
- * @brief Transforms @p Callable into an @ref expression_ if it is not a
+ * Transforms @p Callable into an @ref expression_ if it is not a
  * deferred data type.
  */
 template<typename Callable, typename... Args>
@@ -93,14 +93,19 @@ using make_callable_t =
                                  detail::make_callable_arg_t<Args>...>>;
 
 /**
- * @brief Transforms @p T into an @ref expression_ if it is not a deferred data
- * type.
+ * Transforms @p T into a @c deferred type.
+ *
+ * - If @p T is already a @c deferred type, it does not change.
+ * - If @p T is a callable type, it is transformed to an @ref expression_.
+ * - If @p T is not a callable type, it is transformed to an @ref constant_.
  */
 template<typename T>
-using make_expression_t = std::conditional_t<
-  is_deferred_v<T>,
-  T,
-  std::conditional_t<std::is_invocable_v<T>, make_callable_t<T>, constant_<T>>>;
+using make_deferred_t =
+  std::conditional_t<is_deferred_v<T>,
+                     T,
+                     std::conditional_t<std::is_invocable_v<T>,
+                                        expression_<make_function_object_t<T>>,
+                                        constant_<T>>>;
 
 } // namespace deferred
 

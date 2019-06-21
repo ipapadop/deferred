@@ -26,7 +26,7 @@ constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>)
 
 } // namespace detail
 
-/// Invoke callable @p f with the tuple of @c deferred objects @p t. 
+/// Invoke callable @p f with the tuple of @c deferred objects @p t.
 template<typename F, typename Tuple>
 constexpr decltype(auto) apply(F&& f, Tuple&& t)
 {
@@ -40,3 +40,4 @@ constexpr decltype(auto) apply(F&& f, Tuple&& t)
 } // namespace deferred
 
 #endif
+

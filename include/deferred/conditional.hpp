@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "expression.hpp"
+#include "invoke.hpp"
 #include "type_traits/is_constant_expression.hpp"
 
 namespace deferred {
@@ -55,25 +56,27 @@ public:
 
   constexpr result_type operator()() const
   {
-    if (std::get<0>(static_cast<subexpression_types const&>(*this))())
+    auto& t = static_cast<subexpression_types const&>(*this);
+    if (invoke_immediate(std::get<0>(t)))
     {
-      return std::get<1>(static_cast<subexpression_types const&>(*this))();
+      return invoke_immediate(std::get<1>(t));
     }
     else
     {
-      return std::get<2>(static_cast<subexpression_types const&>(*this))();
+      return invoke_immediate(std::get<2>(t));
     }
   }
 
   constexpr result_type operator()()
   {
-    if (std::get<0>(static_cast<subexpression_types&>(*this))())
+    auto& t = static_cast<subexpression_types&>(*this);
+    if (invoke_immediate(std::get<0>(t)))
     {
-      return std::get<1>(static_cast<subexpression_types&>(*this))();
+      return invoke_immediate(std::get<1>(t));
     }
     else
     {
-      return std::get<2>(static_cast<subexpression_types&>(*this))();
+      return invoke_immediate(std::get<2>(t));
     }
   }
 
@@ -106,9 +109,9 @@ constexpr auto if_then_else(ConditionExpression&& condition,
                             ThenExpression&& then_,
                             ElseExpression&& else_)
 {
-  using condition_expression = make_expression_t<ConditionExpression>;
-  using then_expression      = make_expression_t<ThenExpression>;
-  using else_expression      = make_expression_t<ElseExpression>;
+  using condition_expression = make_deferred_t<ConditionExpression>;
+  using then_expression      = make_deferred_t<ThenExpression>;
+  using else_expression      = make_deferred_t<ElseExpression>;
   return if_then_else_expression<condition_expression,
                                  then_expression,
                                  else_expression>(
