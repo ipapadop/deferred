@@ -60,14 +60,12 @@ TEST_CASE("constant from constant", "[constant-from-constant]")
 TEST_CASE("constant from lambda", "[constant-from-lambda]")
 {
   auto i = 0;
-  auto c = deferred::constant([&] {
-    ++i;
-    return 10;
-  });
+  auto c = deferred::constant([&i]() mutable { return ++i; });
+  CHECK(i == 1);
 
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
-  CHECK(i == 1);
-  CHECK(c() == 10);
+  CHECK(c() == 1);
+  CHECK(c() == 1);
 }
 
 TEST_CASE("constant from mutable lambda", "[constant-from-mutable-lambda]")
