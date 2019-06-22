@@ -12,7 +12,7 @@
 
 #include <vector>
 
-TEST_CASE("constant from lvalue", "[constantf-from-lvalue]")
+TEST_CASE("constant from lvalue", "[constant-lvalue]")
 {
   auto const i = 4;
   auto c       = deferred::constant(i);
@@ -29,7 +29,7 @@ TEST_CASE("constant from lvalue", "[constantf-from-lvalue]")
   }
 }
 
-TEST_CASE("constant from prvalue", "[constant-from-prvalue]")
+TEST_CASE("constant from prvalue", "[constant-prvalue]")
 {
   auto c = deferred::constant(4);
 
@@ -46,7 +46,7 @@ TEST_CASE("constant from prvalue", "[constant-from-prvalue]")
   }
 }
 
-TEST_CASE("constant from xvalue", "[constant-from-xvalue]")
+TEST_CASE("constant from xvalue", "[constant-xvalue]")
 {
   std::vector<int> v = {1, 2, 3};
   auto const v2      = v;
@@ -56,7 +56,7 @@ TEST_CASE("constant from xvalue", "[constant-from-xvalue]")
   CHECK(c() == v2);
 }
 
-TEST_CASE("constant from constant", "[constant-from-constant]")
+TEST_CASE("constant from constant", "[constant-nested-constant]")
 {
   constexpr auto c1 = deferred::constant(4);
   constexpr auto c2 = deferred::constant(c1);
@@ -67,7 +67,7 @@ TEST_CASE("constant from constant", "[constant-from-constant]")
   CHECK(c2() == 4);
 }
 
-TEST_CASE("constant from lambda", "[constant-from-lambda]")
+TEST_CASE("constant from lambda", "[constant-lambda]")
 {
   auto i = 0;
   auto c = deferred::constant([&i] { return ++i; });
@@ -78,13 +78,21 @@ TEST_CASE("constant from lambda", "[constant-from-lambda]")
   CHECK(c() == 1);
 }
 
-TEST_CASE("constant from mutable lambda", "[constant-from-mutable-lambda]")
+TEST_CASE("constant from mutable lambda", "[constant-mutable-lambda]")
 {
   auto c = deferred::constant([i = 0]() mutable { return ++i; });
 
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
   CHECK(c() == 1);
   CHECK(c() == 1);
+}
+
+TEST_CASE("constant from nested lambda", "[constant-nested-lambda]")
+{
+  auto c = deferred::constant([] { return [] { return 10; }; });
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
+  CHECK(c() == 10);
 }
 
 namespace {
