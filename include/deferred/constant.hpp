@@ -30,7 +30,7 @@ private:
 
 public:
   /// Constructs a constant_ from @p u.
-  template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = {}>
+  template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
   constexpr explicit constant_(U&& u) : m_t(std::forward<U>(u))
   {}
 
@@ -63,14 +63,14 @@ public:
 namespace detail {
 
 // Returns t.
-template<typename T, std::enable_if_t<!std::is_invocable_v<T>>* = {}>
+template<typename T, std::enable_if_t<!std::is_invocable_v<T>>* = nullptr>
 constexpr decltype(auto) recursive_eval(T&& t) noexcept
 {
   return std::forward<T>(t);
 }
 
 // Returns the result of t().
-template<typename T, std::enable_if_t<std::is_invocable_v<T>>* = {}>
+template<typename T, std::enable_if_t<std::is_invocable_v<T>>* = nullptr>
 constexpr auto recursive_eval(T&& t)
 {
   return recursive_eval(std::forward<T>(t)());

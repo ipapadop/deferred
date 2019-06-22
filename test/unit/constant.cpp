@@ -95,6 +95,15 @@ TEST_CASE("constant from nested lambda", "[constant-nested-lambda]")
   CHECK(c() == 10);
 }
 
+TEST_CASE("constant from nested lambda constant",
+          "[constant-nested-lambda-constant]")
+{
+  auto c = deferred::constant([] { return deferred::constant(10); });
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
+  CHECK(c() == 10);
+}
+
 namespace {
 
 int function()
@@ -114,14 +123,15 @@ TEST_CASE("constant from function", "[constant-from-function]")
 
 namespace {
 
-  constexpr int function2()
-  {
-    return 10;
-  }
+constexpr int function2()
+{
+  return 10;
+}
 
 } // namespace
 
-TEST_CASE("constant from constexpr function", "[constant-from-constexpr-function]")
+TEST_CASE("constant from constexpr function",
+          "[constant-from-constexpr-function]")
 {
   constexpr auto c = deferred::constant(&function2);
 
