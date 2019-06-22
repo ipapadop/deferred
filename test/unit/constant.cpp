@@ -12,69 +12,96 @@
 
 #include <vector>
 
-TEST_CASE("constant from lvalue", "[constantf-from-lvalue]")
+TEST_CASE("constant from lvalue", "[constant-lvalue]")
 {
   auto const i = 4;
   auto c       = deferred::constant(i);
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
   CHECK(c() == i);
 
   SECTION("constexpr")
   {
     constexpr auto c2 = deferred::constant(i);
-    CHECK(c2() == 4);
+    static_assert(deferred::is_constant_expression_v<decltype(c2)>);
     static_assert(c2() == 4, "constexpr failed");
+    CHECK(c2() == 4);
   }
 }
 
-TEST_CASE("constant from prvalue", "[constant-from-prvalue]")
+TEST_CASE("constant from prvalue", "[constant-prvalue]")
 {
   auto c = deferred::constant(4);
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
   CHECK(c() == 4);
 
   SECTION("constexpr")
   {
     constexpr auto c2 = deferred::constant(4);
+
+    static_assert(deferred::is_constant_expression_v<decltype(c2)>);
     CHECK(c2() == 4);
     static_assert(c2() == 4, "constexpr failed");
   }
 }
 
-TEST_CASE("constant from xvalue", "[constant-from-xvalue]")
+TEST_CASE("constant from xvalue", "[constant-xvalue]")
 {
   std::vector<int> v = {1, 2, 3};
   auto const v2      = v;
   auto c             = deferred::constant(std::move(v));
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
   CHECK(c() == v2);
 }
 
-TEST_CASE("constant from constant", "[constant-from-constant]")
+TEST_CASE("constant from constant", "[constant-nested-constant]")
 {
   constexpr auto c1 = deferred::constant(4);
   constexpr auto c2 = deferred::constant(c1);
+
   static_assert(std::is_same_v<decltype(c1), decltype(c2)>,
                 "copy created nested type");
   static_assert(c2() == 4, "constexpr failed");
   CHECK(c2() == 4);
 }
 
-TEST_CASE("constant from lambda", "[constant-from-lambda]")
+TEST_CASE("constant from lambda", "[constant-lambda]")
 {
   auto i = 0;
-  auto c = deferred::constant([&i]() mutable { return ++i; });
-  CHECK(i == 1);
+  auto c = deferred::constant([&i] { return ++i; });
 
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
+  CHECK(i == 1);
   CHECK(c() == 1);
   CHECK(c() == 1);
 }
 
-TEST_CASE("constant from mutable lambda", "[constant-from-mutable-lambda]")
+TEST_CASE("constant from mutable lambda", "[constant-mutable-lambda]")
 {
   auto c = deferred::constant([i = 0]() mutable { return ++i; });
 
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
   CHECK(c() == 1);
   CHECK(c() == 1);
+}
+
+TEST_CASE("constant from nested lambda", "[constant-nested-lambda]")
+{
+  auto c = deferred::constant([] { return [] { return 10; }; });
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
+  CHECK(c() == 10);
+}
+
+TEST_CASE("constant from nested lambda constant",
+          "[constant-nested-lambda-constant]")
+{
+  auto c = deferred::constant([] { return deferred::constant(10); });
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
+  CHECK(c() == 10);
 }
 
 namespace {
@@ -91,5 +118,24 @@ TEST_CASE("constant from function", "[constant-from-function]")
   auto c = deferred::constant(&function);
 
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
+  CHECK(c() == 10);
+}
+
+namespace {
+
+constexpr int function2()
+{
+  return 10;
+}
+
+} // namespace
+
+TEST_CASE("constant from constexpr function",
+          "[constant-from-constexpr-function]")
+{
+  constexpr auto c = deferred::constant(&function2);
+
+  static_assert(deferred::is_constant_expression_v<decltype(c)>);
+  static_assert(c() == 10, "constexpr failed");
   CHECK(c() == 10);
 }
