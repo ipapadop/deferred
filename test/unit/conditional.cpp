@@ -44,8 +44,7 @@ TEST_CASE("conditional with lambda", "[conditional-lambdas]")
                                    [&] { return ++j; },
                                    [&] { return k += 2; });
 
-  // it cannot detect functions with side-effects
-  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(i == 0);
   CHECK(j == 0);
   CHECK(k == 0);
@@ -64,8 +63,7 @@ TEST_CASE("conditional with mutable lambda", "[conditional-mutable-lambdas]")
                                    [j]() mutable { return ++j; },
                                    [k]() mutable { return k += 2; });
 
-  // it cannot detect functions with side-effects
-  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(i == 0);
   CHECK(j == 0);
   CHECK(k == 0);

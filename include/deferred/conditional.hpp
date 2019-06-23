@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "evaluate.hpp"
 #include "expression.hpp"
 #include "type_traits/is_constant_expression.hpp"
 
@@ -55,25 +56,27 @@ public:
 
   constexpr result_type operator()() const
   {
-    if (std::get<0>(static_cast<subexpression_types const&>(*this))())
+    if (evaluate(std::get<0>(static_cast<subexpression_types const&>(*this))))
     {
-      return std::get<1>(static_cast<subexpression_types const&>(*this))();
+      return evaluate(
+        std::get<1>(static_cast<subexpression_types const&>(*this)));
     }
     else
     {
-      return std::get<2>(static_cast<subexpression_types const&>(*this))();
+      return evaluate(
+        std::get<2>(static_cast<subexpression_types const&>(*this)));
     }
   }
 
   constexpr result_type operator()()
   {
-    if (std::get<0>(static_cast<subexpression_types&>(*this))())
+    if (evaluate(std::get<0>(static_cast<subexpression_types&>(*this))))
     {
-      return std::get<1>(static_cast<subexpression_types&>(*this))();
+      return evaluate(std::get<1>(static_cast<subexpression_types&>(*this)));
     }
     else
     {
-      return std::get<2>(static_cast<subexpression_types&>(*this))();
+      return evaluate(std::get<2>(static_cast<subexpression_types&>(*this)));
     }
   }
 

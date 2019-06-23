@@ -13,7 +13,6 @@
 TEST_CASE("constant from expression", "[constant-from-constant-expression]")
 {
   auto i = 10;
-  static_assert(deferred::is_constant_expression_v<decltype(i)>);
 
   auto ex = deferred::constant(i) * 2;
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
