@@ -41,9 +41,6 @@ template<typename T, typename U, typename... V>
 struct is_expression<switch_expression<T, U, V...>> : public std::true_type
 {};
 
-template<typename T, typename U, typename... V>
-struct is_expression<switch_expression<T, U, V...>> : public std::true_type {};
-
 } // namespace detail
 
 /// Checks if @p T is an @ref expression_.

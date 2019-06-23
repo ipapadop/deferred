@@ -40,4 +40,3 @@ constexpr decltype(auto) apply(F&& f, Tuple&& t)
 } // namespace deferred
 
 #endif
-
