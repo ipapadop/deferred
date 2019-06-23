@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "evaluate.hpp"
 #include "expression.hpp"
 #include "type_traits/is_constant_expression.hpp"
 
@@ -23,7 +24,13 @@ template<typename Expression>
 class default_expression : private Expression
 {
 public:
-  using Expression::Expression;
+  using typename Expression::constant_expression;
+
+  template<typename... T>
+  constexpr explicit default_expression(T&&... t) :
+    Expression(std::forward<T>(t)...)
+  {}
+
   using Expression::operator();
   using Expression::visit;
 };
@@ -50,14 +57,16 @@ public:
   template<typename T>
   constexpr decltype(auto) compare(T&& t) const
   {
-    auto& ex = std::get<0>(static_cast<subexpression_types const&>(*this));
-    return std::forward<T>(t) == ex();
+    return std::forward<T>(t)
+           == evaluate(
+             std::get<0>(static_cast<subexpression_types const&>(*this)));
   }
 
   /// Returns the result of the body expression.
   constexpr decltype(auto) operator()() const
   {
-    return std::get<1>(static_cast<subexpression_types const&>(*this))();
+    return evaluate(
+      std::get<1>(static_cast<subexpression_types const&>(*this)));
   }
 
   template<typename Visitor>
@@ -131,20 +140,18 @@ private:
   {
     if constexpr (I < std::tuple_size<subexpression_types>::value)
     {
-      auto& case_ex =
-        std::get<I>(static_cast<subexpression_types const&>(*this));
-      if (case_ex.compare(std::forward<T>(t)))
+      if (std::get<I>(static_cast<subexpression_types const&>(*this))
+            .compare(std::forward<T>(t)))
       {
-        return case_ex();
+        return std::get<I>(static_cast<subexpression_types const&>(*this))();
       }
 
       return choose_case<I + 1>(std::forward<T>(t));
     }
     else
     {
-      auto& default_ex = std::get<DefaultExpression>(
-        static_cast<subexpression_types const&>(*this));
-      return default_ex();
+      return std::get<DefaultExpression>(
+        static_cast<subexpression_types const&>(*this))();
     }
   }
 
@@ -154,19 +161,18 @@ private:
   {
     if constexpr (I < std::tuple_size<subexpression_types>::value)
     {
-      auto& case_ex = std::get<I>(static_cast<subexpression_types&>(*this));
-      if (case_ex.compare(std::forward<T>(t)))
+      if (std::get<I>(static_cast<subexpression_types&>(*this))
+            .compare(std::forward<T>(t)))
       {
-        return case_ex();
+        return std::get<I>(static_cast<subexpression_types&>(*this))();
       }
 
       return choose_case<I + 1>(std::forward<T>(t));
     }
     else
     {
-      auto& default_ex =
-        std::get<DefaultExpression>(static_cast<subexpression_types&>(*this));
-      return default_ex();
+      return std::get<DefaultExpression>(
+        static_cast<subexpression_types&>(*this))();
     }
   }
 
@@ -174,15 +180,15 @@ public:
   constexpr result_type operator()() const
   {
     // start from second case, as first is the default
-    return choose_case<2>(std::get<ConditionExpression>(
-      static_cast<subexpression_types const&>(*this))());
+    return choose_case<2>(evaluate(std::get<ConditionExpression>(
+      static_cast<subexpression_types const&>(*this))));
   }
 
   constexpr result_type operator()()
   {
     // start from second case, as first is the default
-    return choose_case<2>(std::get<ConditionExpression>(
-      static_cast<subexpression_types&>(*this))());
+    return choose_case<2>(evaluate(
+      std::get<ConditionExpression>(static_cast<subexpression_types&>(*this))));
   }
 
   template<typename Visitor>
@@ -207,7 +213,8 @@ auto case_(LabelExpression&& label, BodyExpression&& body)
   using label_expression = make_deferred_t<LabelExpression>;
   using body_expression  = make_deferred_t<BodyExpression>;
   return case_expression<label_expression, body_expression>(
-    std::forward<LabelExpression>(label), std::forward<BodyExpression>(body));
+    std::forward<LabelExpression>(label),
+    std::forward<BodyExpression>(body));
 }
 
 /**
