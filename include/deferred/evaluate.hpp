@@ -31,6 +31,20 @@ constexpr auto evaluate(T&& t)
   return evaluate(std::forward<T>(t)());
 }
 
+/// Returns @p t.
+template<typename T>
+constexpr void evaluate_void(T&& t) noexcept
+{
+  if constexpr(is_deferred_v<decltype(std::forward<T>(t)())>)
+  {
+    evaluate_void(std::forward<T>(t)());
+  }
+  else
+  {
+    std::forward<T>(t)();
+  }
+}
+
 } // namespace deferred
 
 #endif

@@ -16,7 +16,7 @@ TEST_CASE("while with lambda", "[while-lambda]")
   auto j  = 0;
   auto ex = deferred::while_([&i] { return ++i < 10; }, [&j] { j += 2; });
 
-  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   ex();
   CHECK(i == 10);
   CHECK(j == 18);

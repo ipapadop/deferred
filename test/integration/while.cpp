@@ -17,7 +17,7 @@ TEST_CASE("count to n", "[while-variable]")
   n      = 10;
 
   auto count = 0;
-  auto ex    = deferred::while_(n != 0, --n);
+  auto ex    = deferred::while_(n != 0, n = n() - 1);
   ex();
   CHECK(count == 10);
 }

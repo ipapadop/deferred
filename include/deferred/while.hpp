@@ -13,31 +13,11 @@
 #include <type_traits>
 #include <utility>
 
+#include "evaluate.hpp"
 #include "expression.hpp"
 #include "type_traits/is_constant_expression.hpp"
 
 namespace deferred {
-
-namespace detail {
-
-template<typename T>
-constexpr bool evaluate(T&& t)
-{
-  if constexpr (is_deferred_v<decltype(t)>)
-  {
-    return evaluate(std::forward<T>(t)());
-  }
-  else if constexpr (std::is_invocable_v<decltype(t)>)
-  {
-    return std::forward<T>(t)();
-  }
-  else
-  {
-    return t;
-  }
-}
-
-} // namespace detail
 
 /**
  * Deferred while loop that evaluates @p BodyExpression while @p
@@ -63,19 +43,18 @@ public:
 
   constexpr void operator()() const
   {
-    while (detail::evaluate(
-      std::get<0>(static_cast<subexpression_types const&>(*this))))
+    while (
+      evaluate(std::get<0>(static_cast<subexpression_types const&>(*this))))
     {
-      std::get<1>(static_cast<subexpression_types const&>(*this))();
+      evaluate_void(std::get<1>(static_cast<subexpression_types const&>(*this)));
     }
   }
 
   constexpr void operator()()
   {
-    while (
-      detail::evaluate(std::get<0>(static_cast<subexpression_types&>(*this))))
+    while (evaluate(std::get<0>(static_cast<subexpression_types&>(*this))))
     {
-      std::get<1>(static_cast<subexpression_types&>(*this))();
+      evaluate_void(std::get<1>(static_cast<subexpression_types&>(*this)));
     }
   }
 
