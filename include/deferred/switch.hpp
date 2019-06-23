@@ -24,7 +24,7 @@ template<typename Expression>
 class default_expression : private Expression
 {
 public:
-  using Expression::constant_expression;
+  using typename Expression::constant_expression;
 
   template<typename... T>
   constexpr explicit default_expression(T&&... t) :
