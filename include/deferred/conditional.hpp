@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "evaluate.hpp"
 #include "expression.hpp"
 #include "invoke.hpp"
 #include "type_traits/is_constant_expression.hpp"
@@ -56,27 +57,27 @@ public:
 
   constexpr result_type operator()() const
   {
-    auto& t = static_cast<subexpression_types const&>(*this);
-    if (invoke_immediate(std::get<0>(t)))
+    if (evaluate(std::get<0>(static_cast<subexpression_types const&>(*this))))
     {
-      return invoke_immediate(std::get<1>(t));
+      return evaluate(
+        std::get<1>(static_cast<subexpression_types const&>(*this)));
     }
     else
     {
-      return invoke_immediate(std::get<2>(t));
+      return evaluate(
+        std::get<2>(static_cast<subexpression_types const&>(*this)));
     }
   }
 
   constexpr result_type operator()()
   {
-    auto& t = static_cast<subexpression_types&>(*this);
-    if (invoke_immediate(std::get<0>(t)))
+    if (evaluate(std::get<0>(static_cast<subexpression_types&>(*this))))
     {
-      return invoke_immediate(std::get<1>(t));
+      return evaluate(std::get<1>(static_cast<subexpression_types&>(*this)));
     }
     else
     {
-      return invoke_immediate(std::get<2>(t));
+      return evaluate(std::get<2>(static_cast<subexpression_types&>(*this)));
     }
   }
 

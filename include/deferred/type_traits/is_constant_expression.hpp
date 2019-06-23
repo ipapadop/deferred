@@ -18,7 +18,7 @@ namespace detail {
 
 // Checks if T is a constant expression.
 template<typename T, typename = std::void_t<>>
-struct is_constant_expression : public std::true_type
+struct is_constant_expression : public std::is_empty<T>::type
 {};
 
 // If is_constant_expression is defined, then it is a deferred data type that is

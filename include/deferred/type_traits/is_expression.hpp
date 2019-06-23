@@ -26,13 +26,20 @@ class switch_expression;
 namespace detail {
 
 template<typename...>
-struct is_expression : public std::false_type {};
+struct is_expression : public std::false_type
+{};
 
 template<typename... T>
-struct is_expression<expression_<T...>> : public std::true_type {};
+struct is_expression<expression_<T...>> : public std::true_type
+{};
 
 template<typename T, typename U, typename V>
-struct is_expression<if_then_else_expression<T, U, V>> : public std::true_type {};
+struct is_expression<if_then_else_expression<T, U, V>> : public std::true_type
+{};
+
+template<typename T, typename U, typename... V>
+struct is_expression<switch_expression<T, U, V...>> : public std::true_type
+{};
 
 template<typename T, typename U, typename... V>
 struct is_expression<switch_expression<T, U, V...>> : public std::true_type {};
@@ -41,7 +48,8 @@ struct is_expression<switch_expression<T, U, V...>> : public std::true_type {};
 
 /// Checks if @p T is an @ref expression_.
 template<typename T>
-struct is_expression : public detail::is_expression<std::decay_t<T>> {};
+struct is_expression : public detail::is_expression<std::decay_t<T>>
+{};
 
 /// Alias for @c is_expression::type.
 template<typename T>

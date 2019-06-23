@@ -13,7 +13,6 @@
 TEST_CASE("constant from expression", "[constant-from-constant-expression]")
 {
   auto i = 10;
-  static_assert(deferred::is_constant_expression_v<decltype(i)>);
 
   auto ex = deferred::constant(i) * 2;
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
@@ -45,15 +44,10 @@ TEST_CASE("constant from chained constant expressions",
   CHECK(ex3() == 0);
 }
 
-#if 0
-// cannot create constant from expression with variable
-TEST_CASE("constant from expression with variable",
-          "[constant-from-non-constant-expression]")
+TEST_CASE("constant from expression with variable", "[constant-from-variable]")
 {
   auto v  = deferred::variable(2);
   auto ex = deferred::constant(4) * v;
   auto c  = deferred::constant(ex);
   CHECK(c() == 8);
-  FAIL("Cannot create constant from expression with a variable");
 }
-#endif

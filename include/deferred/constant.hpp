@@ -59,42 +59,37 @@ public:
   }
 };
 
-/**
- * Creates a new @ref constant_ that is initialized from a constant expression.
- *
- * @warning This function will force <tt>ex()</tt>.
- */
-template<typename Expression,
-         std::enable_if_t<
-           is_deferred_v<Expression> && is_constant_expression_v<Expression>>* =
-           nullptr>
-constexpr auto constant(Expression&& ex)
+
+namespace detail {
+
+// Returns t.
+template<typename T, std::enable_if_t<!std::is_invocable_v<T>>* = nullptr>
+constexpr decltype(auto) recursive_eval(T&& t) noexcept
 {
-  using internal_type = std::decay_t<decltype(std::forward<Expression>(ex)())>;
-  return constant_<internal_type>(std::forward<Expression>(ex)());
+  return std::forward<T>(t);
 }
 
-/// Creates a new @ref constant_ that is initialized with @p t.
-template<
-  typename T,
-  std::enable_if_t<!is_deferred_v<T> && !std::is_invocable_v<T>>* = nullptr>
+// Returns the result of t().
+template<typename T, std::enable_if_t<std::is_invocable_v<T>>* = nullptr>
+constexpr auto recursive_eval(T&& t)
+{
+  return recursive_eval(std::forward<T>(t)());
+}
+
+} // namespace detail
+
+/**
+ * Creates a constant for use in @c deferred expressions.
+ *
+ * If @p t is a callable type, this function will force its evaluation through
+ * <tt>t()</tt>. This applies even if @p t is a @c deferred expression.
+ */
+template<typename T>
 constexpr auto constant(T&& t)
 {
-  using internal_type = std::decay_t<T>;
-  return constant_<internal_type>(std::forward<T>(t));
-}
-
-/**
- * Creates a new @ref constant_ that is initialized from a callable @p f.
- *
- * @warning This function will force <tt>f()</tt>.
- */
-template<typename F,
-         std::enable_if_t<!is_deferred_v<F> && std::is_invocable_v<F>>* = nullptr>
-constexpr auto constant(F&& f)
-{
-  using internal_type = decltype(std::forward<F>(f)());
-  return constant_<internal_type>(std::forward<F>(f)());
+  using result_type =
+    std::decay_t<decltype(detail::recursive_eval(std::forward<T>(t)))>;
+  return constant_<result_type>(detail::recursive_eval(std::forward<T>(t)));
 }
 
 } // namespace deferred

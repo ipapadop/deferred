@@ -19,9 +19,9 @@ TEST_CASE("default with literal", "[default-literal]")
 
 TEST_CASE("default with lambda", "[default-lambda]")
 {
-  auto ex = deferred::default_([] { return false; });
+  auto ex = deferred::default_([] { return 2; });
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
-  CHECK(ex() == false);
+  CHECK(ex() == 2);
 }
 
 TEST_CASE("case with literal", "[case-literal]")

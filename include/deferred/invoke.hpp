@@ -10,7 +10,6 @@
 #ifndef DEFERRED_INVOKE_HPP
 #define DEFERRED_INVOKE_HPP
 
-#include <functional>
 #include <utility>
 
 #include "expression.hpp"
@@ -19,43 +18,26 @@ namespace deferred {
 
 namespace detail {
 
-template<typename F, typename... Args>
-using returns_deferred_expression_t =
-  is_deferred_t<decltype(std::declval<F>()(std::declval<Args>()...))>;
-
-template<typename F,
-         typename... Args,
-         typename std::enable_if_t<
-           !returns_deferred_expression_t<F, Args...>{}>* = nullptr>
-constexpr decltype(auto) invoke_immediate(F&& f, Args&&... args)
-{
-  return std::forward<F>(f)(std::forward<Args>(args)...);
-}
-
-template<typename F,
-         typename... Args,
-         typename std::enable_if_t<
-           returns_deferred_expression_t<F, Args...>{}>* = nullptr>
-constexpr decltype(auto) invoke_immediate(F&& f, Args&&... args)
-{
-  return invoke_immediate(std::forward<F>(f)(), std::forward<Args>(args)...);
-}
+// Transforms T into a constant_ if it is not a deferred data type.
+template<typename T>
+using make_callable_arg_t =
+  std::conditional_t<is_deferred_v<T>, T, constant_<T>>;
 
 } // namespace detail
 
 /**
- * Invoke the callable object @p f with the parameters @p args....
+ * Transforms @p Callable into an @ref expression_ if it is not a
+ * deferred data type.
  */
-template<typename F, typename... Args>
-constexpr decltype(auto) invoke_immediate(F&& f, Args&&... args)
-{
-  return detail::invoke_immediate(std::forward<F>(f),
-                                  std::forward<Args>(args)...);
-}
+template<typename Callable, typename... Args>
+using make_callable_t =
+  std::conditional_t<is_expression_v<Callable>,
+                     Callable,
+                     expression_<make_function_object_t<Callable>,
+                                 detail::make_callable_arg_t<Args>...>>;
 
 /**
- * Created a @c deferred expression that its evaluation will invoke the callable
- * object @p f with the parameters @p args....
+ * Invoke the callable object @p f with the parameters @p args....
  *
  * If @p args... are not @c deferred objects, then they will be tranformed to
  * @ref constant_ objects.
@@ -70,4 +52,3 @@ constexpr auto invoke(F&& f, Args&&... args)
 } // namespace deferred
 
 #endif
-
