@@ -12,8 +12,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "type_traits/is_constant_expression.hpp"
-#include "type_traits/is_deferred.hpp"
+#include "evaluate.hpp"
 
 namespace deferred {
 
@@ -79,41 +78,17 @@ constexpr variable_<T> variable() noexcept
 }
 
 /**
- * Creates a new @ref variable_ that is initialized from a constant expression.
+ * Creates a variable for use in @c deferred expressions.
  *
- * @warning This function will force <tt>ex()</tt>.
+ * If @p t is a callable type, this function will force its evaluation through
+ * <tt>t()</tt>. This applies even if @p t is a @c deferred expression.
  */
-template<typename Expression,
-         std::enable_if_t<
-           is_deferred_v<Expression> && is_constant_expression_v<Expression>>* =
-           nullptr>
-constexpr auto variable(Expression&& ex)
-{
-  using internal_type = std::decay_t<decltype(std::forward<Expression>(ex)())>;
-  return variable_<internal_type>(std::forward<Expression>(ex)());
-}
-
-/// Creates a new @ref variable_ that is initialized with @p t.
-template<
-  typename T,
-  std::enable_if_t<!is_deferred_v<T> && !std::is_invocable_v<T>>* = nullptr>
+template<typename T>
 constexpr auto variable(T&& t)
 {
-  using internal_type = std::decay_t<T>;
-  return variable_<internal_type>(std::forward<T>(t));
-}
-
-/**
- * Creates a new @ref constant_ that is initialized from a callable @p f.
- *
- * @warning This function will force <tt>f()</tt>.
- */
-template<typename F,
-         std::enable_if_t<!is_deferred_v<F> && std::is_invocable_v<F>>* = nullptr>
-constexpr auto variable(F&& f)
-{
-  using internal_type = decltype(std::forward<F>(f)());
-  return variable_<internal_type>(std::forward<F>(f)());
+  using result_type =
+    std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
+  return variable_<result_type>(recursive_evaluate(std::forward<T>(t)));
 }
 
 } // namespace deferred
