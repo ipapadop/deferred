@@ -21,20 +21,9 @@ namespace detail {
 // Transforms T into a constant_ if it is not a deferred data type.
 template<typename T>
 using make_callable_arg_t =
-  std::conditional_t<is_deferred_v<T>, T, constant_<T>>;
+  std::conditional_t<is_deferred_v<T>, T, constant_<std::decay_t<T>>>;
 
 } // namespace detail
-
-/**
- * Transforms @p Callable into an @ref expression_ if it is not a
- * deferred data type.
- */
-template<typename Callable, typename... Args>
-using make_callable_t =
-  std::conditional_t<is_expression_v<Callable>,
-                     Callable,
-                     expression_<make_function_object_t<Callable>,
-                                 detail::make_callable_arg_t<Args>...>>;
 
 /**
  * Invoke the callable object @p f with the parameters @p args....
@@ -45,8 +34,22 @@ using make_callable_t =
 template<typename F, typename... Args>
 constexpr auto invoke(F&& f, Args&&... args)
 {
-  using expression_type = make_callable_t<F, Args...>;
-  return expression_type(std::forward<F>(f), std::forward<Args>(args)...);
+  if constexpr (sizeof...(Args) == 0)
+  {
+    // deferred expressions do not accept arguments
+    using expression_type = std::conditional_t<
+      is_expression_v<F>,
+      F,
+      expression_<make_function_object_t<std::remove_reference_t<F>>>>;
+    return expression_type(std::forward<F>(f));
+  }
+  else
+  {
+    using expression_type =
+      expression_<make_function_object_t<std::remove_reference_t<F>>,
+                  detail::make_callable_arg_t<Args>...>;
+    return expression_type(std::forward<F>(f), std::forward<Args>(args)...);
+  }
 }
 
 } // namespace deferred
