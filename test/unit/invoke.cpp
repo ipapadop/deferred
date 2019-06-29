@@ -192,8 +192,11 @@ TEST_CASE("invoke with conditionals", "[invoke-conditionals]")
   auto c    = deferred::constant(10) + deferred::constant(20);
   auto v    = deferred::variable<int>();
 
-  auto ex = deferred::invoke(
-    [](auto cond, auto x, auto y) { return cond ? x : y; }, cond, c, v);
+  auto ex =
+    deferred::invoke([](auto cond, auto x, auto y) { return cond ? x : y; },
+                     cond,
+                     c,
+                     v);
 
   v = 10;
 
@@ -218,8 +221,11 @@ TEST_CASE("invoke with deferred conditionals", "[invoke-deferred-conditionals]")
     ++k;
     return 20;
   });
-  auto ex   = deferred::invoke(
-    [](auto cond, auto x, auto y) { return cond ? x : y; }, cond, res1, res2);
+  auto ex =
+    deferred::invoke([](auto cond, auto x, auto y) { return cond ? x : y; },
+                     cond,
+                     res1,
+                     res2);
 
   CHECK(i == 0);
   CHECK(j == 0);
