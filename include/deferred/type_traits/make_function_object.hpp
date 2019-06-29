@@ -30,6 +30,12 @@ struct fun_ptr_wrapper
   {
     return m_f(std::forward<T>(t)...);
   }
+
+  template<typename... T>
+  constexpr decltype(auto) operator()(T&&... t)
+  {
+    return m_f(std::forward<T>(t)...);
+  }
 };
 
 } // namespace detail
