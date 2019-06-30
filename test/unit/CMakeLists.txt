@@ -3,7 +3,6 @@ set(SOURCES
   constant.cpp
   invoke.cpp
   main.cpp
-  operators.cpp
   switch.cpp
   variable.cpp
   while.cpp)

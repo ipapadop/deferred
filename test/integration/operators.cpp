@@ -10,6 +10,7 @@
 
 #include "deferred/constant.hpp"
 #include "deferred/operators.hpp"
+#include "deferred/variable.hpp"
 
 TEST_CASE("operators", "[operators]")
 {
@@ -77,6 +78,38 @@ TEST_CASE("operators", "[operators]")
 
       auto e2 = c2 % c1;
       CHECK(e2() == j % i);
+    }
+
+    SECTION("++x")
+    {
+      auto v = deferred::variable(10);
+      auto e = ++v;
+      CHECK(e() == 11);
+      CHECK(v() == 11);
+    }
+
+    SECTION("x++")
+    {
+      auto v = deferred::variable(10);
+      auto e = v++;
+      CHECK(e() == 10);
+      CHECK(v() == 11);
+    }
+
+    SECTION("--x")
+    {
+      auto v = deferred::variable(10);
+      auto e = --v;
+      CHECK(e() == 9);
+      CHECK(v() == 9);
+    }
+
+    SECTION("x--")
+    {
+      auto v = deferred::variable(10);
+      auto e = v--;
+      CHECK(e() == 10);
+      CHECK(v() == 9);
     }
   }
 

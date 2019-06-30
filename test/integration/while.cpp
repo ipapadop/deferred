@@ -10,18 +10,26 @@
 
 #include "deferred/deferred.hpp"
 
-#if 0
 TEST_CASE("count to n", "[while-variable]")
 {
   auto n = deferred::variable<int>();
   n      = 10;
 
-  auto count = 0;
-  auto ex    = deferred::while_(n != 0, n = n() - 1);
+  auto ex = deferred::while_(n != 0, --n);
   ex();
-  CHECK(count == 10);
+  CHECK(n() == 0);
 }
-#endif
+
+TEST_CASE("count to n2", "[while-variable2]")
+{
+  auto n = deferred::variable(10);
+
+  int count = 0;
+  auto ex = deferred::while_(--n != 0, [&] { ++count; });
+  ex();
+  CHECK(n() == 0);
+  CHECK(count == 9);
+}
 
 TEST_CASE("while with nested deferred", "[while-nested-deferred]")
 {
@@ -30,7 +38,7 @@ TEST_CASE("while with nested deferred", "[while-nested-deferred]")
 
   auto count = 0;
   auto ex    = deferred::while_([i = 0, &n]() mutable { return i++ != n; },
-                                [&count] { ++count; });
+                             [&count] { ++count; });
   ex();
   CHECK(count == 10);
 }

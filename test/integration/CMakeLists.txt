@@ -3,6 +3,7 @@ set(SOURCES
   conditional.cpp
   constant.cpp
   main.cpp
+  operators.cpp
   switch.cpp
   variable.cpp
   while.cpp)

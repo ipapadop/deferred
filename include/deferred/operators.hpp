@@ -73,6 +73,34 @@ constexpr auto operator%(T&& t, U&& u)
 }
 
 template<typename T,
+         typename = std::enable_if_t<is_deferred_v<T>>>
+constexpr auto operator++(T&& t)
+{
+  return invoke([](auto& x) { return ++x; }, std::forward<T>(t));
+}
+
+template<typename T,
+         typename = std::enable_if_t<is_deferred_v<T>>>
+constexpr auto operator++(T&& t, int)
+{
+  return invoke([](auto& x) { return x++; }, std::forward<T>(t));
+}
+
+template<typename T,
+         typename = std::enable_if_t<is_deferred_v<T>>>
+constexpr auto operator--(T&& t)
+{
+  return invoke([](auto& x) { return --x; }, std::forward<T>(t));
+}
+
+template<typename T,
+         typename = std::enable_if_t<is_deferred_v<T>>>
+constexpr auto operator--(T&& t, int)
+{
+  return invoke([](auto& x) { return x--; }, std::forward<T>(t));
+}
+
+template<typename T,
          typename U,
          typename = std::enable_if_t<any_deferred_v<T, U>>>
 constexpr auto operator==(T&& t, U&& u)
