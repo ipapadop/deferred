@@ -20,8 +20,8 @@
 namespace deferred {
 
 /**
- * Deferred while loop that evaluates @p BodyExpression while @p
- * ConditionExpression evaluates to @c true.
+ * Deferred while loop that evaluates @p BodyExpression while
+ * @p ConditionExpression evaluates to @c true.
  */
 template<typename ConditionExpression, typename BodyExpression>
 class while_expression : private std::tuple<ConditionExpression, BodyExpression>
@@ -66,16 +66,12 @@ public:
 };
 
 /**
+ * Creates a @c deferred while that call @p body while @p condition is @c true.
  *
  * Example:
  * @code
- * auto var = variable<int>();
- * auto ex = switch_(var,
- *                   default_("unknown"),
- *                   case_(10,
- *                         [] { return "10"; }),
- *                   case_([] { return foo(); },
- *                         [] { return "result of foo"; }));
+ * auto var = variable<int>(10);
+ * auto ex = while( n > 0, --n);
  * @endcode
  */
 template<typename ConditionExpression, typename BodyExpression>

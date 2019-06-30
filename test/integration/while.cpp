@@ -20,12 +20,12 @@ TEST_CASE("count to n", "[while-variable]")
   CHECK(n() == 0);
 }
 
-TEST_CASE("count to n2", "[while-variable2]")
+TEST_CASE("count to n", "[while-variable-count]")
 {
   auto n = deferred::variable(10);
 
   int count = 0;
-  auto ex = deferred::while_(--n != 0, [&] { ++count; });
+  auto ex   = deferred::while_(--n != 0, [&count] { ++count; });
   ex();
   CHECK(n() == 0);
   CHECK(count == 9);
@@ -38,7 +38,7 @@ TEST_CASE("while with nested deferred", "[while-nested-deferred]")
 
   auto count = 0;
   auto ex    = deferred::while_([i = 0, &n]() mutable { return i++ != n; },
-                             [&count] { ++count; });
+                                [&count] { ++count; });
   ex();
   CHECK(count == 10);
 }
