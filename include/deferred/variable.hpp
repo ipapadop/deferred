@@ -16,7 +16,7 @@
 
 namespace deferred {
 
-/// Holds a variable value.
+/// Stores a variable value.
 template<typename T>
 class [[nodiscard]] variable_
 {

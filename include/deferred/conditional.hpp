@@ -21,9 +21,9 @@
 namespace deferred {
 
 /**
- * Deferred conditional that evaluates @p ThenExpression if @p
- * ConditionExpression evaluates to @c true, otherwise it evaluates @p
- * ElseExpression.
+ * Deferred conditional that evaluates @p ThenExpression if
+ * @p ConditionExpression evaluates to @c true, otherwise it evaluates
+ * @p ElseExpression.
  */
 template<typename ConditionExpression,
          typename ThenExpression,
@@ -88,11 +88,11 @@ public:
 };
 
 /**
- * Creates a new deferred conditional that evaluates @p then_ if @p condition
+ * Creates a @c deferred conditional that evaluates @p then_ if @p condition
  * evaluates to @c true, otherwise it evaluates @p else_.
  *
- * The result type of <tt>if_then_else_expression(...)()</tt> is the @c
- * std::common_type of the result types of @p then_ and @p else_.
+ * The result type of <tt>if_then_else_expression(...)()</tt> is the
+ * @c std::common_type of the result types of @p then_ and @p else_.
  *
  * Example:
  * @code
