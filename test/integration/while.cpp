@@ -10,7 +10,7 @@
 
 #include "deferred/deferred.hpp"
 
-TEST_CASE("count to n", "[while-variable]")
+TEST_CASE("while with body decrement", "[while-body]")
 {
   auto n = deferred::variable<int>();
   n      = 10;
@@ -20,7 +20,7 @@ TEST_CASE("count to n", "[while-variable]")
   CHECK(n() == 0);
 }
 
-TEST_CASE("count to n", "[while-variable-count]")
+TEST_CASE("while with condition decrement", "[while-condition]")
 {
   auto n = deferred::variable(10);
 
