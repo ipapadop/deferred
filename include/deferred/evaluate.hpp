@@ -31,7 +31,7 @@ constexpr auto evaluate(T&& t)
   return evaluate(std::forward<T>(t)());
 }
 
-/// Returns @p t.
+/// Evaluates @p t.
 template<typename T>
 constexpr void evaluate_void(T&& t) noexcept
 {
@@ -43,6 +43,20 @@ constexpr void evaluate_void(T&& t) noexcept
   {
     std::forward<T>(t)();
   }
+}
+
+/// Returns @p t.
+template<typename T, std::enable_if_t<!std::is_invocable_v<T>>* = nullptr>
+constexpr decltype(auto) recursive_evaluate(T&& t) noexcept
+{
+  return std::forward<T>(t);
+}
+
+/// Returns the result of @p t().
+template<typename T, std::enable_if_t<std::is_invocable_v<T>>* = nullptr>
+constexpr auto recursive_evaluate(T&& t)
+{
+  return recursive_evaluate(std::forward<T>(t)());
 }
 
 } // namespace deferred

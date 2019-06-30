@@ -13,8 +13,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "type_traits/is_constant_expression.hpp"
-#include "type_traits/is_deferred.hpp"
+#include "evaluate.hpp"
 
 namespace deferred {
 
@@ -59,25 +58,6 @@ public:
   }
 };
 
-
-namespace detail {
-
-// Returns t.
-template<typename T, std::enable_if_t<!std::is_invocable_v<T>>* = nullptr>
-constexpr decltype(auto) recursive_eval(T&& t) noexcept
-{
-  return std::forward<T>(t);
-}
-
-// Returns the result of t().
-template<typename T, std::enable_if_t<std::is_invocable_v<T>>* = nullptr>
-constexpr auto recursive_eval(T&& t)
-{
-  return recursive_eval(std::forward<T>(t)());
-}
-
-} // namespace detail
-
 /**
  * Creates a constant for use in @c deferred expressions.
  *
@@ -88,8 +68,8 @@ template<typename T>
 constexpr auto constant(T&& t)
 {
   using result_type =
-    std::decay_t<decltype(detail::recursive_eval(std::forward<T>(t)))>;
-  return constant_<result_type>(detail::recursive_eval(std::forward<T>(t)));
+    std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
+  return constant_<result_type>(recursive_evaluate(std::forward<T>(t)));
 }
 
 } // namespace deferred
