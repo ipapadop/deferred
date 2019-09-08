@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "expression.hpp"
+#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
 
@@ -38,7 +39,7 @@ constexpr auto invoke(F&& f, Args&&... args)
   {
     // deferred expressions do not accept arguments
     using expression_type = std::conditional_t<
-      is_expression_v<F>,
+      is_deferred_v<F>,
       F,
       expression_<make_function_object_t<std::remove_reference_t<F>>>>;
     return expression_type(std::forward<F>(f));

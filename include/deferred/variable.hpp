@@ -13,8 +13,21 @@
 #include <utility>
 
 #include "evaluate.hpp"
+#include "type_traits/is_variable.hpp"
+#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
+
+template<typename T>
+class variable_;
+
+namespace detail {
+
+template<typename T>
+struct is_deferred<variable_<T>> : public std::true_type
+{};
+
+} // namespace detail
 
 /// Stores a variable value.
 template<typename T>

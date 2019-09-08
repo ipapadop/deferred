@@ -18,10 +18,21 @@
 #include "constant.hpp"
 #include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
-#include "type_traits/is_expression.hpp"
 #include "type_traits/make_function_object.hpp"
 
 namespace deferred {
+
+template<typename Operator, typename... Expressions>
+class expression_;
+
+namespace detail {
+
+template<typename Operator, typename... Expressions>
+struct is_deferred<expression_<Operator, Expressions...>> :
+  public std::true_type
+{};
+
+} // namespace detail
 
 /**
  * Deferred expression that is composed of an operator @p Operator applied to
@@ -48,7 +59,7 @@ public:
   {}
 
   expression_(expression_ const&) = default;
-  expression_(expression_&&) = default;
+  expression_(expression_&&)      = default;
 
   ~expression_() = default;
 

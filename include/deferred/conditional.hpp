@@ -17,8 +17,26 @@
 #include "evaluate.hpp"
 #include "expression.hpp"
 #include "type_traits/is_constant_expression.hpp"
+#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
+
+template<typename ConditionExpression,
+         typename ThenExpression,
+         typename ElseExpression>
+class if_then_else_expression;
+
+namespace detail {
+
+template<typename ConditionExpression,
+         typename ThenExpression,
+         typename ElseExpression>
+struct is_deferred<
+  if_then_else_expression<ConditionExpression, ThenExpression, ElseExpression>> :
+  public std::true_type
+{};
+
+} // namespace detail
 
 /**
  * Deferred conditional that evaluates @p ThenExpression if
