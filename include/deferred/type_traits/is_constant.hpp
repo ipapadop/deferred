@@ -29,7 +29,7 @@ struct is_constant<constant_<T>> : public std::true_type {};
 
 /// Checks if @p T is a @ref constant_.
 template<typename T>
-struct is_constant : public detail::is_constant<std::decay_t<T>> {};
+struct is_constant : public detail::is_constant<std::remove_cv_t<T>> {};
 
 /// Alias for @c is_constant::type.
 template<typename T>

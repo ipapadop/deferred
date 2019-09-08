@@ -45,25 +45,32 @@ struct print_visitor
     return std::string(indent, '\t');
   }
 
-  template<typename T, std::enable_if_t<deferred::is_constant_v<T>>* = nullptr>
+  template<typename T,
+           std::enable_if_t<
+             deferred::is_constant_v<std::remove_reference_t<T>>>* = nullptr>
   void operator()(T&& t) const
   {
     std::cout << indentation() << "constant ("
               << deferred::type_name<decltype(t())>() << ")\n";
   }
 
-  template<typename T, std::enable_if_t<deferred::is_variable_v<T>>* = nullptr>
+  template<typename T,
+           std::enable_if_t<
+             deferred::is_variable_v<std::remove_reference_t<T>>>* = nullptr>
   void operator()(T&& t) const
   {
     std::cout << indentation() << "variable ("
               << deferred::type_name<decltype(t())>() << ")\n";
   }
 
-  template<typename T,
-           std::enable_if_t<!deferred::is_constant_v<T> && !deferred::is_variable_v<T>>* = nullptr>
+  template<
+    typename T,
+    std::enable_if_t<
+      !deferred::is_constant_v<std::remove_reference_t<
+        T>> && !deferred::is_variable_v<std::remove_reference_t<T>>>* = nullptr>
   void operator()(T&& t)
   {
-    using operator_type = typename std::decay_t<T>::operator_type;
+    using operator_type = typename std::remove_reference_t<T>::operator_type;
 
     std::cout << indentation() << "expression:\n";
 
