@@ -7,12 +7,12 @@ set(SOURCES
   variable.cpp
   while.cpp)
 
-add_executable(deferred_unit_tests ${SOURCES})
+add_executable(unit_tests ${SOURCES})
 
-target_compile_options(deferred_unit_tests
+target_compile_options(unit_tests
   PRIVATE
     -Wall -Wpedantic -Werror)
-target_link_libraries(deferred_unit_tests
+target_link_libraries(unit_tests
   PRIVATE
     deferred
     Catch2::Catch2)
@@ -22,4 +22,4 @@ add_test(
   NAME
     UnitTests
   COMMAND
-    deferred_unit_tests)
+    unit_tests)
