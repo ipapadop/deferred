@@ -26,10 +26,10 @@ namespace deferred {
 template<typename ConditionExpression, typename BodyExpression>
 class while_expression : private std::tuple<ConditionExpression, BodyExpression>
 {
-private:
-  using subexpression_types = std::tuple<ConditionExpression, BodyExpression>;
-
 public:
+  using condition_expression_type = ConditionExpression;
+  using body_expression_type      = BodyExpression;
+  using subexpression_types = std::tuple<ConditionExpression, BodyExpression>;
   using constant_expression =
     std::conjunction<is_constant_expression<ConditionExpression>,
                      is_constant_expression<BodyExpression>>;
@@ -46,7 +46,8 @@ public:
     while (
       evaluate(std::get<0>(static_cast<subexpression_types const&>(*this))))
     {
-      evaluate_void(std::get<1>(static_cast<subexpression_types const&>(*this)));
+      evaluate_void(
+        std::get<1>(static_cast<subexpression_types const&>(*this)));
     }
   }
 

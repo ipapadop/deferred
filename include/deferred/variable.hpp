@@ -34,7 +34,7 @@ template<typename T>
 class [[nodiscard]] variable_
 {
 public:
-  using constant_expression = std::false_type;
+  using value_type = T;
 
 private:
   T m_t{};

@@ -49,18 +49,19 @@ template<typename ConditionExpression,
 class if_then_else_expression :
   private std::tuple<ConditionExpression, ThenExpression, ElseExpression>
 {
-private:
+public:
+  using condition_expression_type = ConditionExpression;
+  using then_expression_type      = ThenExpression;
+  using else_expression_type      = ElseExpression;
+  using result_type =
+    std::common_type_t<decltype(std::declval<ThenExpression>()()),
+                       decltype(std::declval<ElseExpression>()())>;
   using subexpression_types =
     std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
-
-public:
   using constant_expression =
     std::conjunction<is_constant_expression<ConditionExpression>,
                      is_constant_expression<ThenExpression>,
                      is_constant_expression<ElseExpression>>;
-  using result_type =
-    std::common_type_t<decltype(std::declval<ThenExpression>()()),
-                       decltype(std::declval<ElseExpression>()())>;
 
   template<typename Condition, typename ThenEx, typename ElseEx>
   constexpr explicit if_then_else_expression(Condition&& condition,

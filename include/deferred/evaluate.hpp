@@ -18,14 +18,16 @@
 namespace deferred {
 
 /// Returns @p t.
-template<typename T, std::enable_if_t<!is_deferred_v<T>>* = nullptr>
+template<typename T,
+         std::enable_if_t<!is_deferred_v<std::remove_reference_t<T>>>* = nullptr>
 constexpr decltype(auto) evaluate(T&& t) noexcept
 {
   return std::forward<T>(t);
 }
 
 /// Returns the result of @p t().
-template<typename T, std::enable_if_t<is_deferred_v<T>>* = nullptr>
+template<typename T,
+         std::enable_if_t<is_deferred_v<std::remove_reference_t<T>>>* = nullptr>
 constexpr auto evaluate(T&& t)
 {
   return evaluate(std::forward<T>(t)());
@@ -35,7 +37,8 @@ constexpr auto evaluate(T&& t)
 template<typename T>
 constexpr void evaluate_void(T&& t) noexcept
 {
-  if constexpr(is_deferred_v<decltype(std::forward<T>(t)())>)
+  if constexpr (is_deferred_v<
+                  std::remove_reference_t<decltype(std::forward<T>(t)())>>)
   {
     evaluate_void(std::forward<T>(t)());
   }

@@ -34,6 +34,8 @@ template<typename T>
 class constant_
 {
 public:
+  using value_type = T;
+
   using constant_expression = std::true_type;
 
 private:

@@ -41,11 +41,10 @@ struct is_deferred<expression_<Operator, Expressions...>> :
 template<typename Operator, typename... Expressions>
 class expression_ : private Operator, private std::tuple<Expressions...>
 {
-private:
-  using subexpression_types = std::tuple<Expressions...>;
-
 public:
-  using operator_type = Operator;
+  using operator_type       = Operator;
+  using expression_types    = std::tuple<Expressions...>;
+  using subexpression_types = std::tuple<Operator, Expressions...>;
   using constant_expression =
     std::conjunction<is_constant_expression<Operator>,
                      is_constant_expression<Expressions>...>;
@@ -69,13 +68,13 @@ public:
   constexpr decltype(auto) operator()() const
   {
     return deferred::apply(static_cast<Operator const&>(*this),
-                           static_cast<subexpression_types const&>(*this));
+                           static_cast<expression_types const&>(*this));
   }
 
   constexpr decltype(auto) operator()()
   {
     return deferred::apply(static_cast<Operator&>(*this),
-                           static_cast<subexpression_types&>(*this));
+                           static_cast<expression_types&>(*this));
   }
 
   constexpr operator_type const& operator_() const noexcept
@@ -85,7 +84,7 @@ public:
 
   constexpr decltype(auto) subexpressions() const noexcept
   {
-    return static_cast<subexpression_types const&>(*this);
+    return static_cast<expression_types const&>(*this);
   }
 
   template<typename Visitor>
@@ -104,7 +103,7 @@ public:
  */
 template<typename T>
 using make_deferred_t =
-  std::conditional_t<is_deferred_v<T>,
+  std::conditional_t<is_deferred_v<std::decay_t<T>>,
                      T,
                      std::conditional_t<std::is_invocable_v<T>,
                                         expression_<make_function_object_t<T>>,

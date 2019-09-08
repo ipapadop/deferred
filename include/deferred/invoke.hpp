@@ -21,8 +21,8 @@ namespace detail {
 
 // Transforms T into a constant_ if it is not a deferred data type.
 template<typename T>
-using make_callable_arg_t =
-  std::conditional_t<is_deferred_v<T>, T, constant_<std::decay_t<T>>>;
+using make_callable_arg_t = std::
+  conditional_t<is_deferred_v<std::decay_t<T>>, T, constant_<std::decay_t<T>>>;
 
 } // namespace detail
 
