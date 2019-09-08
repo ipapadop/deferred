@@ -8,12 +8,12 @@ set(SOURCES
   variable.cpp
   while.cpp)
 
-add_executable(deferred_integration_tests ${SOURCES})
+add_executable(integration_tests ${SOURCES})
 
-target_compile_options(deferred_integration_tests
+target_compile_options(integration_tests
   PRIVATE
     -Wall -Wpedantic -Werror)
-target_link_libraries(deferred_integration_tests
+target_link_libraries(integration_tests
   PRIVATE
     deferred
     Catch2::Catch2)
@@ -23,4 +23,4 @@ add_test(
   NAME
     IntegrationTests
   COMMAND
-    deferred_integration_tests)
+    integration_tests)

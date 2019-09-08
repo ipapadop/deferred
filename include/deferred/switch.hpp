@@ -16,8 +16,41 @@
 #include "evaluate.hpp"
 #include "expression.hpp"
 #include "type_traits/is_constant_expression.hpp"
+#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
+
+template<typename Expression>
+class default_expression;
+
+template<typename LabelExpression, typename BodyExpression>
+class case_expression;
+
+template<typename ConditionExpression,
+         typename DefaultExpression,
+         typename... CaseExpression>
+class switch_expression;
+
+namespace detail {
+
+template<typename Expression>
+struct is_deferred<default_expression<Expression>> : public std::true_type
+{};
+
+template<typename LabelExpression, typename BodyExpression>
+struct is_deferred<case_expression<LabelExpression, BodyExpression>> :
+  public std::true_type
+{};
+
+template<typename ConditionExpression,
+         typename DefaultExpression,
+         typename... CaseExpression>
+struct is_deferred<
+  switch_expression<ConditionExpression, DefaultExpression, CaseExpression...>> :
+  public std::true_type
+{};
+
+} // namespace detail
 
 /// Switch default expression.
 template<typename Expression>
@@ -39,10 +72,10 @@ public:
 template<typename LabelExpression, typename BodyExpression>
 class case_expression : private std::tuple<LabelExpression, BodyExpression>
 {
-private:
-  using subexpression_types = std::tuple<LabelExpression, BodyExpression>;
-
 public:
+  using label_expression_type = LabelExpression;
+  using body_expression_type  = BodyExpression;
+  using subexpression_types   = std::tuple<LabelExpression, BodyExpression>;
   using constant_expression =
     std::conjunction<is_constant_expression<LabelExpression>,
                      is_constant_expression<BodyExpression>>;
@@ -105,11 +138,12 @@ template<typename ConditionExpression,
 class switch_expression :
   private std::tuple<ConditionExpression, DefaultExpression, CaseExpression...>
 {
-private:
+public:
+  using condition_expression_type = ConditionExpression;
+  using default_expression_type   = DefaultExpression;
+  using case_expression_types     = std::tuple<CaseExpression...>;
   using subexpression_types =
     std::tuple<ConditionExpression, DefaultExpression, CaseExpression...>;
-
-public:
   using constant_expression =
     std::conjunction<is_constant_expression<ConditionExpression>,
                      is_constant_expression<DefaultExpression>,

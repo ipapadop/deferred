@@ -31,7 +31,7 @@ struct is_variable<variable_<T>> : public std::true_type
 
 /// @brief Checks if @p T is a @ref variable_.
 template<typename T>
-struct is_variable : public detail::is_variable<std::decay_t<T>>
+struct is_variable : public detail::is_variable<std::remove_cv_t<T>>
 {};
 
 /// Alias for @c is_variable::type.

@@ -12,17 +12,12 @@
 
 #include <type_traits>
 
-#include "is_constant.hpp"
-#include "is_expression.hpp"
-#include "is_variable.hpp"
-
 namespace deferred {
 
 namespace detail {
 
-template<typename T>
-struct is_deferred :
-  public std::disjunction<is_constant<T>, is_expression<T>, is_variable<T>> {};
+template<typename... T>
+struct is_deferred : public std::false_type {};
 
 } // namespace detail
 
