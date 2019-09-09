@@ -16,7 +16,6 @@
 
 #include "apply.hpp"
 #include "constant.hpp"
-#include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 #include "type_traits/make_function_object.hpp"
 
@@ -30,12 +29,6 @@ namespace detail {
 template<typename Operator, typename... Expressions>
 struct is_deferred<expression_<Operator, Expressions...>> :
   public std::true_type
-{};
-
-template<typename Operator, typename... Expressions>
-struct is_constant_expression<expression_<Operator, Expressions...>> :
-  public std::conjunction<deferred::is_constant_expression<Operator>,
-                          deferred::is_constant_expression<Expressions>...>
 {};
 
 } // namespace detail

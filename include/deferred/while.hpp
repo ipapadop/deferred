@@ -15,6 +15,7 @@
 
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
 
@@ -24,10 +25,8 @@ class while_expression;
 namespace detail {
 
 template<typename ConditionExpression, typename BodyExpression>
-struct is_constant_expression<
-  while_expression<ConditionExpression, BodyExpression>> :
-  public std::conjunction<deferred::is_constant_expression<ConditionExpression>,
-                          deferred::is_constant_expression<BodyExpression>>
+struct is_deferred<while_expression<ConditionExpression, BodyExpression>> :
+  public std::true_type
 {};
 
 } // namespace detail

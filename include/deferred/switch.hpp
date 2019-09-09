@@ -15,7 +15,6 @@
 
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -37,20 +36,9 @@ template<typename Expression>
 struct is_deferred<default_expression<Expression>> : public std::true_type
 {};
 
-template<typename Expression>
-struct is_constant_expression<default_expression<Expression>> :
-  public deferred::is_constant_expression_t<Expression>
-{};
-
 template<typename LabelExpression, typename BodyExpression>
 struct is_deferred<case_expression<LabelExpression, BodyExpression>> :
   public std::true_type
-{};
-
-template<typename LabelExpression, typename BodyExpression>
-struct is_constant_expression<case_expression<LabelExpression, BodyExpression>> :
-  public std::conjunction<deferred::is_constant_expression<LabelExpression>,
-                          deferred::is_constant_expression<BodyExpression>>
 {};
 
 template<typename ConditionExpression,
@@ -61,16 +49,6 @@ struct is_deferred<
   public std::true_type
 {};
 
-template<typename ConditionExpression,
-         typename DefaultExpression,
-         typename... CaseExpression>
-struct is_constant_expression<
-  switch_expression<ConditionExpression, DefaultExpression, CaseExpression...>> :
-  public std::conjunction<deferred::is_constant_expression<ConditionExpression>,
-                          deferred::is_constant_expression<DefaultExpression>,
-                          deferred::is_constant_expression<CaseExpression>...>
-{};
-
 } // namespace detail
 
 /// Switch default expression.
@@ -78,6 +56,8 @@ template<typename Expression>
 class default_expression : private Expression
 {
 public:
+  using subexpression_types   = std::tuple<Expression>;
+
   template<typename... T>
   constexpr explicit default_expression(T&&... t) :
     Expression(std::forward<T>(t)...)

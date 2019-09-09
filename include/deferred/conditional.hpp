@@ -16,7 +16,6 @@
 
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -34,16 +33,6 @@ template<typename ConditionExpression,
 struct is_deferred<
   if_then_else_expression<ConditionExpression, ThenExpression, ElseExpression>> :
   public std::true_type
-{};
-
-template<typename ConditionExpression,
-         typename ThenExpression,
-         typename ElseExpression>
-struct is_constant_expression<
-  if_then_else_expression<ConditionExpression, ThenExpression, ElseExpression>> :
-  public std::conjunction<deferred::is_constant_expression<ConditionExpression>,
-                          deferred::is_constant_expression<ThenExpression>,
-                          deferred::is_constant_expression<ElseExpression>>
 {};
 
 } // namespace detail
