@@ -10,6 +10,7 @@
 #ifndef DEFERRED_TYPE_TRAITS_IS_CONSTANT_EXPRESSION_HPP
 #define DEFERRED_TYPE_TRAITS_IS_CONSTANT_EXPRESSION_HPP
 
+#include <tuple>
 #include <type_traits>
 
 namespace deferred {
@@ -24,13 +25,13 @@ template<typename T, typename = std::void_t<>>
 struct is_constant_expression : public std::is_empty<T>::type
 {};
 
-template<typename H, typename... T>
-struct is_constant_expression<std::tuple<H, T...>> :
-  public std::conjunction<deferred::is_constant_expression<H>,
-                          deferred::is_constant_expression<std::tuple<T...>>>
+// Matches the tuple of subexpressions for a deferred type
+template<typename... T>
+struct is_constant_expression<std::tuple<T...>> :
+  public std::conjunction<deferred::is_constant_expression<T>...>
 {};
 
-// If is_constant_expression is defined, then it is a deferred data type that is
+// If subexpression_types is defined, then it is a deferred data type that is
 // potentially a constant expression
 template<typename T>
 struct is_constant_expression<T, std::void_t<typename T::subexpression_types>> :
