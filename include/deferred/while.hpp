@@ -15,9 +15,22 @@
 
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "type_traits/is_constant_expression.hpp"
 
 namespace deferred {
+
+template<typename ConditionExpression, typename BodyExpression>
+class while_expression;
+
+namespace detail {
+
+template<typename ConditionExpression, typename BodyExpression>
+struct is_constant_expression<
+  while_expression<ConditionExpression, BodyExpression>> :
+  public std::conjunction<deferred::is_constant_expression<ConditionExpression>,
+                          deferred::is_constant_expression<BodyExpression>>
+{};
+
+} // namespace detail
 
 /**
  * Deferred while loop that evaluates @p BodyExpression while
@@ -30,9 +43,6 @@ public:
   using condition_expression_type = ConditionExpression;
   using body_expression_type      = BodyExpression;
   using subexpression_types = std::tuple<ConditionExpression, BodyExpression>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<ConditionExpression>,
-                     is_constant_expression<BodyExpression>>;
 
   template<typename Condition, typename Body>
   constexpr explicit while_expression(Condition&& condition, Body&& body) :

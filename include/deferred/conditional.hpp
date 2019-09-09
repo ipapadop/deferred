@@ -36,6 +36,16 @@ struct is_deferred<
   public std::true_type
 {};
 
+template<typename ConditionExpression,
+         typename ThenExpression,
+         typename ElseExpression>
+struct is_constant_expression<
+  if_then_else_expression<ConditionExpression, ThenExpression, ElseExpression>> :
+  public std::conjunction<deferred::is_constant_expression<ConditionExpression>,
+                          deferred::is_constant_expression<ThenExpression>,
+                          deferred::is_constant_expression<ElseExpression>>
+{};
+
 } // namespace detail
 
 /**
@@ -58,10 +68,6 @@ public:
                        decltype(std::declval<ElseExpression>()())>;
   using subexpression_types =
     std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<ConditionExpression>,
-                     is_constant_expression<ThenExpression>,
-                     is_constant_expression<ElseExpression>>;
 
   template<typename Condition, typename ThenEx, typename ElseEx>
   constexpr explicit if_then_else_expression(Condition&& condition,

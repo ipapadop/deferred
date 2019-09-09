@@ -32,6 +32,12 @@ struct is_deferred<expression_<Operator, Expressions...>> :
   public std::true_type
 {};
 
+template<typename Operator, typename... Expressions>
+struct is_constant_expression<expression_<Operator, Expressions...>> :
+  public std::conjunction<deferred::is_constant_expression<Operator>,
+                          deferred::is_constant_expression<Expressions>...>
+{};
+
 } // namespace detail
 
 /**
@@ -45,9 +51,6 @@ public:
   using operator_type       = Operator;
   using expression_types    = std::tuple<Expressions...>;
   using subexpression_types = std::tuple<Operator, Expressions...>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<Operator>,
-                     is_constant_expression<Expressions>...>;
 
   template<typename Op,
            typename... Ex,

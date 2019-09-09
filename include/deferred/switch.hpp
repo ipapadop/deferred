@@ -37,9 +37,20 @@ template<typename Expression>
 struct is_deferred<default_expression<Expression>> : public std::true_type
 {};
 
+template<typename Expression>
+struct is_constant_expression<default_expression<Expression>> :
+  public deferred::is_constant_expression_t<Expression>
+{};
+
 template<typename LabelExpression, typename BodyExpression>
 struct is_deferred<case_expression<LabelExpression, BodyExpression>> :
   public std::true_type
+{};
+
+template<typename LabelExpression, typename BodyExpression>
+struct is_constant_expression<case_expression<LabelExpression, BodyExpression>> :
+  public std::conjunction<deferred::is_constant_expression<LabelExpression>,
+                          deferred::is_constant_expression<BodyExpression>>
 {};
 
 template<typename ConditionExpression,
@@ -50,6 +61,16 @@ struct is_deferred<
   public std::true_type
 {};
 
+template<typename ConditionExpression,
+         typename DefaultExpression,
+         typename... CaseExpression>
+struct is_constant_expression<
+  switch_expression<ConditionExpression, DefaultExpression, CaseExpression...>> :
+  public std::conjunction<deferred::is_constant_expression<ConditionExpression>,
+                          deferred::is_constant_expression<DefaultExpression>,
+                          deferred::is_constant_expression<CaseExpression>...>
+{};
+
 } // namespace detail
 
 /// Switch default expression.
@@ -57,8 +78,6 @@ template<typename Expression>
 class default_expression : private Expression
 {
 public:
-  using typename Expression::constant_expression;
-
   template<typename... T>
   constexpr explicit default_expression(T&&... t) :
     Expression(std::forward<T>(t)...)
@@ -76,9 +95,6 @@ public:
   using label_expression_type = LabelExpression;
   using body_expression_type  = BodyExpression;
   using subexpression_types   = std::tuple<LabelExpression, BodyExpression>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<LabelExpression>,
-                     is_constant_expression<BodyExpression>>;
 
   template<typename LabelEx, typename BodyEx>
   constexpr explicit case_expression(LabelEx&& label, BodyEx&& body) :
@@ -144,10 +160,6 @@ public:
   using case_expression_types     = std::tuple<CaseExpression...>;
   using subexpression_types =
     std::tuple<ConditionExpression, DefaultExpression, CaseExpression...>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<ConditionExpression>,
-                     is_constant_expression<DefaultExpression>,
-                     is_constant_expression<CaseExpression>...>;
 
   using result_type =
     std::common_type_t<decltype(std::declval<DefaultExpression>()()),
