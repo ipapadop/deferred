@@ -15,7 +15,6 @@
 
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -57,7 +56,7 @@ template<typename Expression>
 class default_expression : private Expression
 {
 public:
-  using typename Expression::constant_expression;
+  using subexpression_types   = std::tuple<Expression>;
 
   template<typename... T>
   constexpr explicit default_expression(T&&... t) :
@@ -76,9 +75,6 @@ public:
   using label_expression_type = LabelExpression;
   using body_expression_type  = BodyExpression;
   using subexpression_types   = std::tuple<LabelExpression, BodyExpression>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<LabelExpression>,
-                     is_constant_expression<BodyExpression>>;
 
   template<typename LabelEx, typename BodyEx>
   constexpr explicit case_expression(LabelEx&& label, BodyEx&& body) :
@@ -144,10 +140,6 @@ public:
   using case_expression_types     = std::tuple<CaseExpression...>;
   using subexpression_types =
     std::tuple<ConditionExpression, DefaultExpression, CaseExpression...>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<ConditionExpression>,
-                     is_constant_expression<DefaultExpression>,
-                     is_constant_expression<CaseExpression>...>;
 
   using result_type =
     std::common_type_t<decltype(std::declval<DefaultExpression>()()),

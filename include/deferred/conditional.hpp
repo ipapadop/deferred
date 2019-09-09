@@ -16,7 +16,6 @@
 
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -58,10 +57,6 @@ public:
                        decltype(std::declval<ElseExpression>()())>;
   using subexpression_types =
     std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<ConditionExpression>,
-                     is_constant_expression<ThenExpression>,
-                     is_constant_expression<ElseExpression>>;
 
   template<typename Condition, typename ThenEx, typename ElseEx>
   constexpr explicit if_then_else_expression(Condition&& condition,

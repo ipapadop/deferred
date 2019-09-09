@@ -16,7 +16,6 @@
 
 #include "apply.hpp"
 #include "constant.hpp"
-#include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 #include "type_traits/make_function_object.hpp"
 
@@ -45,9 +44,6 @@ public:
   using operator_type       = Operator;
   using expression_types    = std::tuple<Expressions...>;
   using subexpression_types = std::tuple<Operator, Expressions...>;
-  using constant_expression =
-    std::conjunction<is_constant_expression<Operator>,
-                     is_constant_expression<Expressions>...>;
 
   template<typename Op,
            typename... Ex,
