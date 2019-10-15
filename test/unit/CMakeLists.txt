@@ -3,6 +3,7 @@ set(SOURCES
   constant.cpp
   invoke.cpp
   main.cpp
+  make_function_object.cpp
   switch.cpp
   variable.cpp
   while.cpp)

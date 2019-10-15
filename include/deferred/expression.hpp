@@ -16,8 +16,8 @@
 
 #include "apply.hpp"
 #include "constant.hpp"
+#include "make_function_object.hpp"
 #include "type_traits/is_deferred.hpp"
-#include "type_traits/make_function_object.hpp"
 
 namespace deferred {
 
@@ -90,6 +90,23 @@ public:
   }
 };
 
+namespace detail {
+
+template<typename T, typename = std::void_t<>>
+struct make_deferred
+{
+  using type = constant_<T>;
+};
+
+template<typename T>
+struct make_deferred<T, std::enable_if_t<std::is_invocable_v<T>>>
+{
+  using type =
+    expression_<std::decay_t<decltype(make_function_object(std::declval<T>()))>>;
+};
+
+} // namespace detail
+
 /**
  * Transforms @p T into a @c deferred type.
  *
@@ -101,9 +118,7 @@ template<typename T>
 using make_deferred_t =
   std::conditional_t<is_deferred_v<std::decay_t<T>>,
                      T,
-                     std::conditional_t<std::is_invocable_v<T>,
-                                        expression_<make_function_object_t<T>>,
-                                        constant_<std::decay_t<T>>>>;
+                     typename detail::make_deferred<std::decay_t<T>>::type>;
 
 } // namespace deferred
 

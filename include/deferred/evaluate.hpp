@@ -17,25 +17,24 @@
 
 namespace deferred {
 
-/// Returns @p t.
-template<typename T,
-         std::enable_if_t<!is_deferred_v<std::remove_reference_t<T>>>* = nullptr>
-constexpr decltype(auto) evaluate(T&& t) noexcept
-{
-  return std::forward<T>(t);
-}
-
 /// Returns the result of @p t().
-template<typename T,
-         std::enable_if_t<is_deferred_v<std::remove_reference_t<T>>>* = nullptr>
-constexpr auto evaluate(T&& t)
+template<typename T>
+constexpr decltype(auto) evaluate(T&& t)
 {
-  return evaluate(std::forward<T>(t)());
+  if constexpr (is_deferred_v<std::remove_reference_t<T>>)
+  {
+    auto v = evaluate(std::forward<T>(t)());
+    return v;
+  }
+  else
+  {
+    return std::forward<T>(t);
+  }
 }
 
 /// Evaluates @p t.
 template<typename T>
-constexpr void evaluate_void(T&& t) noexcept
+constexpr void evaluate_void(T&& t)
 {
   if constexpr (is_deferred_v<
                   std::remove_reference_t<decltype(std::forward<T>(t)())>>)
@@ -48,18 +47,19 @@ constexpr void evaluate_void(T&& t) noexcept
   }
 }
 
-/// Returns @p t.
-template<typename T, std::enable_if_t<!std::is_invocable_v<T>>* = nullptr>
-constexpr decltype(auto) recursive_evaluate(T&& t) noexcept
+/// Recursively evaluates @p t until a non-callable is returned.
+template<typename T>
+constexpr decltype(auto) recursive_evaluate(T&& t)
 {
-  return std::forward<T>(t);
-}
-
-/// Returns the result of @p t().
-template<typename T, std::enable_if_t<std::is_invocable_v<T>>* = nullptr>
-constexpr auto recursive_evaluate(T&& t)
-{
-  return recursive_evaluate(std::forward<T>(t)());
+  if constexpr (std::is_invocable_v<T>)
+  {
+    auto v = recursive_evaluate(std::forward<T>(t)());
+    return v;
+  }
+  else
+  {
+    return std::forward<T>(t);
+  }
 }
 
 } // namespace deferred
