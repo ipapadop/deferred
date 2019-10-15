@@ -47,9 +47,6 @@ struct get_int_t
 
 } // namespace
 
-#include "deferred/type_name.hpp"
-
-
 TEST_CASE("invoke functions", "[invoke-function]")
 {
   SECTION("no arguments")
