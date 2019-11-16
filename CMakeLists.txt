@@ -4,7 +4,7 @@ project(deferred VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_subdirectory(external EXCLUDE_FROM_ALL)
+add_subdirectory(external)
 
 set(HEADER_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/include/deferred/deferred.hpp)

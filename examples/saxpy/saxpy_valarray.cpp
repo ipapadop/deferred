@@ -13,80 +13,21 @@
 #include "deferred/deferred.hpp"
 #include "deferred/type_name.hpp"
 
-#include <functional> // std::invoke
-#include <tuple>      // std::tuple
-
-// from
-// https://stackoverflow.com/questions/1198260/how-can-you-iterate-over-the-elements-of-an-stdtuple
-template<size_t Index = 0,
-         typename TTuple,
-         size_t Size = std::tuple_size_v<std::remove_reference_t<TTuple>>,
-         typename TCallable,
-         typename... TArgs>
-void for_each(TTuple&& tuple, TCallable&& callable, TArgs&&... args)
-{
-  if constexpr (Index < Size)
-  {
-    std::invoke(callable, args..., std::get<Index>(tuple));
-
-    if constexpr (Index + 1 < Size)
-      for_each<Index + 1>(std::forward<TTuple>(tuple),
-                          std::forward<TCallable>(callable),
-                          std::forward<TArgs>(args)...);
-  }
-}
-
 struct print_visitor
 {
-  std::size_t indent = 0;
-
-  std::string indentation() const
+  std::string indentation(std::size_t indent) const
   {
     return std::string(indent, '\t');
   }
 
-  template<typename T,
-           std::enable_if_t<
-             deferred::is_constant_v<std::remove_reference_t<T>>>* = nullptr>
-  void operator()(T&& t) const
+  template<typename T>
+  void operator()(T&& t, std::size_t nesting) const
   {
-    std::cout << indentation() << "constant ("
-              << deferred::type_name<decltype(t())>() << ")\n";
-  }
+    auto i = indentation(nesting);
 
-  template<typename T,
-           std::enable_if_t<
-             deferred::is_variable_v<std::remove_reference_t<T>>>* = nullptr>
-  void operator()(T&& t) const
-  {
-    std::cout << indentation() << "variable ("
-              << deferred::type_name<decltype(t())>() << ")\n";
-  }
-
-  template<
-    typename T,
-    std::enable_if_t<
-      !deferred::is_constant_v<std::remove_reference_t<
-        T>> && !deferred::is_variable_v<std::remove_reference_t<T>>>* = nullptr>
-  void operator()(T&& t)
-  {
-    using operator_type = typename std::remove_reference_t<T>::operator_type;
-
-    std::cout << indentation() << "expression:\n";
-
-    ++indent;
-
-    auto i = indentation();
-
-    std::cout << i << "result type (" << deferred::type_name<decltype(t())>()
-              << ')' << '\n'
-              << i << "operator ("
-              << deferred::type_name<std::decay_t<operator_type>>() << ')'
-              << '\n';
-
-    for_each(t.subexpressions(), *this);
-
-    --indent;
+    std::cout
+      << i << "Expression: " << deferred::type_name<decltype(t)>() << '\n'
+      << i << "Result type: " << deferred::type_name<decltype(t())>() << '\n';
   }
 };
 
