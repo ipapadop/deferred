@@ -70,9 +70,9 @@ public:
   }
 
   template<typename Visitor>
-  constexpr decltype(auto) visit(Visitor&& v) const
+  constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
-    return std::forward<Visitor>(v)(*this);
+    std::forward<Visitor>(v)(*this, nesting);
   }
 };
 
