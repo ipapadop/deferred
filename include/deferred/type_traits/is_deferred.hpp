@@ -23,7 +23,7 @@ struct is_deferred : public std::false_type {};
 
 /// Checks if @p T is a type in @c deferred namespace.
 template<typename T>
-struct is_deferred : public detail::is_deferred<std::decay_t<T>> {};
+struct is_deferred : public detail::is_deferred<std::remove_cv_t<T>> {};
 
 /// Alias for @c is_deferred_datatype::type.
 template<typename T>
