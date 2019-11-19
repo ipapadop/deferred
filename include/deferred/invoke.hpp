@@ -27,7 +27,7 @@ namespace deferred {
 template<typename F, typename... Args>
 constexpr auto invoke(F&& f, Args&&... args)
 {
-  if constexpr (is_deferred_v<std::decay_t<F>>)
+  if constexpr (is_deferred_v<std::remove_reference_t<F>>)
   {
     static_assert(sizeof...(Args) == 0);
     return std::forward<F>(f);
