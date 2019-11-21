@@ -48,7 +48,7 @@ public:
 
   template<typename Op,
            typename... Ex,
-           typename std::enable_if_t<!std::is_same_v<Op, expression_>>* = nullptr>
+           std::enable_if_t<!std::is_same_v<Op, expression_>>* = nullptr>
   constexpr explicit expression_(Op&& op, Ex&&... ex) :
     Operator(std::forward<Op>(op)), std::tuple<Expressions...>(
                                       std::forward<Ex>(ex)...)
