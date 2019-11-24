@@ -16,21 +16,8 @@
 #include "evaluate.hpp"
 #include "expression.hpp"
 #include "tuple.hpp"
-#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
-
-template<typename ConditionExpression, typename BodyExpression>
-class while_expression;
-
-namespace detail {
-
-template<typename ConditionExpression, typename BodyExpression>
-struct is_deferred<while_expression<ConditionExpression, BodyExpression>> :
-  public std::true_type
-{};
-
-} // namespace detail
 
 /**
  * Deferred while loop that evaluates @p BodyExpression while

@@ -16,41 +16,8 @@
 #include "evaluate.hpp"
 #include "expression.hpp"
 #include "tuple.hpp"
-#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
-
-template<typename Expression>
-class default_expression;
-
-template<typename LabelExpression, typename BodyExpression>
-class case_expression;
-
-template<typename ConditionExpression,
-         typename DefaultExpression,
-         typename... CaseExpression>
-class switch_expression;
-
-namespace detail {
-
-template<typename Expression>
-struct is_deferred<default_expression<Expression>> : public std::true_type
-{};
-
-template<typename LabelExpression, typename BodyExpression>
-struct is_deferred<case_expression<LabelExpression, BodyExpression>> :
-  public std::true_type
-{};
-
-template<typename ConditionExpression,
-         typename DefaultExpression,
-         typename... CaseExpression>
-struct is_deferred<
-  switch_expression<ConditionExpression, DefaultExpression, CaseExpression...>> :
-  public std::true_type
-{};
-
-} // namespace detail
 
 /// Switch default expression.
 template<typename Expression>

@@ -22,18 +22,6 @@
 
 namespace deferred {
 
-template<typename Operator, typename... Expressions>
-class expression_;
-
-namespace detail {
-
-template<typename Operator, typename... Expressions>
-struct is_deferred<expression_<Operator, Expressions...>> :
-  public std::true_type
-{};
-
-} // namespace detail
-
 /**
  * Deferred expression that is composed of an operator @p Operator applied to
  * subexpressions @p Expressions....

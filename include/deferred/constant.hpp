@@ -16,7 +16,6 @@
 #include "evaluate.hpp"
 #include "type_traits/is_constant.hpp"
 #include "type_traits/is_constant_expression.hpp"
-#include "type_traits/is_deferred.hpp"
 
 namespace deferred {
 
@@ -24,10 +23,6 @@ template<typename T>
 class constant_;
 
 namespace detail {
-
-template<typename T>
-struct is_deferred<constant_<T>> : public std::true_type
-{};
 
 template<typename T>
 struct is_constant_expression<constant_<T>> : public std::true_type
@@ -41,6 +36,7 @@ class constant_
 {
 public:
   using value_type = T;
+  using subexpression_types = void;
 
 private:
   T m_t;
