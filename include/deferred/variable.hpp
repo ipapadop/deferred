@@ -13,7 +13,6 @@
 #include <utility>
 
 #include "evaluate.hpp"
-#include "type_traits/is_variable.hpp"
 
 namespace deferred {
 

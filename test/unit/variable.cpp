@@ -9,11 +9,13 @@
 #include <catch2/catch.hpp>
 
 #include "deferred/variable.hpp"
+#include "deferred/type_traits/is_constant_expression.hpp"
 
 TEST_CASE("empty variable", "[variable-empty]")
 {
   auto v = deferred::variable<int>();
 
+  static_assert(!deferred::is_constant_expression_v<decltype(v)>);
   static_assert(std::is_same_v<decltype(v)::value_type, int>);
   static_assert(std::is_same_v<decltype(v()), int&>);
   CHECK(v() == int{});
@@ -29,6 +31,7 @@ TEST_CASE("initialized variable", "[variable-init]")
 {
   constexpr auto v = deferred::variable(42);
 
+  static_assert(!deferred::is_constant_expression_v<decltype(v)>);
   static_assert(std::is_same_v<decltype(v)::value_type, int>);
   static_assert(std::is_same_v<decltype(v()), int const&>);
   CHECK(v() == 42);
@@ -38,6 +41,7 @@ TEST_CASE("constexpr variable", "[variable-constexpr]")
 {
   constexpr auto v = deferred::variable(42);
 
+  static_assert(!deferred::is_constant_expression_v<decltype(v)>);
   static_assert(std::is_same_v<decltype(v)::value_type, int>);
   static_assert(std::is_same_v<decltype(v()), int const&>);
   static_assert(v() == 42);
@@ -51,6 +55,7 @@ TEST_CASE("variable from lambda", "[variable-from-lambda]")
     return 10;
   });
 
+  static_assert(!deferred::is_constant_expression_v<decltype(v)>);
   static_assert(std::is_same_v<decltype(v)::value_type, int>);
   static_assert(std::is_same_v<decltype(v()), int&>);
   CHECK(i == 1);
@@ -61,6 +66,7 @@ TEST_CASE("variable from mutable lambda", "[variable-from-mutable-lambda]")
 {
   auto v = deferred::variable([i = 0]() mutable { return ++i; });
 
+  static_assert(!deferred::is_constant_expression_v<decltype(v)>);
   static_assert(std::is_same_v<decltype(v)::value_type, int>);
   static_assert(std::is_same_v<decltype(v()), int&>);
   CHECK(v() == 1);

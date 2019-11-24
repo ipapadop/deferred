@@ -9,6 +9,7 @@
 #include <catch2/catch.hpp>
 
 #include "deferred/conditional.hpp"
+#include "deferred/type_traits/is_constant_expression.hpp"
 
 TEST_CASE("conditional with literal", "[conditional-literal]")
 {
