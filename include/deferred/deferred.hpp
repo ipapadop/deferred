@@ -19,5 +19,6 @@
 #include "switch.hpp"
 #include "variable.hpp"
 #include "while.hpp"
+#include "type_traits/is_constant_expression.hpp"
 
 #endif
