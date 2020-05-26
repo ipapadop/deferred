@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -68,20 +68,17 @@ TEST_CASE("switch with expressions", "[switch-expressions]")
 {
   auto condition = deferred::variable<int>();
   auto label     = deferred::variable<int>();
-  auto ex =
-    deferred::switch_(condition,
-                      deferred::default_(condition + 1),
-                      deferred::case_(label, condition + 2));
+  auto ex        = deferred::switch_(condition,
+                              deferred::default_(condition + 1),
+                              deferred::case_(label, condition + 2));
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
 
- // using f = typename decltype(ex)::f;
-
   condition = 1;
-  label = 1;
+  label     = 1;
   CHECK(ex() == 3);
 
   condition = 1;
-  label = 5;
+  label     = 5;
   CHECK(ex() == 2);
 }

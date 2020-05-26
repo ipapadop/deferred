@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -16,8 +16,8 @@
 
 #include "apply.hpp"
 #include "constant.hpp"
-#include "tuple.hpp"
 #include "make_function_object.hpp"
+#include "tuple.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -40,7 +40,7 @@ public:
   constexpr explicit expression_(Op&& op, Ex&&... ex) :
     Operator(std::forward<Op>(op)), std::tuple<Expressions...>(
                                       std::forward<Ex>(ex)...)
-  {}
+  { }
 
   expression_(expression_ const&) = default;
   expression_(expression_&&)      = default;

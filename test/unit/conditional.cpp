@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *

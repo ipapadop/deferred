@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -22,7 +22,7 @@ template<typename T>
 class constant_
 {
 public:
-  using value_type = T;
+  using value_type          = T;
   using subexpression_types = std::tuple<>;
 
 private:
@@ -32,7 +32,7 @@ public:
   /// Constructs a constant_ from @p u.
   template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
   constexpr explicit constant_(U&& u) : m_t(std::forward<U>(u))
-  {}
+  { }
 
   constant_(constant_ const&) = default;
   constant_(constant_&&)      = default;

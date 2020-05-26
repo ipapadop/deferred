@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -38,7 +38,7 @@ TEST_CASE("while with nested deferred", "[while-nested-deferred]")
 
   auto count = 0;
   auto ex    = deferred::while_([i = 0, &n]() mutable { return i++ != n; },
-                                [&count] { ++count; });
+                             [&count] { ++count; });
   ex();
   CHECK(count == 10);
 }

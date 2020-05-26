@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -8,8 +8,8 @@
 
 #include <catch2/catch.hpp>
 
-#include "deferred/while.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
+#include "deferred/while.hpp"
 
 TEST_CASE("while with lambda", "[while-lambda]")
 {

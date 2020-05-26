@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -21,7 +21,7 @@ template<typename T>
 class [[nodiscard]] variable_
 {
 public:
-  using value_type = T;
+  using value_type          = T;
   using subexpression_types = void;
 
 private:
@@ -31,13 +31,13 @@ public:
   variable_() = default;
 
   constexpr explicit variable_(T const& t) : m_t(t)
-  {}
+  { }
 
-  constexpr explicit variable_(T && t) noexcept : m_t(std::move(t))
-  {}
+  constexpr explicit variable_(T&& t) noexcept : m_t(std::move(t))
+  { }
 
   variable_(variable_ const&) = delete;
-  variable_(variable_ &&)     = delete;
+  variable_(variable_&&)      = delete;
 
   variable_& operator=(variable_ const&) = delete;
   variable_& operator=(variable_&&) = delete;

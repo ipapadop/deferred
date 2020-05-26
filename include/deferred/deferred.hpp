@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -17,8 +17,8 @@
 #include "invoke.hpp"
 #include "operators.hpp"
 #include "switch.hpp"
+#include "type_traits/is_constant_expression.hpp"
 #include "variable.hpp"
 #include "while.hpp"
-#include "type_traits/is_constant_expression.hpp"
 
 #endif
