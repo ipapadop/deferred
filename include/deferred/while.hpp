@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -36,7 +36,7 @@ public:
     std::tuple<ConditionExpression, BodyExpression>(
       std::forward<Condition>(condition),
       std::forward<Body>(body))
-  {}
+  { }
 
   constexpr void operator()() const
   {

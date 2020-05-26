@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -18,19 +18,19 @@ namespace detail {
 
 template<typename T, typename = std::void_t<>>
 struct has_subexpression_types : std::false_type
-{};
+{ };
 
 template<typename T>
 struct has_subexpression_types<T, std::void_t<typename T::subexpression_types>> :
   std::true_type
-{};
+{ };
 
 } // namespace detail
 
 /// Checks if @p T is a type in @c deferred namespace.
 template<typename T>
 struct is_deferred : public detail::has_subexpression_types<std::remove_cv_t<T>>
-{};
+{ };
 
 /// Alias for @c is_deferred_datatype::type.
 template<typename T>

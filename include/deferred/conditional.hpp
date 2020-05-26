@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -49,7 +49,7 @@ public:
       std::forward<Condition>(condition),
       std::forward<ThenEx>(then_),
       std::forward<ElseEx>(else_))
-  {}
+  { }
 
   constexpr result_type operator()() const
   {

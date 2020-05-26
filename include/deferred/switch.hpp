@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -29,7 +29,7 @@ public:
   template<typename... T>
   constexpr explicit default_expression(T&&... t) :
     Expression(std::forward<T>(t)...)
-  {}
+  { }
 
   using Expression::operator();
   using Expression::visit;
@@ -48,7 +48,7 @@ public:
   constexpr explicit case_expression(LabelEx&& label, BodyEx&& body) :
     std::tuple<LabelExpression, BodyExpression>(std::forward<LabelEx>(label),
                                                 std::forward<BodyEx>(body))
-  {}
+  { }
 
   /// Compares @p T with the label expression.
   template<typename T>
@@ -81,19 +81,19 @@ namespace detail {
 
 template<typename>
 struct is_valid_default : public std::false_type
-{};
+{ };
 
 template<typename T>
 struct is_valid_default<default_expression<T>> : public std::true_type
-{};
+{ };
 
 template<typename>
 struct is_valid_case : public std::false_type
-{};
+{ };
 
 template<typename T, typename U>
 struct is_valid_case<case_expression<T, U>> : public std::true_type
-{};
+{ };
 
 } // namespace detail
 
@@ -125,7 +125,7 @@ public:
       std::forward<Condition>(condition),
       std::forward<Default>(df),
       std::forward<Case>(cs)...)
-  {}
+  { }
 
 private:
   /**

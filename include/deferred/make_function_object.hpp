@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -23,7 +23,7 @@ struct fun_ptr_wrapper
   F m_f;
 
   constexpr fun_ptr_wrapper(F f) noexcept : m_f{f}
-  {}
+  { }
 
   template<typename... T>
   constexpr decltype(auto)

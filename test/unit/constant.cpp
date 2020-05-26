@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Yiannis Papadopoulos
+ * Copyright (c) 2019-2020 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -84,7 +84,7 @@ TEST_CASE("constant from constant", "[constant-nested-constant]")
 
 TEST_CASE("constant from lambda", "[constant-lambda]")
 {
-  int i = 0;
+  int i  = 0;
   auto c = deferred::constant([&i] { return ++i; });
 
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
@@ -98,7 +98,7 @@ TEST_CASE("constant from lambda", "[constant-lambda]")
 TEST_CASE("constant from mutable lambda", "[constant-mutable-lambda]")
 {
   unsigned int i = 0;
-  auto c = deferred::constant([i = i]() mutable { return ++i; });
+  auto c         = deferred::constant([i = i]() mutable { return ++i; });
 
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
   static_assert(std::is_same_v<decltype(c)::value_type, unsigned int>);
