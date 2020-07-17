@@ -10,12 +10,16 @@
 #ifndef DEFERRED_TYPE_NAME_HPP
 #define DEFERRED_TYPE_NAME_HPP
 
-#include <cstdlib>
-#include <cxxabi.h>
-#include <memory>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+
+#ifdef __GNUG__
+#  include <cstdlib>
+#  include <memory>
+
+#  include <cxxabi.h>
+#endif
 
 namespace deferred {
 
@@ -30,11 +34,15 @@ std::string type_name()
 {
   using TR = std::remove_reference_t<T>;
 
+#ifdef __GNUG__
   std::unique_ptr<char, void (*)(void*)> own(
     abi::__cxa_demangle(typeid(TR).name(), nullptr, nullptr, nullptr),
     std::free);
-
   std::string r = own != nullptr ? own.get() : typeid(TR).name();
+#else
+  std::string r = typeid(TR).name();
+#endif
+
   if (std::is_const<TR>::value)
   {
     r += " const";
@@ -56,7 +64,7 @@ std::string type_name()
 
 /// @copydoc type_name()
 template<typename T>
-std::string type_name(T&& t)
+auto type_name(T&& t)
 {
   return type_name<decltype(t)>();
 }
