@@ -259,7 +259,7 @@ TEST_CASE("logical operators", "[logical-operators]")
 
 TEST_CASE("bitwise operators", "[bitwise-operators]")
 {
-  auto i = 41;
+  auto i = 13;
   auto j = 3;
 
   auto c1 = deferred::constant(i);
