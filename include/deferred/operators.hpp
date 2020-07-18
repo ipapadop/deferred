@@ -41,7 +41,8 @@ constexpr auto operator-(T&& t, U&& u)
 template<typename T, std::enable_if_t<is_deferred_v<std::decay_t<T>>>* = nullptr>
 constexpr auto operator+(T&& t)
 {
-  return invoke([](auto&& x) { return +x; }, std::forward<T>(t));
+  return invoke([](auto&& x) { return +std::forward<decltype(x)>(x); },
+                std::forward<T>(t));
 }
 
 template<typename T, std::enable_if_t<is_deferred_v<std::decay_t<T>>>* = nullptr>
@@ -80,25 +81,29 @@ constexpr auto operator%(T&& t, U&& u)
 template<typename T, std::enable_if_t<is_deferred_v<std::decay_t<T>>>* = nullptr>
 constexpr auto operator++(T&& t)
 {
-  return invoke([](auto&& x) { return ++x; }, std::forward<T>(t));
+  return invoke([](auto&& x) { return ++std::forward<decltype(x)>(x); },
+                std::forward<T>(t));
 }
 
 template<typename T, std::enable_if_t<is_deferred_v<std::decay_t<T>>>* = nullptr>
 constexpr auto operator++(T&& t, int)
 {
-  return invoke([](auto&& x) { return x++; }, std::forward<T>(t));
+  return invoke([](auto&& x) { return std::forward<decltype(x)>(x)++; },
+                std::forward<T>(t));
 }
 
 template<typename T, std::enable_if_t<is_deferred_v<std::decay_t<T>>>* = nullptr>
 constexpr auto operator--(T&& t)
 {
-  return invoke([](auto&& x) { return --x; }, std::forward<T>(t));
+  return invoke([](auto&& x) { return --std::forward<decltype(x)>(x); },
+                std::forward<T>(t));
 }
 
 template<typename T, std::enable_if_t<is_deferred_v<std::decay_t<T>>>* = nullptr>
 constexpr auto operator--(T&& t, int)
 {
-  return invoke([](auto&& x) { return x--; }, std::forward<T>(t));
+  return invoke([](auto&& x) { return std::forward<decltype(x)>(x)--; },
+                std::forward<T>(t));
 }
 
 template<
@@ -218,9 +223,12 @@ template<
   std::enable_if_t<any_deferred_v<std::decay_t<T>, std::decay_t<U>>>* = nullptr>
 constexpr auto operator<<(T&& t, U&& u)
 {
-  return invoke([](auto&& x, auto&& y) { return x << y; },
-                std::forward<T>(t),
-                std::forward<U>(u));
+  return invoke(
+    [](auto&& x, auto&& y) {
+      return std::forward<decltype(x)>(x) << std::forward<decltype(y)>(y);
+    },
+    std::forward<T>(t),
+    std::forward<U>(u));
 }
 
 template<
@@ -229,9 +237,12 @@ template<
   std::enable_if_t<any_deferred_v<std::decay_t<T>, std::decay_t<U>>>* = nullptr>
 constexpr auto operator>>(T&& t, U&& u)
 {
-  return invoke([](auto&& x, auto&& y) { return x >> y; },
-                std::forward<T>(t),
-                std::forward<U>(u));
+  return invoke(
+    [](auto&& x, auto&& y) {
+      return std::forward<decltype(x)>(x) >> std::forward<decltype(y)>(y);
+    },
+    std::forward<T>(t),
+    std::forward<U>(u));
 }
 
 } // namespace deferred

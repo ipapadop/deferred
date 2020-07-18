@@ -6,6 +6,7 @@
  * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
  */
 
+#include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <valarray>
