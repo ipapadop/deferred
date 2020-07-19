@@ -23,27 +23,19 @@ constexpr decltype(auto) evaluate(T&& t)
 {
   if constexpr (is_deferred_v<std::remove_reference_t<T>>)
   {
-    auto v = evaluate(std::forward<T>(t)());
-    return v;
+    if constexpr (std::is_same_v<decltype(std::forward<T>(t)()), void>)
+    {
+      std::forward<T>(t)();
+    }
+    else
+    {
+      auto v = evaluate(std::forward<T>(t)());
+      return v;
+    }
   }
   else
   {
     return std::forward<T>(t);
-  }
-}
-
-/// Evaluates @p t.
-template<typename T>
-constexpr void evaluate_void(T&& t)
-{
-  if constexpr (is_deferred_v<
-                  std::remove_reference_t<decltype(std::forward<T>(t)())>>)
-  {
-    evaluate_void(std::forward<T>(t)());
-  }
-  else
-  {
-    std::forward<T>(t)();
   }
 }
 
