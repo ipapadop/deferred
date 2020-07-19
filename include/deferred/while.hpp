@@ -43,8 +43,7 @@ public:
     while (
       evaluate(std::get<0>(static_cast<subexpression_types const&>(*this))))
     {
-      evaluate_void(
-        std::get<1>(static_cast<subexpression_types const&>(*this)));
+      evaluate(std::get<1>(static_cast<subexpression_types const&>(*this)));
     }
   }
 
@@ -52,7 +51,7 @@ public:
   {
     while (evaluate(std::get<0>(static_cast<subexpression_types&>(*this))))
     {
-      evaluate_void(std::get<1>(static_cast<subexpression_types&>(*this)));
+      evaluate(std::get<1>(static_cast<subexpression_types&>(*this)));
     }
   }
 
