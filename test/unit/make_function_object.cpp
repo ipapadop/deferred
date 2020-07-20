@@ -29,8 +29,7 @@ struct get_int_t
 
 } // namespace
 
-TEST_CASE("make_function_object from function",
-          "[make-function-object-function]")
+TEST_CASE("make_function_object from function", "[make-function-object-function]")
 {
   constexpr auto f = deferred::make_function_object(get_int);
 
@@ -38,8 +37,7 @@ TEST_CASE("make_function_object from function",
   CHECK(f() == get_int());
 }
 
-TEST_CASE("make_function_object from function object",
-          "[make-function-object-function-object]")
+TEST_CASE("make_function_object from function object", "[make-function-object-function-object]")
 {
   constexpr auto f = deferred::make_function_object(get_int_t{});
 

@@ -68,8 +68,7 @@ public:
 template<typename T>
 constexpr auto constant(T&& t)
 {
-  using result_type =
-    std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
+  using result_type = std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
   return constant_<result_type>(recursive_evaluate(std::forward<T>(t)));
 }
 

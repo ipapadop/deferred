@@ -8,8 +8,8 @@
 
 #include <catch2/catch.hpp>
 
-#include "deferred/variable.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
+#include "deferred/variable.hpp"
 
 TEST_CASE("empty variable", "[variable-empty]")
 {
@@ -49,7 +49,7 @@ TEST_CASE("constexpr variable", "[variable-constexpr]")
 
 TEST_CASE("variable from lambda", "[variable-from-lambda]")
 {
-  int i = 0;
+  int i  = 0;
   auto v = deferred::variable([&] {
     ++i;
     return 10;

@@ -72,8 +72,7 @@ TEST_CASE("constant from constant", "[constant-nested-constant]")
   constexpr auto c1 = deferred::constant(4);
   constexpr auto c2 = deferred::constant(c1);
 
-  static_assert(std::is_same_v<decltype(c1), decltype(c2)>,
-                "copy created nested type");
+  static_assert(std::is_same_v<decltype(c1), decltype(c2)>, "copy created nested type");
   static_assert(std::is_same_v<decltype(c1)::value_type, int>);
   static_assert(std::is_same_v<decltype(c2)::value_type, int>);
   static_assert(std::is_same_v<decltype(c1()), int const&>);
@@ -110,7 +109,11 @@ TEST_CASE("constant from mutable lambda", "[constant-mutable-lambda]")
 
 TEST_CASE("constant from nested lambda", "[constant-nested-lambda]")
 {
-  auto c = deferred::constant([] { return [] { return 10; }; });
+  auto c = deferred::constant([] {
+    return [] {
+      return 10;
+    };
+  });
 
   static_assert(deferred::is_constant_expression_v<decltype(c)>);
   static_assert(std::is_same_v<decltype(c)::value_type, int>);
@@ -118,8 +121,7 @@ TEST_CASE("constant from nested lambda", "[constant-nested-lambda]")
   CHECK(c() == 10);
 }
 
-TEST_CASE("constant from nested lambda constant",
-          "[constant-nested-lambda-constant]")
+TEST_CASE("constant from nested lambda constant", "[constant-nested-lambda-constant]")
 {
   auto c = deferred::constant([] { return deferred::constant(10); });
 
@@ -157,8 +159,7 @@ constexpr int function2()
 
 } // namespace
 
-TEST_CASE("constant from constexpr function",
-          "[constant-from-constexpr-function]")
+TEST_CASE("constant from constexpr function", "[constant-from-constexpr-function]")
 {
   constexpr auto c = deferred::constant(&function2);
 

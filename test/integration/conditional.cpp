@@ -25,10 +25,9 @@ TEST_CASE("conditional with constants", "[conditional-constants]")
 
 TEST_CASE("conditional with variable", "[conditional-variable]")
 {
-  auto v = deferred::variable<bool>();
-  auto ex =
-    deferred::if_then_else(v, deferred::constant(42), deferred::constant(10));
-  v = true;
+  auto v  = deferred::variable<bool>();
+  auto ex = deferred::if_then_else(v, deferred::constant(42), deferred::constant(10));
+  v       = true;
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == 42);
@@ -63,8 +62,7 @@ TEST_CASE("conditional with expression", "[conditional-expression]")
   CHECK(ex() == 42);
 }
 
-TEST_CASE("conditional with nested expression",
-          "[conditional-nested-expression]")
+TEST_CASE("conditional with nested expression", "[conditional-nested-expression]")
 {
   auto v  = deferred::variable<int>();
   auto ex = deferred::if_then_else([&] { return (v + 1) > 10; }, 42, 10);

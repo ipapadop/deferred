@@ -64,8 +64,7 @@ TEST_CASE("switch with three literals", "[switch-three-literals]")
   CHECK(ex() == 100);
 }
 
-TEST_CASE("switch with two literals defaulting",
-          "[switch-two-literals-default]")
+TEST_CASE("switch with two literals defaulting", "[switch-two-literals-default]")
 {
   auto ex = deferred::switch_(10,
                               deferred::default_(100),
@@ -75,8 +74,7 @@ TEST_CASE("switch with two literals defaulting",
   CHECK(ex() == 100);
 }
 
-TEST_CASE("switch with three literals defaulting",
-          "[switch-three-literals-default]")
+TEST_CASE("switch with three literals defaulting", "[switch-three-literals-default]")
 {
   auto ex = deferred::switch_(0,
                               deferred::default_(1000),

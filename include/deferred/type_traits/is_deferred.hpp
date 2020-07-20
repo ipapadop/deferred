@@ -21,8 +21,7 @@ struct has_subexpression_types : std::false_type
 { };
 
 template<typename T>
-struct has_subexpression_types<T, std::void_t<typename T::subexpression_types>> :
-  std::true_type
+struct has_subexpression_types<T, std::void_t<typename T::subexpression_types>> : std::true_type
 { };
 
 } // namespace detail
