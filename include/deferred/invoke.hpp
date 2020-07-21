@@ -34,9 +34,9 @@ constexpr auto invoke(F&& f, Args&&... args)
   }
   else
   {
-    using expression_type = expression_<
-      std::decay_t<decltype(make_function_object(std::forward<F>(f)))>,
-      make_deferred_t<Args>...>;
+    using expression_type =
+      expression_<std::decay_t<decltype(make_function_object(std::forward<F>(f)))>,
+                  make_deferred_t<Args>...>;
     return expression_type(std::forward<F>(f), std::forward<Args>(args)...);
   }
 }

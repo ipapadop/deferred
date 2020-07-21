@@ -45,8 +45,7 @@ TEST_CASE("variable from constant", "[variable-from-constant]")
   CHECK(v() == i);
 }
 
-TEST_CASE("variable from constant expression",
-          "[variable-from-constant-expression]")
+TEST_CASE("variable from constant expression", "[variable-from-constant-expression]")
 {
   auto ex = deferred::constant(10) + deferred::constant(20);
   auto v  = deferred::variable(ex);

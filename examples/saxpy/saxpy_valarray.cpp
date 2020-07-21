@@ -26,9 +26,8 @@ struct print_visitor
   {
     auto i = indentation(nesting);
 
-    std::cout
-      << i << "Expression: " << deferred::type_name<decltype(t)>() << '\n'
-      << i << "Result type: " << deferred::type_name<decltype(t())>() << '\n';
+    std::cout << i << "Expression: " << deferred::type_name<decltype(t)>() << '\n'
+              << i << "Result type: " << deferred::type_name<decltype(t())>() << '\n';
   }
 };
 
@@ -43,9 +42,7 @@ int main()
   std::valarray<float> res = a * x + y;
 
   std::cout << "valarray result: ";
-  std::copy(std::begin(res),
-            std::end(res),
-            std::ostream_iterator<float>(std::cout, " "));
+  std::copy(std::begin(res), std::end(res), std::ostream_iterator<float>(std::cout, " "));
   std::cout << "\n\n";
 
   auto da = constant(a);
@@ -69,9 +66,7 @@ int main()
 
   std::valarray<float> eval_res = dres();
   std::cout << "deferred result: ";
-  std::copy(std::begin(eval_res),
-            std::end(eval_res),
-            std::ostream_iterator<float>(std::cout, " "));
+  std::copy(std::begin(eval_res), std::end(eval_res), std::ostream_iterator<float>(std::cout, " "));
   std::cout << '\n';
 
   return 0;

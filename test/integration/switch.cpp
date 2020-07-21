@@ -23,11 +23,10 @@ int foo()
 
 TEST_CASE("switch with constants", "[switch-constants]")
 {
-  auto c = deferred::constant(10);
-  auto ex =
-    deferred::switch_(c,
-                      deferred::default_(std::string("unknown")),
-                      deferred::case_(10, [] { return std::string("10"); }));
+  auto c  = deferred::constant(10);
+  auto ex = deferred::switch_(c,
+                              deferred::default_(std::string("unknown")),
+                              deferred::case_(10, [] { return std::string("10"); }));
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == "10");
@@ -54,11 +53,11 @@ TEST_CASE("switch with c-strings", "[switch-c-strings]")
 
 TEST_CASE("switch checking against function", "[switch-function]")
 {
-  auto c  = deferred::constant(foo());
-  auto ex = deferred::switch_(
-    c,
-    deferred::default_(std::string("unknown")),
-    deferred::case_([] { return foo(); }, [] { return std::string("foo"); }));
+  auto c = deferred::constant(foo());
+  auto ex =
+    deferred::switch_(c,
+                      deferred::default_(std::string("unknown")),
+                      deferred::case_([] { return foo(); }, [] { return std::string("foo"); }));
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == "foo");

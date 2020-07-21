@@ -38,12 +38,11 @@ TEST_CASE("conditional with different result types", "[conditional-diff-types]")
 
 TEST_CASE("conditional with lambda", "[conditional-lambdas]")
 {
-  auto i  = 0;
-  auto j  = 0;
-  auto k  = 0;
-  auto ex = deferred::if_then_else([&] { return i++ == 1; },
-                                   [&] { return ++j; },
-                                   [&] { return k += 2; });
+  auto i = 0;
+  auto j = 0;
+  auto k = 0;
+  auto ex =
+    deferred::if_then_else([&] { return i++ == 1; }, [&] { return ++j; }, [&] { return k += 2; });
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(i == 0);

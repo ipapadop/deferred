@@ -25,9 +25,7 @@ namespace deferred {
  * @p ConditionExpression evaluates to @c true, otherwise it evaluates
  * @p ElseExpression.
  */
-template<typename ConditionExpression,
-         typename ThenExpression,
-         typename ElseExpression>
+template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
 class if_then_else_expression :
   private std::tuple<ConditionExpression, ThenExpression, ElseExpression>
 {
@@ -35,11 +33,9 @@ public:
   using condition_expression_type = ConditionExpression;
   using then_expression_type      = ThenExpression;
   using else_expression_type      = ElseExpression;
-  using result_type =
-    std::common_type_t<decltype(std::declval<ThenExpression>()()),
-                       decltype(std::declval<ElseExpression>()())>;
-  using subexpression_types =
-    std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
+  using result_type               = std::common_type_t<decltype(std::declval<ThenExpression>()()),
+                                         decltype(std::declval<ElseExpression>()())>;
+  using subexpression_types       = std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
 
   template<typename Condition, typename ThenEx, typename ElseEx>
   constexpr explicit if_then_else_expression(Condition&& condition,
@@ -55,13 +51,11 @@ public:
   {
     if (evaluate(std::get<0>(static_cast<subexpression_types const&>(*this))))
     {
-      return evaluate(
-        std::get<1>(static_cast<subexpression_types const&>(*this)));
+      return evaluate(std::get<1>(static_cast<subexpression_types const&>(*this)));
     }
     else
     {
-      return evaluate(
-        std::get<2>(static_cast<subexpression_types const&>(*this)));
+      return evaluate(std::get<2>(static_cast<subexpression_types const&>(*this)));
     }
   }
 
@@ -82,9 +76,7 @@ public:
   {
     std::forward<Visitor>(v)(*this, nesting);
     for_each(static_cast<subexpression_types const&>(*this),
-             [&v, nesting](auto& t) {
-               t.visit(std::forward<Visitor>(v), nesting + 1);
-             });
+             [&v, nesting](auto& t) { t.visit(std::forward<Visitor>(v), nesting + 1); });
   }
 };
 
@@ -103,19 +95,14 @@ public:
  * assert(v() == 42);
  * @endcode
  */
-template<typename ConditionExpression,
-         typename ThenExpression,
-         typename ElseExpression>
-constexpr auto if_then_else(ConditionExpression&& condition,
-                            ThenExpression&& then_,
-                            ElseExpression&& else_)
+template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
+constexpr auto
+if_then_else(ConditionExpression&& condition, ThenExpression&& then_, ElseExpression&& else_)
 {
   using condition_expression = make_deferred_t<ConditionExpression>;
   using then_expression      = make_deferred_t<ThenExpression>;
   using else_expression      = make_deferred_t<ElseExpression>;
-  return if_then_else_expression<condition_expression,
-                                 then_expression,
-                                 else_expression>(
+  return if_then_else_expression<condition_expression, then_expression, else_expression>(
     std::forward<ConditionExpression>(condition),
     std::forward<ThenExpression>(then_),
     std::forward<ElseExpression>(else_));

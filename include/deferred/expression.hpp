@@ -34,12 +34,9 @@ public:
   using expression_types    = std::tuple<Expressions...>;
   using subexpression_types = std::tuple<Operator, Expressions...>;
 
-  template<typename Op,
-           typename... Ex,
-           std::enable_if_t<!std::is_same_v<Op, expression_>>* = nullptr>
+  template<typename Op, typename... Ex, std::enable_if_t<!std::is_same_v<Op, expression_>>* = nullptr>
   constexpr explicit expression_(Op&& op, Ex&&... ex) :
-    Operator(std::forward<Op>(op)), std::tuple<Expressions...>(
-                                      std::forward<Ex>(ex)...)
+    Operator(std::forward<Op>(op)), std::tuple<Expressions...>(std::forward<Ex>(ex)...)
   { }
 
   expression_(expression_ const&) = default;
@@ -58,8 +55,7 @@ public:
 
   constexpr decltype(auto) operator()()
   {
-    return deferred::apply(static_cast<Operator&>(*this),
-                           static_cast<expression_types&>(*this));
+    return deferred::apply(static_cast<Operator&>(*this), static_cast<expression_types&>(*this));
   }
 
   constexpr operator_type const& operator_() const noexcept
@@ -77,9 +73,7 @@ public:
   {
     std::forward<Visitor>(v)(*this, nesting);
     for_each(static_cast<expression_types const&>(*this),
-             [&v, nesting](auto& t) {
-               t.visit(std::forward<Visitor>(v), nesting + 1);
-             });
+             [&v, nesting](auto& t) { t.visit(std::forward<Visitor>(v), nesting + 1); });
   }
 };
 
@@ -94,8 +88,7 @@ struct make_deferred
 template<typename T>
 struct make_deferred<T, std::enable_if_t<std::is_invocable_v<T>>>
 {
-  using type =
-    expression_<std::decay_t<decltype(make_function_object(std::declval<T>()))>>;
+  using type = expression_<std::decay_t<decltype(make_function_object(std::declval<T>()))>>;
 };
 
 } // namespace detail
@@ -108,10 +101,18 @@ struct make_deferred<T, std::enable_if_t<std::is_invocable_v<T>>>
  * - If @p T is not a callable type, it is transformed to an @ref constant_.
  */
 template<typename T>
-using make_deferred_t =
-  std::conditional_t<is_deferred_v<std::decay_t<T>>,
-                     T,
-                     typename detail::make_deferred<std::decay_t<T>>::type>;
+using make_deferred_t = std::conditional_t<is_deferred_v<std::decay_t<T>>,
+                                           T,
+                                           typename detail::make_deferred<std::decay_t<T>>::type>;
+
+
+/**
+ */
+template<typename... Expressions>
+constexpr auto call_self(Expressions&&...)
+{
+  return 1;
+}
 
 } // namespace deferred
 

@@ -87,8 +87,7 @@ constexpr variable_<T> variable() noexcept
 template<typename T>
 constexpr auto variable(T&& t)
 {
-  using result_type =
-    std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
+  using result_type = std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
   return variable_<result_type>(recursive_evaluate(std::forward<T>(t)));
 }
 

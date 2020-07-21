@@ -37,8 +37,7 @@ TEST_CASE("while with nested deferred", "[while-nested-deferred]")
   n      = 10;
 
   auto count = 0;
-  auto ex    = deferred::while_([i = 0, &n]() mutable { return i++ != n; },
-                             [&count] { ++count; });
+  auto ex    = deferred::while_([i = 0, &n]() mutable { return i++ != n; }, [&count] { ++count; });
   ex();
   CHECK(count == 10);
 }

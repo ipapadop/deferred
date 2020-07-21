@@ -40,9 +40,7 @@ int main()
   auto res  = add_vectors(std::move(mult), y);
 
   std::cout << "vector result:   ";
-  std::copy(std::begin(res),
-            std::end(res),
-            std::ostream_iterator<float>(std::cout, " "));
+  std::copy(std::begin(res), std::end(res), std::ostream_iterator<float>(std::cout, " "));
   std::cout << '\n';
 
   auto da    = constant(a);
@@ -53,9 +51,7 @@ int main()
 
   auto eval_res = dres();
   std::cout << "deferred result: ";
-  std::copy(std::begin(eval_res),
-            std::end(eval_res),
-            std::ostream_iterator<float>(std::cout, " "));
+  std::copy(std::begin(eval_res), std::end(eval_res), std::ostream_iterator<float>(std::cout, " "));
   std::cout << '\n';
 
   return 0;

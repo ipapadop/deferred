@@ -29,19 +29,17 @@ class while_expression : private std::tuple<ConditionExpression, BodyExpression>
 public:
   using condition_expression_type = ConditionExpression;
   using body_expression_type      = BodyExpression;
-  using subexpression_types = std::tuple<ConditionExpression, BodyExpression>;
+  using subexpression_types       = std::tuple<ConditionExpression, BodyExpression>;
 
   template<typename Condition, typename Body>
   constexpr explicit while_expression(Condition&& condition, Body&& body) :
-    std::tuple<ConditionExpression, BodyExpression>(
-      std::forward<Condition>(condition),
-      std::forward<Body>(body))
+    std::tuple<ConditionExpression, BodyExpression>(std::forward<Condition>(condition),
+                                                    std::forward<Body>(body))
   { }
 
   constexpr void operator()() const
   {
-    while (
-      evaluate(std::get<0>(static_cast<subexpression_types const&>(*this))))
+    while (evaluate(std::get<0>(static_cast<subexpression_types const&>(*this))))
     {
       evaluate(std::get<1>(static_cast<subexpression_types const&>(*this)));
     }
@@ -60,9 +58,7 @@ public:
   {
     std::forward<Visitor>(v)(*this, nesting);
     for_each(static_cast<subexpression_types const&>(*this),
-             [&v, nesting](auto& t) {
-               t.visit(std::forward<Visitor>(v), nesting + 1);
-             });
+             [&v, nesting](auto& t) { t.visit(std::forward<Visitor>(v), nesting + 1); });
   }
 };
 
