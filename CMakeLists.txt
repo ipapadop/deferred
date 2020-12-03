@@ -1,7 +1,13 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(deferred
   VERSION 1.0.0
   LANGUAGES CXX)
+
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
+
+# options
+
+option(BUILD_EXAMPLES "Build examples" ON)
 
 # dependencies
 
@@ -56,8 +62,7 @@ install(FILES
 
 find_package(Doxygen)
 option(DEFERRED_BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" ${DOXYGEN_FOUND})
-
-if(DEFERRED_BUILD_DOCUMENTATION)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND DEFERRED_BUILD_DOCUMENTATION)
     if(NOT DOXYGEN_FOUND)
         message(FATAL_ERROR "Doxygen is needed to build the documentation.")
     endif()
@@ -78,10 +83,17 @@ endif()
 
 # examples
 
-add_subdirectory(examples)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
-# testing
+# tests
 
-include(CTest)
-enable_testing()
-add_subdirectory(test)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  include(CTest)
+endif()
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+  enable_testing()
+  add_subdirectory(test)
+endif()
