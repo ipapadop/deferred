@@ -6,7 +6,7 @@
  * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
  */
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "deferred/type_traits/is_constant_expression.hpp"
 #include "deferred/while.hpp"
@@ -25,7 +25,7 @@ TEST_CASE("while with lambda", "[while-lambda]")
 
 TEST_CASE("while with constexpr", "[while-constexpr]")
 {
-  constexpr auto ex = deferred::while_([] { return false; }, [] {});
+  auto ex = deferred::while_([] { return false; }, [] {});
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   ex();

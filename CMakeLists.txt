@@ -9,10 +9,6 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
 
 option(BUILD_EXAMPLES "Build examples" ON)
 
-# dependencies
-
-add_subdirectory(external)
-
 # targets and properties
 
 add_library(deferred INTERFACE)
