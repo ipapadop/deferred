@@ -43,12 +43,12 @@ ctest --output-on-failure
 ```
 
 ### Building Documentation
-If Doxygen is installed, you can generate the HTML documentation:
+If Doxygen is found, you can generate the HTML documentation:
 ```bash
 # From the build directory
 cmake --build . --target documentation
 ```
-The output will be in the `build/html` directory.
+The output will be in the `build/html` directory. Note that documentation is not built by default and must be explicitly built if you wish to install it.
 
 ### Installation
 The library can be installed using standard CMake installation:
