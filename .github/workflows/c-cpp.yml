@@ -145,8 +145,13 @@ jobs:
           message(FATAL_ERROR "Running tests failed!")
         endif()
 
-    - name: Install Strip
+    - name: Install (Linux/macOS)
+      if: runner.os != 'Windows'
       run: ${{ steps.cmake_and_ninja.outputs.cmake_dir }}/cmake --install build --prefix instdir --strip
+
+    - name: Install (Windows)
+      if: runner.os == 'Windows'
+      run: ${{ steps.cmake_and_ninja.outputs.cmake_dir }}/cmake --install build --prefix instdir
 
     - name: Pack
       working-directory: instdir
