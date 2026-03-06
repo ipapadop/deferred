@@ -1,6 +1,6 @@
 # deferred
 
-Library for creating deferred evaluation expressions in C++.
+Library for creating deferred evaluation expressions in C++23.
 
 ``deferred`` provides:
 - functions to declare constants and variables,
@@ -10,7 +10,7 @@ Library for creating deferred evaluation expressions in C++.
 Requirements
 ------------
 
-- C++17 capable compiler.
+- C++23 capable compiler.
 - CMake 3.28.1 and higher.
 
 Compilers tested:
