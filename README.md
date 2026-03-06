@@ -11,21 +11,50 @@ Requirements
 ------------
 
 - C++17 capable compiler.
-- CMake 3.8 and higher.
+- CMake 3.28.1 and higher.
 
 Compilers tested:
-- Clang 8.0.0
-- gcc 8.2.0
+- Clang 16.0.0 (macOS)
+- GCC 13.3.0 (Ubuntu)
+- MSVC 19.44 (Windows)
+
+Building
+------------
+
+Standard CMake build process:
+
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
 
 Installation
 ------------
 
-Copy ``include/deferred`` and include it in your compiler line with the ``-I`` flag.
+The library is header-only. You can:
+1. Copy the `include/deferred` directory to your project.
+2. Install via CMake:
+   ```bash
+   cmake --install build --prefix /path/to/install
+   ```
+3. Use as a sub-project in CMake:
+   ```cmake
+   add_subdirectory(deferred)
+   target_link_libraries(my_target PRIVATE deferred::deferred)
+   ```
 
 Documentation
 ------------
 
-Generate documentation with ``make documentation`` from your build directory.
+Generate documentation with Doxygen:
+
+```bash
+# From the build directory
+cmake --build . --target documentation
+```
+The output will be in the ``build/html`` directory.
 
 Usage
 ------------
@@ -56,7 +85,12 @@ Examples can be found in the ``examples/`` directory. They are compiled by defau
 Testing
 ------------
 
-Tests are written using [Catch2](https://github.com/catchorg/Catch2).
+Tests are written using [Catch2 v3](https://github.com/catchorg/Catch2).
+To run tests after building:
+
+```bash
+ctest --output-on-failure
+```
 
 Known Issues
 ------------

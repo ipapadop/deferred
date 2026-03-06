@@ -6,7 +6,7 @@
  * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
  */
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "deferred/deferred.hpp"
 

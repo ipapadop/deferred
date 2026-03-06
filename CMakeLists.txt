@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28.1 FATAL_ERROR)
 project(deferred
   VERSION 1.0.0
   LANGUAGES CXX)
@@ -8,10 +8,6 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
 # options
 
 option(BUILD_EXAMPLES "Build examples" ON)
-
-# dependencies
-
-add_subdirectory(external)
 
 # targets and properties
 
@@ -78,7 +74,9 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND DEFERRED_BUILD_DOCUMENTATION)
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM)
 
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html")
+
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html" DESTINATION share/doc)
 endif()
 
 # examples
