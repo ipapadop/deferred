@@ -21,9 +21,9 @@ namespace deferred {
 template<typename T>
 constexpr decltype(auto) evaluate(T&& t)
 {
-  if constexpr (is_deferred_v<std::remove_reference_t<T>>)
+  if constexpr (Deferred<T>)
   {
-    if constexpr (std::is_same_v<decltype(std::forward<T>(t)()), void>)
+    if constexpr (std::is_void_v<decltype(std::forward<T>(t)())>)
     {
       std::forward<T>(t)();
     }

@@ -39,6 +39,9 @@ using is_deferred_t = typename is_deferred<T>::type;
 template<typename T>
 inline constexpr bool is_deferred_v = is_deferred<T>::value;
 
+/// Concept for types that are deferred expressions.
+template<typename T>
+concept Deferred = is_deferred_v<std::remove_cvref_t<T>>;
 
 /// Checks if any of @p T... satisfies @ref is_deferred.
 template<typename... T>
@@ -47,6 +50,10 @@ using any_deferred_t = std::disjunction<is_deferred_t<T>...>;
 /// Alias for @c any_deferred_t::value.
 template<typename... T>
 inline constexpr bool any_deferred_v = any_deferred_t<T...>::value;
+
+/// Concept for when at least one type in a set is a deferred expression.
+template<typename... T>
+concept AnyDeferred = (Deferred<T> || ...);
 
 } // namespace deferred
 

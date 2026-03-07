@@ -27,16 +27,20 @@ namespace deferred {
  * subexpressions @p Expressions....
  */
 template<typename Operator, typename... Expressions>
-class expression_ : private Operator, private std::tuple<Expressions...>
+class expression_
 {
+  [[no_unique_address]] Operator         m_op;
+  [[no_unique_address]] std::tuple<Expressions...> m_expressions;
+
 public:
   using operator_type       = Operator;
   using expression_types    = std::tuple<Expressions...>;
   using subexpression_types = std::tuple<Operator, Expressions...>;
 
-  template<typename Op, typename... Ex, std::enable_if_t<!std::is_same_v<Op, expression_>>* = nullptr>
+  template<typename Op, typename... Ex>
+  requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
   constexpr explicit expression_(Op&& op, Ex&&... ex) :
-    Operator(std::forward<Op>(op)), std::tuple<Expressions...>(std::forward<Ex>(ex)...)
+    m_op(std::forward<Op>(op)), m_expressions(std::forward<Ex>(ex)...)
   { }
 
   expression_(expression_ const&) = default;
@@ -49,44 +53,44 @@ public:
 
   constexpr decltype(auto) operator()() const
   {
-    return deferred::apply(static_cast<Operator const&>(*this),
-                           static_cast<expression_types const&>(*this));
+    return deferred::apply(m_op, m_expressions);
   }
 
   constexpr decltype(auto) operator()()
   {
-    return deferred::apply(static_cast<Operator&>(*this), static_cast<expression_types&>(*this));
+    return deferred::apply(m_op, m_expressions);
   }
 
   constexpr operator_type const& operator_() const noexcept
   {
-    return static_cast<Operator const&>(*this);
+    return m_op;
   }
 
-  constexpr decltype(auto) subexpressions() const noexcept
+  constexpr expression_types const& subexpressions() const noexcept
   {
-    return static_cast<expression_types const&>(*this);
+    return m_expressions;
   }
 
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    for_each(static_cast<expression_types const&>(*this),
+    for_each(m_expressions,
              [&v, nesting](auto& t) { t.visit(std::forward<Visitor>(v), nesting + 1); });
   }
 };
 
 namespace detail {
 
-template<typename T, typename = std::void_t<>>
+template<typename T>
 struct make_deferred
 {
   using type = constant_<T>;
 };
 
 template<typename T>
-struct make_deferred<T, std::enable_if_t<std::is_invocable_v<T>>>
+requires std::is_invocable_v<T>
+struct make_deferred<T>
 {
   using type = expression_<std::decay_t<decltype(make_function_object(std::declval<T>()))>>;
 };
@@ -101,18 +105,9 @@ struct make_deferred<T, std::enable_if_t<std::is_invocable_v<T>>>
  * - If @p T is not a callable type, it is transformed to an @ref constant_.
  */
 template<typename T>
-using make_deferred_t = std::conditional_t<is_deferred_v<std::decay_t<T>>,
+using make_deferred_t = std::conditional_t<Deferred<T>,
                                            T,
                                            typename detail::make_deferred<std::decay_t<T>>::type>;
-
-
-/**
- */
-template<typename... Expressions>
-constexpr auto call_self(Expressions&&...)
-{
-  return 1;
-}
 
 } // namespace deferred
 
