@@ -38,7 +38,7 @@ public:
   constant_(constant_&&)      = default;
 
   constant_& operator=(constant_ const&) = delete;
-  constant_& operator=(constant_&&) = delete;
+  constant_& operator=(constant_&&)      = delete;
 
   /// Returns the stored value.
   constexpr T const& operator()() const& noexcept

@@ -11,6 +11,7 @@
 #define DEFERRED_MAKE_FUNCTION_OBJECT_HPP
 
 #include <type_traits>
+#include <utility>
 
 namespace deferred {
 

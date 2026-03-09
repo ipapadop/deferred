@@ -16,7 +16,6 @@
 
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "tuple.hpp"
 
 namespace deferred {
 
@@ -28,14 +27,15 @@ namespace deferred {
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
 class if_then_else_expression
 {
-  [[no_unique_address]] std::tuple<ConditionExpression, ThenExpression, ElseExpression> m_expressions;
+  [[no_unique_address]] std::tuple<ConditionExpression, ThenExpression, ElseExpression>
+    m_expressions;
 
 public:
   using condition_expression_type = ConditionExpression;
   using then_expression_type      = ThenExpression;
   using else_expression_type      = ElseExpression;
   using result_type               = std::common_type_t<decltype(std::declval<ThenExpression>()()),
-                                         decltype(std::declval<ElseExpression>()())>;
+                                                       decltype(std::declval<ElseExpression>()())>;
   using subexpression_types       = std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
 
   template<typename Condition, typename ThenEx, typename ElseEx>
@@ -43,8 +43,8 @@ public:
                                              ThenEx&& then_,
                                              ElseEx&& else_) :
     m_expressions(std::forward<Condition>(condition),
-                 std::forward<ThenEx>(then_),
-                 std::forward<ElseEx>(else_))
+                  std::forward<ThenEx>(then_),
+                  std::forward<ElseEx>(else_))
   { }
 
   constexpr result_type operator()() const
@@ -75,8 +75,9 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    for_each(m_expressions,
-             [&v, nesting](auto& t) { t.visit(std::forward<Visitor>(v), nesting + 1); });
+    std::apply([&v, nesting](
+                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
+               m_expressions);
   }
 };
 

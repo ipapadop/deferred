@@ -15,7 +15,6 @@
 
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "tuple.hpp"
 
 namespace deferred {
 
@@ -58,8 +57,9 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    for_each(m_expressions,
-             [&v, nesting](auto& t) { t.visit(std::forward<Visitor>(v), nesting + 1); });
+    std::apply([&v, nesting](
+                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
+               m_expressions);
   }
 };
 

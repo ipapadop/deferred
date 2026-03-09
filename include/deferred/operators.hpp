@@ -12,7 +12,6 @@
 #define DEFERRED_OPERATORS_HPP
 
 #include <functional>
-#include <type_traits>
 #include <utility>
 
 #include "invoke.hpp"
@@ -21,14 +20,14 @@
 namespace deferred {
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator+(T&& t, U&& u)
 {
   return invoke(std::plus<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator-(T&& t, U&& u)
 {
   return invoke(std::minus<>{}, std::forward<T>(t), std::forward<U>(u));
@@ -47,21 +46,21 @@ constexpr auto operator-(T&& t)
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator*(T&& t, U&& u)
 {
   return invoke(std::multiplies<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator/(T&& t, U&& u)
 {
   return invoke(std::divides<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator%(T&& t, U&& u)
 {
   return invoke(std::modulus<>{}, std::forward<T>(t), std::forward<U>(u));
@@ -92,56 +91,56 @@ constexpr auto operator--(T&& t, int)
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator==(T&& t, U&& u)
 {
   return invoke(std::equal_to<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator!=(T&& t, U&& u)
 {
   return invoke(std::not_equal_to<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator>(T&& t, U&& u)
 {
   return invoke(std::greater<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator<(T&& t, U&& u)
 {
   return invoke(std::less<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator>=(T&& t, U&& u)
 {
   return invoke(std::greater_equal<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator<=(T&& t, U&& u)
 {
   return invoke(std::less_equal<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator&&(T&& t, U&& u)
 {
   return invoke(std::logical_and<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator||(T&& t, U&& u)
 {
   return invoke(std::logical_or<>{}, std::forward<T>(t), std::forward<U>(u));
@@ -154,21 +153,21 @@ constexpr auto operator!(T&& t)
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator&(T&& t, U&& u)
 {
   return invoke(std::bit_and<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator|(T&& t, U&& u)
 {
   return invoke(std::bit_or<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator^(T&& t, U&& u)
 {
   return invoke(std::bit_xor<>{}, std::forward<T>(t), std::forward<U>(u));
@@ -181,7 +180,7 @@ constexpr auto operator~(T&& t)
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator<<(T&& t, U&& u)
 {
   return invoke(
@@ -191,7 +190,7 @@ constexpr auto operator<<(T&& t, U&& u)
 }
 
 template<typename T, typename U>
-requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U>
 constexpr auto operator>>(T&& t, U&& u)
 {
   return invoke(

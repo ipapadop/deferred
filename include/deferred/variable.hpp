@@ -40,7 +40,7 @@ public:
   variable_(variable_&&)      = delete;
 
   variable_& operator=(variable_ const&) = delete;
-  variable_& operator=(variable_&&) = delete;
+  variable_& operator=(variable_&&)      = delete;
 
   constexpr variable_& operator=(T const& t)
   {

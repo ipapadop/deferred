@@ -17,7 +17,6 @@
 #include "apply.hpp"
 #include "constant.hpp"
 #include "make_function_object.hpp"
-#include "tuple.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -29,7 +28,7 @@ namespace deferred {
 template<typename Operator, typename... Expressions>
 class expression_
 {
-  [[no_unique_address]] Operator         m_op;
+  [[no_unique_address]] Operator m_op;
   [[no_unique_address]] std::tuple<Expressions...> m_expressions;
 
 public:
@@ -38,7 +37,7 @@ public:
   using subexpression_types = std::tuple<Operator, Expressions...>;
 
   template<typename Op, typename... Ex>
-  requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
+    requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
   constexpr explicit expression_(Op&& op, Ex&&... ex) :
     m_op(std::forward<Op>(op)), m_expressions(std::forward<Ex>(ex)...)
   { }
@@ -49,7 +48,7 @@ public:
   ~expression_() = default;
 
   expression_& operator=(expression_ const&) = delete;
-  expression_& operator=(expression_&&) = delete;
+  expression_& operator=(expression_&&)      = delete;
 
   constexpr decltype(auto) operator()() const
   {
@@ -75,8 +74,9 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    for_each(m_expressions,
-             [&v, nesting](auto& t) { t.visit(std::forward<Visitor>(v), nesting + 1); });
+    std::apply([&v, nesting](
+                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
+               m_expressions);
   }
 };
 
@@ -89,7 +89,7 @@ struct make_deferred
 };
 
 template<typename T>
-requires std::is_invocable_v<T>
+  requires std::is_invocable_v<T>
 struct make_deferred<T>
 {
   using type = expression_<std::decay_t<decltype(make_function_object(std::declval<T>()))>>;
@@ -105,9 +105,8 @@ struct make_deferred<T>
  * - If @p T is not a callable type, it is transformed to an @ref constant_.
  */
 template<typename T>
-using make_deferred_t = std::conditional_t<Deferred<T>,
-                                           T,
-                                           typename detail::make_deferred<std::decay_t<T>>::type>;
+using make_deferred_t =
+  std::conditional_t<Deferred<T>, T, typename detail::make_deferred<std::decay_t<T>>::type>;
 
 } // namespace deferred
 
