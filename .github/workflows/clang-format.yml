@@ -1,0 +1,32 @@
+name: Clang Format
+
+on:
+  pull_request:
+
+jobs:
+  format:
+    name: Format Code
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+
+    - name: Install clang-format-22
+      run: |
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y clang-format-22
+
+    - name: Run clang-format-22
+      run: |
+        find include examples test -type f \( -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 clang-format-22 -i
+
+    - name: Commit and push changes
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "style: apply clang-format-22"
+        commit_user_name: "github-actions[bot]"
+        commit_user_email: "github-actions[bot]@users.noreply.github.com"
+        branch: ${{ github.head_ref }}
