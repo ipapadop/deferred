@@ -250,6 +250,7 @@ auto default_(Expression&& ex)
  * @param label The label expression to compare against.
  * @param body The body expression to evaluate if matched.
  * @return A \ref case_expression wrapping the label and body.
+ */
 template<typename LabelExpression, typename BodyExpression>
 auto case_(LabelExpression&& label, BodyExpression&& body)
 {
