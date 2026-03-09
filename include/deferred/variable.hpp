@@ -16,7 +16,10 @@
 
 namespace deferred {
 
-/// Stores a variable value.
+/**
+ * @brief Stores a variable value.
+ * @tparam T The type of the variable to store.
+ */
 template<typename T>
 class [[nodiscard]] variable_
 {
@@ -30,9 +33,17 @@ private:
 public:
   variable_() = default;
 
+  /**
+   * @brief Constructs a variable_ with a copy of @p t.
+   * @param t The value to initialize the variable with.
+   */
   constexpr explicit variable_(T const& t) : m_t(t)
   { }
 
+  /**
+   * @brief Constructs a variable_ by moving @p t.
+   * @param t The value to initialize the variable with.
+   */
   constexpr explicit variable_(T&& t) noexcept : m_t(std::move(t))
   { }
 
@@ -64,6 +75,12 @@ public:
     return m_t;
   }
 
+  /**
+   * @brief Visits the variable with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
@@ -71,7 +88,11 @@ public:
   }
 };
 
-/// Creates a new @ref variable_ that holds a @p T.
+/**
+ * @brief Creates a new @ref variable_ that holds a default-initialized @p T.
+ * @tparam T The type of the variable.
+ * @return A newly constructed variable.
+ */
 template<typename T>
 constexpr variable_<T> variable() noexcept
 {
@@ -83,6 +104,10 @@ constexpr variable_<T> variable() noexcept
  *
  * If @p t is a callable type, this function will force its evaluation through
  * <tt>t()</tt>. This applies even if @p t is a @c deferred expression.
+ *
+ * @tparam T The type of the value to deduce.
+ * @param t The value to wrap in a \ref variable_.
+ * @return A variable representing the evaluated type of @p t.
  */
 template<typename T>
 constexpr auto variable(T&& t)

@@ -14,13 +14,27 @@
 #include "deferred/deferred.hpp"
 #include "deferred/type_name.hpp"
 
+/**
+ * @brief Visitor to print the deferred expression tree.
+ */
 struct print_visitor
 {
+  /**
+   * @brief Helper to create indentation strings.
+   * @param indent The number of tab characters to indent by.
+   * @return A string containing @p indent tab characters.
+   */
   std::string indentation(std::size_t indent) const
   {
     return std::string(indent, '\t');
   }
 
+  /**
+   * @brief Visits a node in the expression tree and prints its type and result type.
+   * @tparam T The type of the visited node.
+   * @param t The expression node being visited.
+   * @param nesting The current nesting level (used for indentation).
+   */
   template<typename T>
   void operator()(T&& t, std::size_t nesting) const
   {
@@ -32,6 +46,9 @@ struct print_visitor
 };
 
 
+/**
+ * @brief Main function demonstrating deferred evaluation with std::valarray.
+ */
 int main()
 {
   using namespace deferred;

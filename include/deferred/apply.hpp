@@ -18,6 +18,16 @@ namespace deferred {
 
 namespace detail {
 
+/**
+ * @brief Helper function to apply a callable to the elements of a tuple.
+ * @tparam F Type of the callable.
+ * @tparam Tuple Type of the tuple.
+ * @tparam I Index sequence for tuple elements.
+ * @param f The callable to apply.
+ * @param t The tuple containing deferred objects.
+ * @param I Index sequence for tuple elements.
+ * @return The result of applying @p f to the evaluated elements of @p t.
+ */
 template<typename F, typename Tuple, std::size_t... I>
 constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>)
 {
@@ -26,7 +36,14 @@ constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>)
 
 } // namespace detail
 
-/// Invoke callable @p f with the tuple of @c deferred objects @p t.
+/**
+ * @brief Invoke callable @p f with the tuple of @c deferred objects @p t.
+ * @tparam F Type of the callable.
+ * @tparam Tuple Type of the tuple containing deferred objects.
+ * @param f The callable to invoke.
+ * @param t The tuple containing deferred objects.
+ * @return The result of invoking @p f with the evaluated elements of @p t.
+ */
 template<typename F, typename Tuple>
 constexpr decltype(auto) apply(F&& f, Tuple&& t)
 {

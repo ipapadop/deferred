@@ -24,6 +24,9 @@ namespace deferred {
 /**
  * Deferred expression that is composed of an operator @p Operator applied to
  * subexpressions @p Expressions....
+ *
+ * @tparam Operator The type of the operator.
+ * @tparam Expressions The types of the subexpressions.
  */
 template<typename Operator, typename... Expressions>
 class expression_
@@ -36,6 +39,13 @@ public:
   using expression_types    = std::tuple<Expressions...>;
   using subexpression_types = std::tuple<Operator, Expressions...>;
 
+  /**
+   * @brief Constructs an expression.
+   * @tparam Op The type of the operator.
+   * @tparam Ex The types of the subexpressions.
+   * @param op The operator.
+   * @param ex The subexpressions.
+   */
   template<typename Op, typename... Ex>
     requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
   constexpr explicit expression_(Op&& op, Ex&&... ex) :
@@ -70,6 +80,12 @@ public:
     return m_expressions;
   }
 
+  /**
+   * @brief Visits the expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
@@ -103,6 +119,8 @@ struct make_deferred<T>
  * - If @p T is already a @c deferred type, it does not change.
  * - If @p T is a callable type, it is transformed to an @ref expression_.
  * - If @p T is not a callable type, it is transformed to an @ref constant_.
+ *
+ * @tparam T The type to transform.
  */
 template<typename T>
 using make_deferred_t =

@@ -19,7 +19,10 @@
 
 namespace deferred {
 
-/// Switch default expression.
+/**
+ * @brief Switch default expression.
+ * @tparam Expression The type of the underlying expression.
+ */
 template<typename Expression>
 class default_expression
 {
@@ -28,6 +31,11 @@ class default_expression
 public:
   using subexpression_types = std::tuple<Expression>;
 
+  /**
+   * @brief Constructs a default_expression.
+   * @tparam T The types of the arguments.
+   * @param t The arguments to forward to the underlying expression.
+   */
   template<typename... T>
   constexpr explicit default_expression(T&&... t) : m_expression(std::forward<T>(t)...)
   { }
@@ -37,6 +45,12 @@ public:
     return m_expression();
   }
 
+  /**
+   * @brief Visits the default expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
@@ -45,7 +59,11 @@ public:
   }
 };
 
-/// Switch case expression.
+/**
+ * @brief Switch case expression.
+ * @tparam LabelExpression The type of the label expression.
+ * @tparam BodyExpression The type of the body expression.
+ */
 template<typename LabelExpression, typename BodyExpression>
 class case_expression
 {
@@ -56,6 +74,13 @@ public:
   using body_expression_type  = BodyExpression;
   using subexpression_types   = std::tuple<LabelExpression, BodyExpression>;
 
+  /**
+   * @brief Constructs a case_expression.
+   * @tparam LabelEx The type of the label expression.
+   * @tparam BodyEx The type of the body expression.
+   * @param label The label expression.
+   * @param body The body expression.
+   */
   template<typename LabelEx, typename BodyEx>
   constexpr explicit case_expression(LabelEx&& label, BodyEx&& body) :
     m_expressions(std::forward<LabelEx>(label), std::forward<BodyEx>(body))
@@ -106,6 +131,10 @@ struct is_valid_case<case_expression<T, U>> : public std::true_type
 
 /**
  * Deferred switch
+ *
+ * @tparam ConditionExpression The type of the condition expression.
+ * @tparam DefaultExpression The type of the default case expression.
+ * @tparam CaseExpression The types of the case expressions.
  */
 template<typename ConditionExpression, typename DefaultExpression, typename... CaseExpression>
 class switch_expression
@@ -122,6 +151,15 @@ public:
   using result_type = std::common_type_t<decltype(std::declval<DefaultExpression>()()),
                                          decltype(std::declval<CaseExpression>()())...>;
 
+  /**
+   * @brief Constructs a switch_expression.
+   * @tparam Condition The type of the condition.
+   * @tparam Default The type of the default expression.
+   * @tparam Case The types of the case expressions.
+   * @param condition The condition expression.
+   * @param df The default expression.
+   * @param cs The case expressions.
+   */
   template<typename Condition, typename Default, typename... Case>
   constexpr explicit switch_expression(Condition&& condition, Default&& df, Case&&... cs) :
     m_expressions(std::forward<Condition>(condition),
@@ -192,7 +230,12 @@ public:
   }
 };
 
-/// Creates a default case for use with @ref switch_().
+/**
+ * @brief Creates a default case for use with @ref switch_().
+ * @tparam Expression The type of the default expression.
+ * @param ex The expression to use as a default case.
+ * @return A \ref default_expression wrapping the given expression.
+ */
 template<typename Expression>
 auto default_(Expression&& ex)
 {
@@ -200,7 +243,13 @@ auto default_(Expression&& ex)
   return default_expression<expression>(std::forward<Expression>(ex));
 }
 
-/// Creates a case for use with @ref switch_().
+/**
+ * @brief Creates a case for use with @ref switch_().
+ * @tparam LabelExpression The type of the label expression.
+ * @tparam BodyExpression The type of the body expression.
+ * @param label The label expression to compare against.
+ * @param body The body expression to evaluate if matched.
+ * @return A \ref case_expression wrapping the label and body.
 template<typename LabelExpression, typename BodyExpression>
 auto case_(LabelExpression&& label, BodyExpression&& body)
 {
@@ -226,6 +275,14 @@ auto case_(LabelExpression&& label, BodyExpression&& body)
  *                   case_([] { return foo(); },
  *                         [] { return "result of foo"; }));
  * @endcode
+ *
+ * @tparam ConditionExpression The type of the condition expression.
+ * @tparam DefaultExpression The type of the default expression.
+ * @tparam CaseExpressions The types of the case expressions.
+ * @param condition The condition expression.
+ * @param default_ The default case expression.
+ * @param case_ The case expressions.
+ * @return A tuple-like expression representing the switch construct.
  */
 template<typename ConditionExpression, typename DefaultExpression, typename... CaseExpressions>
 constexpr auto

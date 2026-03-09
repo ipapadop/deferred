@@ -19,6 +19,14 @@
 
 namespace deferred {
 
+/**
+ * @brief Deferred binary operator +
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator+(T&& t, U&& u)
@@ -26,6 +34,14 @@ constexpr auto operator+(T&& t, U&& u)
   return invoke(std::plus<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator -
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator-(T&& t, U&& u)
@@ -33,18 +49,38 @@ constexpr auto operator-(T&& t, U&& u)
   return invoke(std::minus<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred prefix or unary operator +
+ * @tparam T The type of the operand.
+ * @param t The operand.
+ * @return A deferred expression representing the operation.
+ */
 template<Deferred T>
 constexpr auto operator+(T&& t)
 {
   return invoke([](auto&& x) { return +std::forward<decltype(x)>(x); }, std::forward<T>(t));
 }
 
+/**
+ * @brief Deferred prefix or unary operator -
+ * @tparam T The type of the operand.
+ * @param t The operand.
+ * @return A deferred expression representing the operation.
+ */
 template<Deferred T>
 constexpr auto operator-(T&& t)
 {
   return invoke(std::negate<>{}, std::forward<T>(t));
 }
 
+/**
+ * @brief Deferred binary operator *
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator*(T&& t, U&& u)
@@ -52,6 +88,14 @@ constexpr auto operator*(T&& t, U&& u)
   return invoke(std::multiplies<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator /
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator/(T&& t, U&& u)
@@ -59,6 +103,14 @@ constexpr auto operator/(T&& t, U&& u)
   return invoke(std::divides<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator %
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator%(T&& t, U&& u)
@@ -66,30 +118,64 @@ constexpr auto operator%(T&& t, U&& u)
   return invoke(std::modulus<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred prefix or unary operator ++
+ * @tparam T The type of the operand.
+ * @param t The operand.
+ * @return A deferred expression representing the operation.
+ */
 template<Deferred T>
 constexpr auto operator++(T&& t)
 {
   return invoke([](auto&& x) { return ++std::forward<decltype(x)>(x); }, std::forward<T>(t));
 }
 
+/**
+ * @brief Deferred postfix operator ++
+ * @tparam T The type of the operand.
+ * @param t The operand.
+ * @param \<unnamed\> An int for postfix differentiation.
+ * @return A deferred expression representing the operation.
+ */
 template<Deferred T>
 constexpr auto operator++(T&& t, int)
 {
   return invoke([](auto&& x) { return std::forward<decltype(x)>(x)++; }, std::forward<T>(t));
 }
 
+/**
+ * @brief Deferred prefix or unary operator --
+ * @tparam T The type of the operand.
+ * @param t The operand.
+ * @return A deferred expression representing the operation.
+ */
 template<Deferred T>
 constexpr auto operator--(T&& t)
 {
   return invoke([](auto&& x) { return --std::forward<decltype(x)>(x); }, std::forward<T>(t));
 }
 
+/**
+ * @brief Deferred postfix operator --
+ * @tparam T The type of the operand.
+ * @param t The operand.
+ * @param \<unnamed\> An int for postfix differentiation.
+ * @return A deferred expression representing the operation.
+ */
 template<Deferred T>
 constexpr auto operator--(T&& t, int)
 {
   return invoke([](auto&& x) { return std::forward<decltype(x)>(x)--; }, std::forward<T>(t));
 }
 
+/**
+ * @brief Deferred binary operator ==
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator==(T&& t, U&& u)
@@ -97,6 +183,14 @@ constexpr auto operator==(T&& t, U&& u)
   return invoke(std::equal_to<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator !=
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator!=(T&& t, U&& u)
@@ -104,6 +198,14 @@ constexpr auto operator!=(T&& t, U&& u)
   return invoke(std::not_equal_to<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator >
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator>(T&& t, U&& u)
@@ -111,6 +213,14 @@ constexpr auto operator>(T&& t, U&& u)
   return invoke(std::greater<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator <
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator<(T&& t, U&& u)
@@ -118,6 +228,14 @@ constexpr auto operator<(T&& t, U&& u)
   return invoke(std::less<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator >=
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator>=(T&& t, U&& u)
@@ -125,6 +243,14 @@ constexpr auto operator>=(T&& t, U&& u)
   return invoke(std::greater_equal<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator <=
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator<=(T&& t, U&& u)
@@ -132,6 +258,14 @@ constexpr auto operator<=(T&& t, U&& u)
   return invoke(std::less_equal<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator &&
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator&&(T&& t, U&& u)
@@ -139,6 +273,14 @@ constexpr auto operator&&(T&& t, U&& u)
   return invoke(std::logical_and<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator ||
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator||(T&& t, U&& u)
@@ -146,12 +288,26 @@ constexpr auto operator||(T&& t, U&& u)
   return invoke(std::logical_or<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred prefix or unary operator !
+ * @tparam T The type of the operand.
+ * @param t The operand.
+ * @return A deferred expression representing the operation.
+ */
 template<Deferred T>
 constexpr auto operator!(T&& t)
 {
   return invoke(std::logical_not<>{}, std::forward<T>(t));
 }
 
+/**
+ * @brief Deferred binary operator &
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator&(T&& t, U&& u)
@@ -159,6 +315,14 @@ constexpr auto operator&(T&& t, U&& u)
   return invoke(std::bit_and<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator |
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator|(T&& t, U&& u)
@@ -166,6 +330,14 @@ constexpr auto operator|(T&& t, U&& u)
   return invoke(std::bit_or<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator ^
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator^(T&& t, U&& u)
@@ -173,12 +345,26 @@ constexpr auto operator^(T&& t, U&& u)
   return invoke(std::bit_xor<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred prefix or unary operator ~
+ * @tparam T The type of the operand.
+ * @param t The operand.
+ * @return A deferred expression representing the operation.
+ */
 template<Deferred T>
 constexpr auto operator~(T&& t)
 {
   return invoke(std::bit_not<>{}, std::forward<T>(t));
 }
 
+/**
+ * @brief Deferred binary operator <<
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator<<(T&& t, U&& u)
@@ -189,6 +375,14 @@ constexpr auto operator<<(T&& t, U&& u)
     std::forward<U>(u));
 }
 
+/**
+ * @brief Deferred binary operator >>
+ * @tparam T The type of the left operand.
+ * @tparam U The type of the right operand.
+ * @param t The left operand.
+ * @param u The right operand.
+ * @return A deferred expression representing the operation.
+ */
 template<typename T, typename U>
   requires AnyDeferred<T, U>
 constexpr auto operator>>(T&& t, U&& u)

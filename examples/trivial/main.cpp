@@ -9,6 +9,9 @@
 #include <deferred/deferred.hpp>
 #include <iostream>
 
+/**
+ * @brief Trivial example showing basic variable setup and deferred evaluation.
+ */
 int main()
 {
   auto v = deferred::variable<int>();

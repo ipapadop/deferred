@@ -13,7 +13,13 @@
 
 #include "deferred/deferred.hpp"
 
-// Adds vectors x and y
+/**
+ * @brief Adds elements of vector @p x and vector @p y pairwise.
+ * @tparam T The element type.
+ * @param x The first vector.
+ * @param y The second vector.
+ * @return A new vector containing the sum of @p x and @p y.
+ */
 template<typename T>
 std::vector<T> add_vectors(std::vector<T> x, std::vector<T> const& y)
 {
@@ -21,7 +27,13 @@ std::vector<T> add_vectors(std::vector<T> x, std::vector<T> const& y)
   return x;
 }
 
-// Multiplies every element of x with v
+/**
+ * @brief Multiplies every element of vector @p x with a scalar @p v.
+ * @tparam T The element type.
+ * @param v The scalar value.
+ * @param x The vector.
+ * @return A new vector with each element multiplied by @p v.
+ */
 template<typename T>
 std::vector<T> multiply_scalar_vector(T const& v, std::vector<T> x)
 {
@@ -29,6 +41,9 @@ std::vector<T> multiply_scalar_vector(T const& v, std::vector<T> x)
   return x;
 }
 
+/**
+ * @brief Main function demonstrating deferred evaluation with std::vector.
+ */
 int main()
 {
   using namespace deferred;

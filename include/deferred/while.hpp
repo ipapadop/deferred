@@ -10,7 +10,6 @@
 #ifndef DEFERRED_WHILE_HPP
 #define DEFERRED_WHILE_HPP
 
-#include <type_traits>
 #include <utility>
 
 #include "evaluate.hpp"
@@ -21,6 +20,9 @@ namespace deferred {
 /**
  * Deferred while loop that evaluates @p BodyExpression while
  * @p ConditionExpression evaluates to @c true.
+ *
+ * @tparam ConditionExpression The type of the condition expression.
+ * @tparam BodyExpression The type of the body expression.
  */
 template<typename ConditionExpression, typename BodyExpression>
 class while_expression
@@ -32,6 +34,13 @@ public:
   using body_expression_type      = BodyExpression;
   using subexpression_types       = std::tuple<ConditionExpression, BodyExpression>;
 
+  /**
+   * @brief Constructs a while_expression.
+   * @tparam Condition The type of the condition expression.
+   * @tparam Body The type of the body expression.
+   * @param condition The condition expression.
+   * @param body The body expression.
+   */
   template<typename Condition, typename Body>
   constexpr explicit while_expression(Condition&& condition, Body&& body) :
     m_expressions(std::forward<Condition>(condition), std::forward<Body>(body))
@@ -53,6 +62,12 @@ public:
     }
   }
 
+  /**
+   * @brief Visits the while expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
@@ -65,6 +80,12 @@ public:
 
 /**
  * Creates a @c deferred while that call @p body while @p condition is @c true.
+ *
+ * @tparam ConditionExpression The type of the condition expression.
+ * @tparam BodyExpression The type of the body expression.
+ * @param condition The condition expression.
+ * @param body The body expression.
+ * @return A \ref while_expression capturing the condition and body.
  */
 template<typename ConditionExpression, typename BodyExpression>
 constexpr auto while_(ConditionExpression&& condition, BodyExpression&& body)

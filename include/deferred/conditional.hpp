@@ -23,6 +23,10 @@ namespace deferred {
  * Deferred conditional that evaluates @p ThenExpression if
  * @p ConditionExpression evaluates to @c true, otherwise it evaluates
  * @p ElseExpression.
+ *
+ * @tparam ConditionExpression The type of the condition expression.
+ * @tparam ThenExpression The type of the expression to evaluate if the condition is true.
+ * @tparam ElseExpression The type of the expression to evaluate if the condition is false.
  */
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
 class if_then_else_expression
@@ -38,6 +42,15 @@ public:
                                                        decltype(std::declval<ElseExpression>()())>;
   using subexpression_types       = std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
 
+  /**
+   * @brief Constructs an if_then_else_expression.
+   * @tparam Condition Type of the condition expression.
+   * @tparam ThenEx Type of the then expression.
+   * @tparam ElseEx Type of the else expression.
+   * @param condition The condition expression.
+   * @param then_ The then expression.
+   * @param else_ The else expression.
+   */
   template<typename Condition, typename ThenEx, typename ElseEx>
   constexpr explicit if_then_else_expression(Condition&& condition,
                                              ThenEx&& then_,
@@ -71,6 +84,12 @@ public:
     }
   }
 
+  /**
+   * @brief Visits the expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
@@ -87,6 +106,14 @@ public:
  *
  * The result type of <tt>if_then_else_expression(...)()</tt> is the
  * @c std::common_type of the result types of @p then_ and @p else_.
+ *
+ * @tparam ConditionExpression The type of the condition expression.
+ * @tparam ThenExpression The type of the then expression.
+ * @tparam ElseExpression The type of the else expression.
+ * @param condition The condition expression.
+ * @param then_ The then expression.
+ * @param else_ The else expression.
+ * @return An \ref if_then_else_expression that will perform the deferred evaluation.
  */
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
 constexpr auto
