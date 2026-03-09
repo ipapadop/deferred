@@ -1,12 +1,12 @@
 # Agent Context: Deferred Evaluation Library
 
-This project is a C++17 header-only library for creating deferred evaluation expressions.
+This project is a C++23 header-only library for creating deferred evaluation expressions.
 
 ## Project Overview
 
 - **Purpose**: Provides a mechanism to define expressions (using constants, variables, and operators) that are evaluated lazily at a later point.
 - **Main Technologies**: 
-  - **Language**: C++17
+  - **Language**: C++23
   - **Build System**: CMake (3.28.1+)
   - **Testing**: Catch2 (v3.13.0)
   - **CI**: GitHub Actions (Ubuntu, Windows, macOS)
@@ -20,7 +20,7 @@ This project is a C++17 header-only library for creating deferred evaluation exp
 ## Building and Running
 
 ### Prerequisites
-- C++17 capable compiler (Clang 8.0.0+, GCC 8.2.0+, MSVC 2019+).
+- C++23 capable compiler (Clang 16.0.0+, GCC 13.3.0+, MSVC 19.44+).
 - CMake 3.28.1 or higher.
 
 ### Build Instructions

@@ -17,13 +17,18 @@
 
 namespace deferred {
 
-/// Returns the result of @p t().
+/**
+ * @brief Evaluates a deferred expression.
+ * @tparam T The type of the expression to evaluate.
+ * @param t The expression to evaluate.
+ * @return The result of evaluating the expression.
+ */
 template<typename T>
 constexpr decltype(auto) evaluate(T&& t)
 {
-  if constexpr (is_deferred_v<std::remove_reference_t<T>>)
+  if constexpr (Deferred<T>)
   {
-    if constexpr (std::is_same_v<decltype(std::forward<T>(t)()), void>)
+    if constexpr (std::is_void_v<decltype(std::forward<T>(t)())>)
     {
       std::forward<T>(t)();
     }
@@ -39,7 +44,12 @@ constexpr decltype(auto) evaluate(T&& t)
   }
 }
 
-/// Recursively evaluates @p t until a non-callable is returned.
+/**
+ * @brief Recursively evaluates @p t until a non-callable is returned.
+ * @tparam T The type of the expression to recursively evaluate.
+ * @param t The expression to recursively evaluate.
+ * @return The result of the recursive evaluation.
+ */
 template<typename T>
 constexpr decltype(auto) recursive_evaluate(T&& t)
 {

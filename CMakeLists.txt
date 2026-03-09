@@ -17,7 +17,7 @@ target_include_directories(deferred
   INTERFACE
     $<INSTALL_INTERFACE:include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_compile_features(deferred INTERFACE cxx_std_17)
+target_compile_features(deferred INTERFACE cxx_std_23)
 
 # installation
 

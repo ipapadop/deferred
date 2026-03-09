@@ -17,7 +17,6 @@
 #include "apply.hpp"
 #include "constant.hpp"
 #include "make_function_object.hpp"
-#include "tuple.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -25,18 +24,32 @@ namespace deferred {
 /**
  * Deferred expression that is composed of an operator @p Operator applied to
  * subexpressions @p Expressions....
+ *
+ * @tparam Operator The type of the operator.
+ * @tparam Expressions The types of the subexpressions.
  */
 template<typename Operator, typename... Expressions>
-class expression_ : private Operator, private std::tuple<Expressions...>
+class expression_
 {
+  [[no_unique_address]] Operator m_op;
+  [[no_unique_address]] std::tuple<Expressions...> m_expressions;
+
 public:
   using operator_type       = Operator;
   using expression_types    = std::tuple<Expressions...>;
   using subexpression_types = std::tuple<Operator, Expressions...>;
 
-  template<typename Op, typename... Ex, std::enable_if_t<!std::is_same_v<Op, expression_>>* = nullptr>
+  /**
+   * @brief Constructs an expression.
+   * @tparam Op The type of the operator.
+   * @tparam Ex The types of the subexpressions.
+   * @param op The operator.
+   * @param ex The subexpressions.
+   */
+  template<typename Op, typename... Ex>
+    requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
   constexpr explicit expression_(Op&& op, Ex&&... ex) :
-    Operator(std::forward<Op>(op)), std::tuple<Expressions...>(std::forward<Ex>(ex)...)
+    m_op(std::forward<Op>(op)), m_expressions(std::forward<Ex>(ex)...)
   { }
 
   expression_(expression_ const&) = default;
@@ -45,48 +58,55 @@ public:
   ~expression_() = default;
 
   expression_& operator=(expression_ const&) = delete;
-  expression_& operator=(expression_&&) = delete;
+  expression_& operator=(expression_&&)      = delete;
 
   constexpr decltype(auto) operator()() const
   {
-    return deferred::apply(static_cast<Operator const&>(*this),
-                           static_cast<expression_types const&>(*this));
+    return deferred::apply(m_op, m_expressions);
   }
 
   constexpr decltype(auto) operator()()
   {
-    return deferred::apply(static_cast<Operator&>(*this), static_cast<expression_types&>(*this));
+    return deferred::apply(m_op, m_expressions);
   }
 
   constexpr operator_type const& operator_() const noexcept
   {
-    return static_cast<Operator const&>(*this);
+    return m_op;
   }
 
-  constexpr decltype(auto) subexpressions() const noexcept
+  constexpr expression_types const& subexpressions() const noexcept
   {
-    return static_cast<expression_types const&>(*this);
+    return m_expressions;
   }
 
+  /**
+   * @brief Visits the expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    for_each(static_cast<expression_types const&>(*this),
-             [&v, nesting](auto& t) { t.visit(std::forward<Visitor>(v), nesting + 1); });
+    std::apply([&v, nesting](
+                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
+               m_expressions);
   }
 };
 
 namespace detail {
 
-template<typename T, typename = std::void_t<>>
+template<typename T>
 struct make_deferred
 {
   using type = constant_<T>;
 };
 
 template<typename T>
-struct make_deferred<T, std::enable_if_t<std::is_invocable_v<T>>>
+  requires std::is_invocable_v<T>
+struct make_deferred<T>
 {
   using type = expression_<std::decay_t<decltype(make_function_object(std::declval<T>()))>>;
 };
@@ -99,20 +119,12 @@ struct make_deferred<T, std::enable_if_t<std::is_invocable_v<T>>>
  * - If @p T is already a @c deferred type, it does not change.
  * - If @p T is a callable type, it is transformed to an @ref expression_.
  * - If @p T is not a callable type, it is transformed to an @ref constant_.
+ *
+ * @tparam T The type to transform.
  */
 template<typename T>
-using make_deferred_t = std::conditional_t<is_deferred_v<std::decay_t<T>>,
-                                           T,
-                                           typename detail::make_deferred<std::decay_t<T>>::type>;
-
-
-/**
- */
-template<typename... Expressions>
-constexpr auto call_self(Expressions&&...)
-{
-  return 1;
-}
+using make_deferred_t =
+  std::conditional_t<Deferred<T>, T, typename detail::make_deferred<std::decay_t<T>>::type>;
 
 } // namespace deferred
 

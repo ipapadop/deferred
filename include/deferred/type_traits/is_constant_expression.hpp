@@ -41,15 +41,18 @@ struct is_constant_expression<T, std::void_t<typename T::subexpression_types>> :
 } // namespace detail
 
 /// Checks if @p T is a constant expression.
+/// @tparam T The type to check.
 template<typename T>
 struct is_constant_expression : public detail::is_constant_expression<std::decay_t<T>>
 { };
 
 /// Alias for @c is_constant::type.
+/// @tparam T The type to check.
 template<typename T>
 using is_constant_expression_t = typename is_constant_expression<T>::type;
 
 /// Alias for @c is_constant::value.
+/// @tparam T The type to check.
 template<typename T>
 inline constexpr bool is_constant_expression_v = is_constant_expression<T>::value;
 

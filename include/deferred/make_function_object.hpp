@@ -11,17 +11,25 @@
 #define DEFERRED_MAKE_FUNCTION_OBJECT_HPP
 
 #include <type_traits>
+#include <utility>
 
 namespace deferred {
 
 namespace detail {
 
-// Wraps a function pointer
+/**
+ * @brief Wraps a function pointer to make it callable.
+ * @tparam F The type of the function pointer.
+ */
 template<typename F>
 struct fun_ptr_wrapper
 {
   F m_f;
 
+  /**
+   * @brief Constructs a fun_ptr_wrapper.
+   * @param f The function pointer to wrap.
+   */
   constexpr fun_ptr_wrapper(F f) noexcept : m_f{f}
   { }
 
@@ -34,7 +42,12 @@ struct fun_ptr_wrapper
 
 } // namespace detail
 
-/// Creates a function object from @p f.
+/**
+ * @brief Creates a function object from @p f.
+ * @tparam F The type of the function or callable.
+ * @param f The function or callable to wrap.
+ * @return A callable object representing @p f.
+ */
 template<typename F>
 constexpr decltype(auto) make_function_object(F&& f) noexcept(noexcept(std::forward<F>(f)))
 {

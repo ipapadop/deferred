@@ -17,7 +17,10 @@
 
 namespace deferred {
 
-/// Stores a constant.
+/**
+ * @brief Stores a constant value.
+ * @tparam T The type of the constant.
+ */
 template<typename T>
 class constant_
 {
@@ -29,7 +32,11 @@ private:
   T m_t;
 
 public:
-  /// Constructs a constant_ from @p u.
+  /**
+   * @brief Constructs a constant_ from @p u.
+   * @tparam U The type of the value to initialize the constant with.
+   * @param u The value to initialize the constant with.
+   */
   template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
   constexpr explicit constant_(U&& u) : m_t(std::forward<U>(u))
   { }
@@ -38,7 +45,7 @@ public:
   constant_(constant_&&)      = default;
 
   constant_& operator=(constant_ const&) = delete;
-  constant_& operator=(constant_&&) = delete;
+  constant_& operator=(constant_&&)      = delete;
 
   /// Returns the stored value.
   constexpr T const& operator()() const& noexcept
@@ -52,6 +59,12 @@ public:
     return std::move(m_t);
   }
 
+  /**
+   * @brief Visits the constant with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
@@ -64,6 +77,10 @@ public:
  *
  * If @p t is a callable type, this function will force its evaluation through
  * <tt>t()</tt>. This applies even if @p t is a @c deferred expression.
+ *
+ * @tparam T The type of the value to wrap.
+ * @param t The value to wrap in a constant.
+ * @return A constant_ object containing the evaluated value.
  */
 template<typename T>
 constexpr auto constant(T&& t)

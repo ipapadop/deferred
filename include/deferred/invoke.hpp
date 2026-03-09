@@ -23,6 +23,12 @@ namespace deferred {
  *
  * If @p args... are not @c deferred objects, then they will be tranformed to
  * @ref constant_ objects.
+ *
+ * @tparam F The type of the callable object.
+ * @tparam Args The types of the parameters.
+ * @param f The callable object.
+ * @param args The parameters to pass to the callable object.
+ * @return An expression representing the invocation.
  */
 template<typename F, typename... Args>
 constexpr auto invoke(F&& f, Args&&... args)
