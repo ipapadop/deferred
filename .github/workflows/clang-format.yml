@@ -1,0 +1,35 @@
+name: Clang Format
+
+on:
+  pull_request:
+
+jobs:
+  format:
+    name: Format Code
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        ref: ${{ github.event.pull_request.head.ref }}
+
+    - name: Install clang-format-22
+      run: |
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+        sudo add-apt-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-22 main"
+        sudo apt-get update
+        sudo apt-get install -y clang-format-22
+
+    - name: Run clang-format-22
+      run: |
+        find include examples test -type f \( -name '*.hpp' -o -name '*.cpp' \) -print0 | xargs -0 clang-format-22 -i
+
+    - name: Commit and push changes
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "style: apply clang-format-22"
+        commit_user_name: "github-actions[bot]"
+        commit_user_email: "github-actions[bot]@users.noreply.github.com"
+        branch: ${{ github.event.pull_request.head.ref }}
