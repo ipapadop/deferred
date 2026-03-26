@@ -1,6 +1,6 @@
 /** @file */
 /*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
+ * Copyright (c) 2019-2026 Yiannis Papadopoulos
  *
  * Distributed under the terms of the MIT License.
  *
@@ -10,6 +10,7 @@
 #ifndef DEFERRED_WHILE_HPP
 #define DEFERRED_WHILE_HPP
 
+#include <tuple>
 #include <utility>
 
 #include "evaluate.hpp"
@@ -46,7 +47,10 @@ public:
     m_expressions(std::forward<Condition>(condition), std::forward<Body>(body))
   { }
 
-  constexpr void operator()() const
+  /**
+   * @brief Evaluates the while loop.
+   */
+  constexpr void operator()() const&
   {
     while (evaluate(std::get<0>(m_expressions)))
     {
@@ -54,11 +58,21 @@ public:
     }
   }
 
-  constexpr void operator()()
+  /// @copydoc operator()() const&
+  constexpr void operator()() &
   {
     while (evaluate(std::get<0>(m_expressions)))
     {
       evaluate(std::get<1>(m_expressions));
+    }
+  }
+
+  /// @copydoc operator()() const&
+  constexpr void operator()() &&
+  {
+    while (evaluate(std::get<0>(std::move(m_expressions))))
+    {
+      evaluate(std::get<1>(std::move(m_expressions)));
     }
   }
 
@@ -88,7 +102,7 @@ public:
  * @return A \ref while_expression capturing the condition and body.
  */
 template<typename ConditionExpression, typename BodyExpression>
-constexpr auto while_(ConditionExpression&& condition, BodyExpression&& body)
+[[nodiscard]] constexpr auto while_(ConditionExpression&& condition, BodyExpression&& body)
 {
   using condition_expression = make_deferred_t<ConditionExpression>;
   using body_expression      = make_deferred_t<BodyExpression>;
