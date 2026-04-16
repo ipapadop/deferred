@@ -25,7 +25,7 @@ public:
   using subexpression_types = void;
 
 private:
-  T m_t{};
+  [[no_unique_address]] T m_t{};
 
 public:
   variable_() = default;

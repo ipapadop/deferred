@@ -23,7 +23,7 @@ public:
   using subexpression_types = std::tuple<>;
 
 private:
-  T m_t;
+  [[no_unique_address]] T m_t;
 
 public:
   /**

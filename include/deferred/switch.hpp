@@ -217,6 +217,12 @@ public:
     return choose_case<2>(evaluate(std::get<ConditionExpression>(m_expressions)));
   }
 
+  /**
+   * @brief Visits the switch expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v) const
   {

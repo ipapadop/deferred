@@ -52,7 +52,7 @@ public:
     }
   }
 
-  /// @copydoc operator()() const&
+  /// @copydoc while_expression::operator()() const&
   constexpr void operator()() &
   {
     while (evaluate(std::get<0>(m_expressions)))
@@ -61,7 +61,7 @@ public:
     }
   }
 
-  /// @copydoc operator()() const&
+  /// @copydoc while_expression::operator()() const&
   constexpr void operator()() &&
   {
     while (evaluate(std::get<0>(std::move(m_expressions))))
@@ -93,7 +93,7 @@ public:
  * @tparam BodyExpression The type of the body expression.
  * @param condition The condition expression.
  * @param body The body expression.
- * @return A \ref while_expression capturing the condition and body.
+ * @return A @ref while_expression capturing the condition and body.
  */
 template<typename ConditionExpression, typename BodyExpression>
 [[nodiscard]] constexpr auto while_(ConditionExpression&& condition, BodyExpression&& body)
