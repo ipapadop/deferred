@@ -61,13 +61,15 @@ public:
 template<typename LabelExpression, typename BodyExpression>
 class case_expression
 {
-  [[no_unique_address]] std::tuple<LabelExpression, BodyExpression> m_expressions;
-
 public:
   using label_expression_type = LabelExpression;
   using body_expression_type  = BodyExpression;
   using subexpression_types   = std::tuple<LabelExpression, BodyExpression>;
 
+private:
+  [[no_unique_address]] subexpression_types m_expressions;
+
+public:
   /**
    * @brief Constructs a case_expression.
    * @tparam LabelEx The type of the label expression.
@@ -93,6 +95,12 @@ public:
     return evaluate(std::get<1>(m_expressions));
   }
 
+  /**
+   * @brief Visits the case expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
@@ -185,7 +193,7 @@ private:
     }
   }
 
-  /// @copydoc choose_case(T&&) const
+  /// @copydoc switch_expression::choose_case(T&&) const
   template<std::size_t I, typename T>
   [[nodiscard]] constexpr result_type choose_case(T&& t)
   {
@@ -205,12 +213,17 @@ private:
   }
 
 public:
+  /**
+   * @brief Evaluates the switch expression.
+   * @return The result of the switch expression.
+   */
   [[nodiscard]] constexpr result_type operator()() const
   {
     // start from second case, as first is the default
     return choose_case<2>(evaluate(std::get<ConditionExpression>(m_expressions)));
   }
 
+  /// @copydoc switch_expression::operator()() const
   [[nodiscard]] constexpr result_type operator()()
   {
     // start from second case, as first is the default
@@ -224,9 +237,12 @@ public:
    * @param nesting The nesting level.
    */
   template<typename Visitor>
-  constexpr void visit(Visitor&& v) const
+  constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
-    std::forward<Visitor>(v)(*this);
+    std::forward<Visitor>(v)(*this, nesting);
+    std::apply([&v, nesting](
+                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
+               m_expressions);
   }
 };
 

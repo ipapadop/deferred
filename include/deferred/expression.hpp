@@ -25,14 +25,16 @@ namespace deferred {
 template<typename Operator, typename... Expressions>
 class expression_
 {
-  [[no_unique_address]] Operator m_op;
-  [[no_unique_address]] std::tuple<Expressions...> m_expressions;
-
 public:
   using operator_type       = Operator;
   using expression_types    = std::tuple<Expressions...>;
   using subexpression_types = std::tuple<Operator, Expressions...>;
 
+private:
+  [[no_unique_address]] operator_type m_op;
+  [[no_unique_address]] expression_types m_expressions;
+
+public:
   /**
    * @brief Constructs an expression.
    * @tparam Op The type of the operator.

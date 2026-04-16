@@ -64,9 +64,9 @@ public:
   /// @copydoc while_expression::operator()() const&
   constexpr void operator()() &&
   {
-    while (evaluate(std::get<0>(std::move(m_expressions))))
+    while (evaluate(std::get<0>(m_expressions)))
     {
-      evaluate(std::get<1>(std::move(m_expressions)));
+      evaluate(std::get<1>(m_expressions));
     }
   }
 

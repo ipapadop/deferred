@@ -25,9 +25,6 @@ namespace deferred {
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
 class if_then_else_expression
 {
-  [[no_unique_address]] std::tuple<ConditionExpression, ThenExpression, ElseExpression>
-    m_expressions;
-
 public:
   using condition_expression_type = ConditionExpression;
   using then_expression_type      = ThenExpression;
@@ -36,6 +33,10 @@ public:
                                                        decltype(std::declval<ElseExpression>()())>;
   using subexpression_types       = std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
 
+private:
+  [[no_unique_address]] subexpression_types m_expressions;
+
+public:
   /**
    * @brief Constructs an if_then_else_expression.
    * @tparam Condition Type of the condition expression.
@@ -54,6 +55,10 @@ public:
                   std::forward<ElseEx>(else_))
   { }
 
+  /**
+   * @brief Evaluates the conditional expression.
+   * @return The result of the conditional expression.
+   */
   [[nodiscard]] constexpr result_type operator()() const
   {
     if (evaluate(std::get<0>(m_expressions)))
@@ -66,6 +71,7 @@ public:
     }
   }
 
+  /// @copydoc if_then_else_expression::operator()() const
   [[nodiscard]] constexpr result_type operator()()
   {
     if (evaluate(std::get<0>(m_expressions)))
