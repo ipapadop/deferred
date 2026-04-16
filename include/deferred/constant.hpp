@@ -48,13 +48,13 @@ public:
   constant_& operator=(constant_&&)      = delete;
 
   /// Returns the stored value.
-  constexpr T const& operator()() const& noexcept
+  [[nodiscard]] constexpr T const& operator()() const& noexcept
   {
     return m_t;
   }
 
   /// @copydoc operator()()
-  constexpr T operator()() && noexcept
+  [[nodiscard]] constexpr T operator()() && noexcept
   {
     return std::move(m_t);
   }
@@ -83,7 +83,7 @@ public:
  * @return A constant_ object containing the evaluated value.
  */
 template<typename T>
-constexpr auto constant(T&& t)
+[[nodiscard]] constexpr auto constant(T&& t)
 {
   using result_type = std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
   return constant_<result_type>(recursive_evaluate(std::forward<T>(t)));

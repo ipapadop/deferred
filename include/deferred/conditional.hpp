@@ -60,7 +60,7 @@ public:
                   std::forward<ElseEx>(else_))
   { }
 
-  constexpr result_type operator()() const
+  [[nodiscard]] constexpr result_type operator()() const
   {
     if (evaluate(std::get<0>(m_expressions)))
     {
@@ -72,7 +72,7 @@ public:
     }
   }
 
-  constexpr result_type operator()()
+  [[nodiscard]] constexpr result_type operator()()
   {
     if (evaluate(std::get<0>(m_expressions)))
     {
@@ -116,7 +116,7 @@ public:
  * @return An \ref if_then_else_expression that will perform the deferred evaluation.
  */
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
-constexpr auto
+[[nodiscard]] constexpr auto
 if_then_else(ConditionExpression&& condition, ThenExpression&& then_, ElseExpression&& else_)
 {
   using condition_expression = make_deferred_t<ConditionExpression>;

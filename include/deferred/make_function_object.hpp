@@ -34,7 +34,8 @@ struct fun_ptr_wrapper
   { }
 
   template<typename... T>
-  constexpr decltype(auto) operator()(T&&... t) const noexcept(noexcept(m_f(std::forward<T>(t)...)))
+  [[nodiscard]] constexpr decltype(auto)
+  operator()(T&&... t) const noexcept(noexcept(m_f(std::forward<T>(t)...)))
   {
     return m_f(std::forward<T>(t)...);
   }
@@ -49,7 +50,8 @@ struct fun_ptr_wrapper
  * @return A callable object representing @p f.
  */
 template<typename F>
-constexpr decltype(auto) make_function_object(F&& f) noexcept(noexcept(std::forward<F>(f)))
+[[nodiscard]] constexpr decltype(auto)
+make_function_object(F&& f) noexcept(noexcept(std::forward<F>(f)))
 {
   if constexpr (std::is_function_v<std::remove_reference_t<F>>)
   {

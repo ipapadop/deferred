@@ -60,23 +60,23 @@ public:
   expression_& operator=(expression_ const&) = delete;
   expression_& operator=(expression_&&)      = delete;
 
-  constexpr decltype(auto) operator()() const
+  [[nodiscard]] constexpr decltype(auto) operator()() const
   {
     return deferred::apply(m_op, m_expressions);
   }
 
   /// @copydoc operator()() const
-  constexpr decltype(auto) operator()()
+  [[nodiscard]] constexpr decltype(auto) operator()()
   {
     return deferred::apply(m_op, m_expressions);
   }
 
-  constexpr operator_type const& operator_() const noexcept
+  [[nodiscard]] constexpr operator_type const& operator_() const noexcept
   {
     return m_op;
   }
 
-  constexpr expression_types const& subexpressions() const noexcept
+  [[nodiscard]] constexpr expression_types const& subexpressions() const noexcept
   {
     return m_expressions;
   }

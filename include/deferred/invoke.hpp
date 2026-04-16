@@ -31,7 +31,7 @@ namespace deferred {
  * @return An expression representing the invocation.
  */
 template<typename F, typename... Args>
-constexpr auto invoke(F&& f, Args&&... args)
+[[nodiscard]] constexpr auto invoke(F&& f, Args&&... args)
 {
   if constexpr (is_deferred_v<std::remove_reference_t<F>>)
   {
