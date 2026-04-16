@@ -91,3 +91,19 @@ To run tests after building:
 ```bash
 ctest --output-on-failure
 ```
+
+Formatting
+----------
+
+The project uses `clang-format` for code formatting.
+
+To format all files:
+```bash
+# From the build directory
+cmake --build . --target format
+```
+
+To format only changed files (requires `git`):
+```bash
+./scripts/format_changed.sh
+```

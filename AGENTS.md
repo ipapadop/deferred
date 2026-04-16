@@ -42,6 +42,20 @@ ctest --output-on-failure
 ./test/integration/integration_tests
 ```
 
+### Formatting
+The project uses `clang-format` for code formatting.
+
+To format all files:
+```bash
+# From the build directory
+cmake --build . --target format
+```
+
+To format only changed files (requires `git`):
+```bash
+./scripts/format_changed.sh
+```
+
 ### Building Documentation
 If Doxygen is found, you can generate the HTML documentation:
 ```bash
@@ -63,6 +77,7 @@ Or simply copy the `include/deferred` directory to your project's include path.
   - **Indentation**: 2 spaces.
   - **Pointer Alignment**: Left (`Type* ptr`).
   - **Brace Wrapping**: Custom (check `.clang-format` for details).
+  - **Formatting**: All code must be formatted using `clang-format` before being committed. Use the `format` CMake target or the `scripts/format_changed.sh` script.
 - **Naming**: 
   - Namespaces: `deferred`
   - Files: `.hpp` for headers, `.cpp` for tests/examples.
