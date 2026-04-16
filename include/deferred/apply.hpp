@@ -20,13 +20,9 @@ namespace detail {
 
 /**
  * @brief Helper function to apply a callable to the elements of a tuple.
- * @tparam F Type of the callable.
- * @tparam Tuple Type of the tuple.
+ * @copydoc apply(F&&, Tuple&&)
  * @tparam I Index sequence for tuple elements.
- * @param f The callable to apply.
- * @param t The tuple containing deferred objects.
  * @param I Index sequence for tuple elements.
- * @return The result of applying @p f to the evaluated elements of @p t.
  */
 template<typename F, typename Tuple, std::size_t... I>
 constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>)

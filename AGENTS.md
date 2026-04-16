@@ -68,6 +68,8 @@ Or simply copy the `include/deferred` directory to your project's include path.
   - Files: `.hpp` for headers, `.cpp` for tests/examples.
 - **Testing**: New features must include unit tests in `test/unit/` and integration tests in `test/integration/`. Tests use the Catch2 v3 framework.
   - **Catch2 v3**: Uses `#include <catch2/catch_test_macros.hpp>` and requires a custom `main` in `main.cpp` using `Catch::Session().run()`.
+  - **Verification**: All changes must be verified by ensuring that all tests pass (`ctest`).
+- **Project Documentation**: After any code changes, `README.md` and `AGENTS.md` must be reviewed and updated if necessary to reflect the current state of the project.
 - **License**: MIT License. All source files should include the standard MIT license header.
 - **Header Guards**: Use `#ifndef DEFERRED_FILENAME_HPP` format.
 - **CI**: GitHub Actions workflow (`.github/workflows/c-cpp.yml`) builds the project on Ubuntu, Windows (MSVC), and macOS.

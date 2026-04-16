@@ -65,6 +65,7 @@ public:
     return deferred::apply(m_op, m_expressions);
   }
 
+  /// @copydoc operator()() const
   constexpr decltype(auto) operator()()
   {
     return deferred::apply(m_op, m_expressions);

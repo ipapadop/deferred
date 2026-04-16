@@ -91,9 +91,3 @@ To run tests after building:
 ```bash
 ctest --output-on-failure
 ```
-
-Known Issues
-------------
-
-* Using callable objects and functions with side-effects in ``invoke()`` and ``if_then_else()`` will result in a constant expression, assignable to ``constant_``.
-* Using ``deferred`` with other expression template based classes (e.g., `std::valarray`) may not be possible.
