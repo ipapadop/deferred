@@ -1,11 +1,5 @@
-/** @file */
-/*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
- *
- * Distributed under the terms of the MIT License.
- *
- * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
- */
+// SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
 
 #ifndef DEFERRED_CONSTANT_HPP
 #define DEFERRED_CONSTANT_HPP
@@ -29,7 +23,7 @@ public:
   using subexpression_types = std::tuple<>;
 
 private:
-  T m_t;
+  [[no_unique_address]] T m_t;
 
 public:
   /**
@@ -48,13 +42,13 @@ public:
   constant_& operator=(constant_&&)      = delete;
 
   /// Returns the stored value.
-  constexpr T const& operator()() const& noexcept
+  [[nodiscard]] constexpr T const& operator()() const& noexcept
   {
     return m_t;
   }
 
   /// @copydoc operator()()
-  constexpr T operator()() && noexcept
+  [[nodiscard]] constexpr T operator()() && noexcept
   {
     return std::move(m_t);
   }
@@ -83,7 +77,7 @@ public:
  * @return A constant_ object containing the evaluated value.
  */
 template<typename T>
-constexpr auto constant(T&& t)
+[[nodiscard]] constexpr auto constant(T&& t)
 {
   using result_type = std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
   return constant_<result_type>(recursive_evaluate(std::forward<T>(t)));

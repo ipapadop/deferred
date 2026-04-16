@@ -1,11 +1,5 @@
-/** @file */
-/*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
- *
- * Distributed under the terms of the MIT License.
- *
- * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
- */
+// SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
 
 #ifndef DEFERRED_TYPE_NAME_HPP
 #define DEFERRED_TYPE_NAME_HPP
@@ -30,7 +24,7 @@ namespace deferred {
  * https://stackoverflow.com/questions/18369128/how-can-i-see-the-type-deduced-for-a-template-type-parameter/18369732#18369732
  */
 template<typename T>
-std::string type_name()
+[[nodiscard]] std::string type_name()
 {
   using TR = std::remove_reference_t<T>;
 
@@ -64,7 +58,7 @@ std::string type_name()
 
 /// @copydoc type_name()
 template<typename T>
-auto type_name(T&& t)
+[[nodiscard]] auto type_name(T&& t)
 {
   return type_name<decltype(t)>();
 }

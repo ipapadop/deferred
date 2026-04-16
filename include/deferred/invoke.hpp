@@ -1,11 +1,5 @@
-/** @file */
-/*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
- *
- * Distributed under the terms of the MIT License.
- *
- * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
- */
+// SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
 
 #ifndef DEFERRED_INVOKE_HPP
 #define DEFERRED_INVOKE_HPP
@@ -31,7 +25,7 @@ namespace deferred {
  * @return An expression representing the invocation.
  */
 template<typename F, typename... Args>
-constexpr auto invoke(F&& f, Args&&... args)
+[[nodiscard]] constexpr auto invoke(F&& f, Args&&... args)
 {
   if constexpr (is_deferred_v<std::remove_reference_t<F>>)
   {

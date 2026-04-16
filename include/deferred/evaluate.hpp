@@ -1,11 +1,5 @@
-/** @file */
-/*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
- *
- * Distributed under the terms of the MIT License.
- *
- * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
- */
+// SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
 
 #ifndef DEFERRED_EVALUATE_HPP
 #define DEFERRED_EVALUATE_HPP
@@ -24,7 +18,7 @@ namespace deferred {
  * @return The result of evaluating the expression.
  */
 template<typename T>
-constexpr decltype(auto) evaluate(T&& t)
+constexpr auto evaluate(T&& t)
 {
   if constexpr (Deferred<T>)
   {
@@ -34,8 +28,7 @@ constexpr decltype(auto) evaluate(T&& t)
     }
     else
     {
-      auto v = evaluate(std::forward<T>(t)());
-      return v;
+      return evaluate(std::forward<T>(t)());
     }
   }
   else
@@ -46,17 +39,14 @@ constexpr decltype(auto) evaluate(T&& t)
 
 /**
  * @brief Recursively evaluates @p t until a non-callable is returned.
- * @tparam T The type of the expression to recursively evaluate.
- * @param t The expression to recursively evaluate.
- * @return The result of the recursive evaluation.
+ * @copydoc evaluate(T&&)
  */
 template<typename T>
-constexpr decltype(auto) recursive_evaluate(T&& t)
+constexpr auto recursive_evaluate(T&& t)
 {
   if constexpr (std::is_invocable_v<T>)
   {
-    auto v = recursive_evaluate(std::forward<T>(t)());
-    return v;
+    return recursive_evaluate(std::forward<T>(t)());
   }
   else
   {

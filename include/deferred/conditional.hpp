@@ -1,11 +1,5 @@
-/** @file */
-/*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
- *
- * Distributed under the terms of the MIT License.
- *
- * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
- */
+// SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
 
 #ifndef DEFERRED_CONDITIONAL_HPP
 #define DEFERRED_CONDITIONAL_HPP
@@ -31,9 +25,6 @@ namespace deferred {
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
 class if_then_else_expression
 {
-  [[no_unique_address]] std::tuple<ConditionExpression, ThenExpression, ElseExpression>
-    m_expressions;
-
 public:
   using condition_expression_type = ConditionExpression;
   using then_expression_type      = ThenExpression;
@@ -42,6 +33,10 @@ public:
                                                        decltype(std::declval<ElseExpression>()())>;
   using subexpression_types       = std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
 
+private:
+  [[no_unique_address]] subexpression_types m_expressions;
+
+public:
   /**
    * @brief Constructs an if_then_else_expression.
    * @tparam Condition Type of the condition expression.
@@ -60,7 +55,11 @@ public:
                   std::forward<ElseEx>(else_))
   { }
 
-  constexpr result_type operator()() const
+  /**
+   * @brief Evaluates the conditional expression.
+   * @return The result of the conditional expression.
+   */
+  [[nodiscard]] constexpr result_type operator()() const
   {
     if (evaluate(std::get<0>(m_expressions)))
     {
@@ -72,7 +71,8 @@ public:
     }
   }
 
-  constexpr result_type operator()()
+  /// @copydoc if_then_else_expression::operator()() const
+  [[nodiscard]] constexpr result_type operator()()
   {
     if (evaluate(std::get<0>(m_expressions)))
     {
@@ -116,7 +116,7 @@ public:
  * @return An \ref if_then_else_expression that will perform the deferred evaluation.
  */
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
-constexpr auto
+[[nodiscard]] constexpr auto
 if_then_else(ConditionExpression&& condition, ThenExpression&& then_, ElseExpression&& else_)
 {
   using condition_expression = make_deferred_t<ConditionExpression>;

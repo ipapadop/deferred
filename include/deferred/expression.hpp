@@ -1,11 +1,5 @@
-/** @file */
-/*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
- *
- * Distributed under the terms of the MIT License.
- *
- * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
- */
+// SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
 
 #ifndef DEFERRED_EXPRESSION_HPP
 #define DEFERRED_EXPRESSION_HPP
@@ -31,14 +25,16 @@ namespace deferred {
 template<typename Operator, typename... Expressions>
 class expression_
 {
-  [[no_unique_address]] Operator m_op;
-  [[no_unique_address]] std::tuple<Expressions...> m_expressions;
-
 public:
   using operator_type       = Operator;
   using expression_types    = std::tuple<Expressions...>;
   using subexpression_types = std::tuple<Operator, Expressions...>;
 
+private:
+  [[no_unique_address]] operator_type m_op;
+  [[no_unique_address]] expression_types m_expressions;
+
+public:
   /**
    * @brief Constructs an expression.
    * @tparam Op The type of the operator.
@@ -60,22 +56,23 @@ public:
   expression_& operator=(expression_ const&) = delete;
   expression_& operator=(expression_&&)      = delete;
 
-  constexpr decltype(auto) operator()() const
+  [[nodiscard]] constexpr decltype(auto) operator()() const
   {
     return deferred::apply(m_op, m_expressions);
   }
 
-  constexpr decltype(auto) operator()()
+  /// @copydoc operator()() const
+  [[nodiscard]] constexpr decltype(auto) operator()()
   {
     return deferred::apply(m_op, m_expressions);
   }
 
-  constexpr operator_type const& operator_() const noexcept
+  [[nodiscard]] constexpr operator_type const& operator_() const noexcept
   {
     return m_op;
   }
 
-  constexpr expression_types const& subexpressions() const noexcept
+  [[nodiscard]] constexpr expression_types const& subexpressions() const noexcept
   {
     return m_expressions;
   }

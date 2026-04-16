@@ -92,8 +92,18 @@ To run tests after building:
 ctest --output-on-failure
 ```
 
-Known Issues
-------------
+Formatting
+----------
 
-* Using callable objects and functions with side-effects in ``invoke()`` and ``if_then_else()`` will result in a constant expression, assignable to ``constant_``.
-* Using ``deferred`` with other expression template based classes (e.g., `std::valarray`) may not be possible.
+The project uses `clang-format` for code formatting.
+
+To format all files:
+```bash
+# From the build directory
+cmake --build . --target format
+```
+
+To format only changed files (requires `git`):
+```bash
+./scripts/format_changed.sh
+```

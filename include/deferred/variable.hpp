@@ -1,14 +1,11 @@
-/** @file */
-/*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
- *
- * Distributed under the terms of the MIT License.
- *
- * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
- */
+// SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
+
 #ifndef DEFERRED_VARIABLE_HPP
 #define DEFERRED_VARIABLE_HPP
 
+#include <concepts>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -28,7 +25,7 @@ public:
   using subexpression_types = void;
 
 private:
-  T m_t{};
+  [[no_unique_address]] T m_t{};
 
 public:
   variable_() = default;
@@ -53,26 +50,40 @@ public:
   variable_& operator=(variable_ const&) = delete;
   variable_& operator=(variable_&&)      = delete;
 
+  /**
+   * @brief Assigns a value to the variable.
+   */
   constexpr variable_& operator=(T const& t)
   {
     m_t = t;
     return *this;
   }
 
+  /// @copydoc variable_::operator=(T const&)
   constexpr variable_& operator=(T&& t) noexcept
   {
     m_t = std::move(t);
     return *this;
   }
 
-  constexpr T const& operator()() const& noexcept
+  /**
+   * @brief Returns the stored value.
+   */
+  [[nodiscard]] constexpr T const& operator()() const& noexcept
   {
     return m_t;
   }
 
-  constexpr T& operator()() & noexcept
+  /// @copydoc variable_::operator()() const& noexcept
+  [[nodiscard]] constexpr T& operator()() & noexcept
   {
     return m_t;
+  }
+
+  /// @copydoc variable_::operator()() const& noexcept
+  [[nodiscard]] constexpr T operator()() && noexcept
+  {
+    return std::move(m_t);
   }
 
   /**
@@ -94,9 +105,9 @@ public:
  * @return A newly constructed variable.
  */
 template<typename T>
-constexpr variable_<T> variable() noexcept
+[[nodiscard]] constexpr auto variable() noexcept
 {
-  return {};
+  return variable_<T>{};
 }
 
 /**
@@ -110,7 +121,7 @@ constexpr variable_<T> variable() noexcept
  * @return A variable representing the evaluated type of @p t.
  */
 template<typename T>
-constexpr auto variable(T&& t)
+[[nodiscard]] constexpr auto variable(T&& t)
 {
   using result_type = std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
   return variable_<result_type>(recursive_evaluate(std::forward<T>(t)));

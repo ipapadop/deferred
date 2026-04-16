@@ -95,3 +95,18 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
   enable_testing()
   add_subdirectory(test)
 endif()
+
+# formatting
+
+find_program(CLANG_FORMAT clang-format)
+if(CLANG_FORMAT)
+  file(GLOB_RECURSE ALL_SOURCE_FILES
+    "include/*.h*"
+    "test/*.c*"
+    "examples/*.c*")
+  add_custom_target(format
+    COMMAND ${CLANG_FORMAT} -i ${ALL_SOURCE_FILES}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Formatting code with clang-format"
+    VERBATIM)
+endif()

@@ -1,11 +1,5 @@
-/** @file */
-/*
- * Copyright (c) 2019-2020 Yiannis Papadopoulos
- *
- * Distributed under the terms of the MIT License.
- *
- * (See accompanying file LICENSE or copy at http://opensource.org/licenses/MIT)
- */
+// SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
 
 #ifndef DEFERRED_SWITCH_HPP
 #define DEFERRED_SWITCH_HPP
@@ -40,7 +34,7 @@ public:
   constexpr explicit default_expression(T&&... t) : m_expression(std::forward<T>(t)...)
   { }
 
-  constexpr decltype(auto) operator()() const
+  [[nodiscard]] constexpr decltype(auto) operator()() const
   {
     return m_expression();
   }
@@ -67,13 +61,15 @@ public:
 template<typename LabelExpression, typename BodyExpression>
 class case_expression
 {
-  [[no_unique_address]] std::tuple<LabelExpression, BodyExpression> m_expressions;
-
 public:
   using label_expression_type = LabelExpression;
   using body_expression_type  = BodyExpression;
   using subexpression_types   = std::tuple<LabelExpression, BodyExpression>;
 
+private:
+  [[no_unique_address]] subexpression_types m_expressions;
+
+public:
   /**
    * @brief Constructs a case_expression.
    * @tparam LabelEx The type of the label expression.
@@ -88,17 +84,23 @@ public:
 
   /// Compares @p T with the label expression.
   template<typename T>
-  constexpr decltype(auto) compare(T&& t) const
+  [[nodiscard]] constexpr decltype(auto) compare(T&& t) const
   {
     return std::forward<T>(t) == evaluate(std::get<0>(m_expressions));
   }
 
   /// Returns the result of the body expression.
-  constexpr decltype(auto) operator()() const
+  [[nodiscard]] constexpr decltype(auto) operator()() const
   {
     return evaluate(std::get<1>(m_expressions));
   }
 
+  /**
+   * @brief Visits the case expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
@@ -174,7 +176,7 @@ private:
    * If none does, the default (@c std::tuple_element<1>) is returned.
    */
   template<std::size_t I, typename T>
-  constexpr result_type choose_case(T&& t) const
+  [[nodiscard]] constexpr result_type choose_case(T&& t) const
   {
     if constexpr (I < std::tuple_size<subexpression_types>::value)
     {
@@ -191,9 +193,9 @@ private:
     }
   }
 
-  /// @copydoc choose_case(T&&) const
+  /// @copydoc switch_expression::choose_case(T&&) const
   template<std::size_t I, typename T>
-  constexpr result_type choose_case(T&& t)
+  [[nodiscard]] constexpr result_type choose_case(T&& t)
   {
     if constexpr (I < std::tuple_size<subexpression_types>::value)
     {
@@ -211,22 +213,36 @@ private:
   }
 
 public:
-  constexpr result_type operator()() const
+  /**
+   * @brief Evaluates the switch expression.
+   * @return The result of the switch expression.
+   */
+  [[nodiscard]] constexpr result_type operator()() const
   {
     // start from second case, as first is the default
     return choose_case<2>(evaluate(std::get<ConditionExpression>(m_expressions)));
   }
 
-  constexpr result_type operator()()
+  /// @copydoc switch_expression::operator()() const
+  [[nodiscard]] constexpr result_type operator()()
   {
     // start from second case, as first is the default
     return choose_case<2>(evaluate(std::get<ConditionExpression>(m_expressions)));
   }
 
+  /**
+   * @brief Visits the switch expression with a visitor.
+   * @tparam Visitor The type of the visitor.
+   * @param v The visitor.
+   * @param nesting The nesting level.
+   */
   template<typename Visitor>
-  constexpr decltype(auto) visit(Visitor&& v) const
+  constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
-    return std::forward<Visitor>(v)(*this);
+    std::forward<Visitor>(v)(*this, nesting);
+    std::apply([&v, nesting](
+                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
+               m_expressions);
   }
 };
 
@@ -237,7 +253,7 @@ public:
  * @return A \ref default_expression wrapping the given expression.
  */
 template<typename Expression>
-auto default_(Expression&& ex)
+[[nodiscard]] constexpr auto default_(Expression&& ex)
 {
   using expression = make_deferred_t<Expression>;
   return default_expression<expression>(std::forward<Expression>(ex));
@@ -252,7 +268,7 @@ auto default_(Expression&& ex)
  * @return A \ref case_expression wrapping the label and body.
  */
 template<typename LabelExpression, typename BodyExpression>
-auto case_(LabelExpression&& label, BodyExpression&& body)
+[[nodiscard]] constexpr auto case_(LabelExpression&& label, BodyExpression&& body)
 {
   using label_expression = make_deferred_t<LabelExpression>;
   using body_expression  = make_deferred_t<BodyExpression>;
@@ -286,7 +302,7 @@ auto case_(LabelExpression&& label, BodyExpression&& body)
  * @return A tuple-like expression representing the switch construct.
  */
 template<typename ConditionExpression, typename DefaultExpression, typename... CaseExpressions>
-constexpr auto
+[[nodiscard]] constexpr auto
 switch_(ConditionExpression&& condition, DefaultExpression&& default_, CaseExpressions&&... case_)
 {
   static_assert(std::conjunction_v<detail::is_valid_default<std::decay_t<DefaultExpression>>>,
