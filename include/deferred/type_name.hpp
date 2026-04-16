@@ -30,7 +30,7 @@ namespace deferred {
  * https://stackoverflow.com/questions/18369128/how-can-i-see-the-type-deduced-for-a-template-type-parameter/18369732#18369732
  */
 template<typename T>
-std::string type_name()
+[[nodiscard]] std::string type_name()
 {
   using TR = std::remove_reference_t<T>;
 
@@ -64,7 +64,7 @@ std::string type_name()
 
 /// @copydoc type_name()
 template<typename T>
-auto type_name(T&& t)
+[[nodiscard]] auto type_name(T&& t)
 {
   return type_name<decltype(t)>();
 }
