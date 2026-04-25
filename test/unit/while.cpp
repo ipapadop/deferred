@@ -20,7 +20,7 @@ TEST_CASE("while with lambda", "[while-lambda]")
 
 TEST_CASE("while with constexpr", "[while-constexpr]")
 {
-  auto ex = deferred::while_([] { return false; }, [] { });
+  auto ex = deferred::while_([] { return false; }, [] {});
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   ex();
