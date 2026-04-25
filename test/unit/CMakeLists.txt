@@ -1,4 +1,5 @@
 set(SOURCES
+  apply.cpp
   conditional.cpp
   constant.cpp
   invoke.cpp
