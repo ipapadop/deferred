@@ -16,7 +16,7 @@
 namespace deferred {
 
 /**
- * Deferred expression that is composed of an operator @p Operator applied to
+ * @brief Deferred expression that is composed of an operator @p Operator applied to
  * subexpressions @p Expressions....
  *
  * @tparam Operator The type of the operator.
@@ -111,7 +111,7 @@ struct make_deferred<T>
 } // namespace detail
 
 /**
- * Transforms @p T into a @c deferred type.
+ * @brief Transforms @p T into a @c deferred type.
  *
  * - If @p T is already a @c deferred type, it does not change.
  * - If @p T is a callable type, it is transformed to an @ref expression_.

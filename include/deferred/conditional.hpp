@@ -14,7 +14,7 @@
 namespace deferred {
 
 /**
- * Deferred conditional that evaluates @p ThenExpression if
+ * @brief Deferred conditional that evaluates @p ThenExpression if
  * @p ConditionExpression evaluates to @c true, otherwise it evaluates
  * @p ElseExpression.
  *
@@ -101,7 +101,7 @@ public:
 };
 
 /**
- * Creates a @c deferred conditional that evaluates @p then_ if @p condition
+ * @brief Creates a @c deferred conditional that evaluates @p then_ if @p condition
  * evaluates to @c true, otherwise it evaluates @p else_.
  *
  * The result type of <tt>if_then_else_expression(...)()</tt> is the
@@ -113,7 +113,7 @@ public:
  * @param condition The condition expression.
  * @param then_ The then expression.
  * @param else_ The else expression.
- * @return An \ref if_then_else_expression that will perform the deferred evaluation.
+ * @return An @ref if_then_else_expression that will perform the deferred evaluation.
  */
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
 [[nodiscard]] constexpr auto

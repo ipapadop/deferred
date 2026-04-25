@@ -81,6 +81,10 @@ Or simply copy the `include/deferred` directory to your project's include path.
 - **Naming**: 
   - Namespaces: `deferred`
   - Files: `.hpp` for headers, `.cpp` for tests/examples.
+- **Documentation Comments**:
+  - Use Doxygen block comments `/** ... */` for multi-line documentation. Use `///` for single-line comments.
+  - Always include a `@brief` description as the first line of the comment.
+  - Use `@tparam`, `@param`, `@return`, and other Doxygen commands where applicable instead of their `\ ` equivalents.
 - **Testing**: New features must include unit tests in `test/unit/` and integration tests in `test/integration/`. Tests use the Catch2 v3 framework.
   - **Catch2 v3**: Uses `#include <catch2/catch_test_macros.hpp>` and requires a custom `main` in `main.cpp` using `Catch::Session().run()`.
   - **Verification**: All changes must be verified by ensuring that all tests pass (`ctest`).
