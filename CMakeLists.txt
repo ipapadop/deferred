@@ -7,7 +7,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
 
 # options
 
-option(BUILD_EXAMPLES "Build examples" ON)
+option(DEFERRED_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 
 # targets and properties
 
@@ -25,9 +25,7 @@ include(GNUInstallDirs)
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/deferred)
 
 install(TARGETS deferred
-  EXPORT deferred-targets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  EXPORT deferred-targets)
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
@@ -58,7 +56,7 @@ install(FILES
 
 find_package(Doxygen)
 option(DEFERRED_BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" ${DOXYGEN_FOUND})
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND DEFERRED_BUILD_DOCUMENTATION)
+if(PROJECT_IS_TOP_LEVEL AND DEFERRED_BUILD_DOCUMENTATION)
     if(NOT DOXYGEN_FOUND)
         message(FATAL_ERROR "Doxygen is needed to build the documentation.")
     endif()
@@ -81,24 +79,27 @@ endif()
 
 # examples
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_EXAMPLES)
+if(DEFERRED_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
 # tests
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+if(PROJECT_IS_TOP_LEVEL)
   include(CTest)
-endif()
-
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
-  enable_testing()
-  add_subdirectory(test)
+  if(BUILD_TESTING)
+    add_subdirectory(test)
+  endif()
 endif()
 
 # formatting
 
-find_program(CLANG_FORMAT clang-format)
+find_program(CLANG_FORMAT
+  NAMES
+    clang-format-22
+    clang-format-21
+    clang-format-20
+    clang-format)
 if(CLANG_FORMAT)
   file(GLOB_RECURSE ALL_SOURCE_FILES
     "include/*.h*"
