@@ -7,7 +7,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
 
 # options
 
-option(DEFERRED_BUILD_EXAMPLES "Build examples" ON)
+option(DEFERRED_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 
 # targets and properties
 
@@ -56,7 +56,7 @@ install(FILES
 
 find_package(Doxygen)
 option(DEFERRED_BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" ${DOXYGEN_FOUND})
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND DEFERRED_BUILD_DOCUMENTATION)
+if(PROJECT_IS_TOP_LEVEL AND DEFERRED_BUILD_DOCUMENTATION)
     if(NOT DOXYGEN_FOUND)
         message(FATAL_ERROR "Doxygen is needed to build the documentation.")
     endif()
@@ -79,13 +79,13 @@ endif()
 
 # examples
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND DEFERRED_BUILD_EXAMPLES)
+if(DEFERRED_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
 # tests
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+if(PROJECT_IS_TOP_LEVEL)
   include(CTest)
   if(BUILD_TESTING)
     add_subdirectory(test)
