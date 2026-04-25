@@ -82,14 +82,14 @@ public:
     m_expressions(std::forward<LabelEx>(label), std::forward<BodyEx>(body))
   { }
 
-  /// Compares @p T with the label expression.
+  /// @brief Compares @p T with the label expression.
   template<typename T>
   [[nodiscard]] constexpr decltype(auto) compare(T&& t) const
   {
     return std::forward<T>(t) == evaluate(std::get<0>(m_expressions));
   }
 
-  /// Returns the result of the body expression.
+  /// @brief Returns the result of the body expression.
   [[nodiscard]] constexpr decltype(auto) operator()() const
   {
     return evaluate(std::get<1>(m_expressions));
@@ -132,7 +132,7 @@ struct is_valid_case<case_expression<T, U>> : public std::true_type
 } // namespace detail
 
 /**
- * Deferred switch
+ * @brief Deferred switch
  *
  * @tparam ConditionExpression The type of the condition expression.
  * @tparam DefaultExpression The type of the default case expression.
@@ -171,7 +171,7 @@ public:
 
 private:
   /**
-   * Traverses the cases until one matches.
+   * @brief Traverses the cases until one matches.
    *
    * If none does, the default (@c std::tuple_element<1>) is returned.
    */
@@ -250,7 +250,7 @@ public:
  * @brief Creates a default case for use with @ref switch_().
  * @tparam Expression The type of the default expression.
  * @param ex The expression to use as a default case.
- * @return A \ref default_expression wrapping the given expression.
+ * @return A @ref default_expression wrapping the given expression.
  */
 template<typename Expression>
 [[nodiscard]] constexpr auto default_(Expression&& ex)
@@ -265,7 +265,7 @@ template<typename Expression>
  * @tparam BodyExpression The type of the body expression.
  * @param label The label expression to compare against.
  * @param body The body expression to evaluate if matched.
- * @return A \ref case_expression wrapping the label and body.
+ * @return A @ref case_expression wrapping the label and body.
  */
 template<typename LabelExpression, typename BodyExpression>
 [[nodiscard]] constexpr auto case_(LabelExpression&& label, BodyExpression&& body)
@@ -277,7 +277,7 @@ template<typename LabelExpression, typename BodyExpression>
 }
 
 /**
- * Creates a new @ref switch_expression that checks @p condition against the
+ * @brief Creates a new @ref switch_expression that checks @p condition against the
  * list of cases @p case_.
  *
  * If none of @p case_ matches, it returns the result of @p default_.

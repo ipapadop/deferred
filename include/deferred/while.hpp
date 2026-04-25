@@ -13,7 +13,7 @@
 namespace deferred {
 
 /**
- * Deferred while loop that evaluates @p BodyExpression while
+ * @brief Deferred while loop that evaluates @p BodyExpression while
  * @p ConditionExpression evaluates to @c true.
  *
  * @tparam ConditionExpression The type of the condition expression.
@@ -41,9 +41,7 @@ public:
     m_expressions(std::forward<Condition>(condition), std::forward<Body>(body))
   { }
 
-  /**
-   * @brief Evaluates the while loop.
-   */
+  /// @brief Evaluates the while loop.
   constexpr void operator()() const&
   {
     while (evaluate(std::get<0>(m_expressions)))
@@ -87,7 +85,7 @@ public:
 };
 
 /**
- * Creates a @c deferred while that call @p body while @p condition is @c true.
+ * @brief Creates a @c deferred while that call @p body while @p condition is @c true.
  *
  * @tparam ConditionExpression The type of the condition expression.
  * @tparam BodyExpression The type of the body expression.
