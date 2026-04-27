@@ -43,7 +43,7 @@ struct is_constant_expression : public detail::is_constant_expression<std::decay
 { };
 
 /**
- * @brief Alias for @c is_constant::type.
+ * @brief Alias for @c is_constant_expression::type.
  * @tparam T The type to check.
  */
 template<typename T>
