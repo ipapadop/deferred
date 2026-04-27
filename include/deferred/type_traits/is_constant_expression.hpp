@@ -50,7 +50,7 @@ template<typename T>
 using is_constant_expression_t = typename is_constant_expression<T>::type;
 
 /**
- * @brief Alias for @c is_constant::value.
+ * @brief Alias for @c is_constant_expression::value.
  * @tparam T The type to check.
  */
 template<typename T>
