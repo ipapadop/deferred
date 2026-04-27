@@ -85,7 +85,7 @@ public:
 };
 
 /**
- * @brief Creates a @c deferred while that call @p body while @p condition is @c true.
+ * @brief Creates a @c deferred while that calls @p body while @p condition is @c true.
  *
  * @tparam ConditionExpression The type of the condition expression.
  * @tparam BodyExpression The type of the body expression.
