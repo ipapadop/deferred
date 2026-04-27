@@ -18,7 +18,7 @@
 namespace deferred {
 
 /**
- * Returns the unmangled name of @p T as a @c std::string.
+ * @brief Returns the unmangled name of @p T as a @c std::string.
  *
  * This solution initially appeared in
  * https://stackoverflow.com/questions/18369128/how-can-i-see-the-type-deduced-for-a-template-type-parameter/18369732#18369732

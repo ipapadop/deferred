@@ -36,9 +36,7 @@ std::vector<T> multiply_scalar_vector(T const& v, std::vector<T> x)
   return x;
 }
 
-/**
- * @brief Main function demonstrating deferred evaluation with std::vector.
- */
+/// @brief Main function demonstrating deferred evaluation with std::vector.
 int main()
 {
   using namespace deferred;

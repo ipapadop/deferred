@@ -13,7 +13,7 @@
 namespace deferred {
 
 /**
- * Invoke the callable object @p f with the parameters @p args....
+ * @brief Invoke the callable object @p f with the parameters @p args....
  *
  * If @p args... are not @c deferred objects, then they will be tranformed to
  * @ref constant_ objects.

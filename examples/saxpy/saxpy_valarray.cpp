@@ -9,9 +9,7 @@
 #include "deferred/deferred.hpp"
 #include "deferred/type_name.hpp"
 
-/**
- * @brief Visitor to print the deferred expression tree.
- */
+/// @brief Visitor to print the deferred expression tree.
 struct print_visitor
 {
   /**
@@ -41,9 +39,7 @@ struct print_visitor
 };
 
 
-/**
- * @brief Main function demonstrating deferred evaluation with std::valarray.
- */
+/// @brief Main function demonstrating deferred evaluation with std::valarray.
 int main()
 {
   using namespace deferred;

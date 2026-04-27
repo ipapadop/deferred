@@ -41,7 +41,7 @@ public:
   constant_& operator=(constant_ const&) = delete;
   constant_& operator=(constant_&&)      = delete;
 
-  /// Returns the stored value.
+  /// @brief Returns the stored value.
   [[nodiscard]] constexpr T const& operator()() const& noexcept
   {
     return m_t;
@@ -67,7 +67,7 @@ public:
 };
 
 /**
- * Creates a constant for use in @c deferred expressions.
+ * @brief Creates a constant for use in @c deferred expressions.
  *
  * If @p t is a callable type, this function will force its evaluation through
  * <tt>t()</tt>. This applies even if @p t is a @c deferred expression.

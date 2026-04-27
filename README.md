@@ -107,3 +107,5 @@ To format only changed files (requires `git`):
 ```bash
 ./scripts/format_changed.sh
 ```
+
+Doxygen comments must use the block style `/** ... */` for multi-line documentation and `///` for single-line comments. Always start with a `@brief` description. Use `@` instead of `\` for Doxygen commands (e.g., `@param`, `@tparam`, `@return`).

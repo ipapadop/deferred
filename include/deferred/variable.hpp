@@ -50,9 +50,7 @@ public:
   variable_& operator=(variable_ const&) = delete;
   variable_& operator=(variable_&&)      = delete;
 
-  /**
-   * @brief Assigns a value to the variable.
-   */
+  /// @brief Assigns a value to the variable.
   constexpr variable_& operator=(T const& t)
   {
     m_t = t;
@@ -66,9 +64,7 @@ public:
     return *this;
   }
 
-  /**
-   * @brief Returns the stored value.
-   */
+  /// @brief Returns the stored value.
   [[nodiscard]] constexpr T const& operator()() const& noexcept
   {
     return m_t;
@@ -111,13 +107,13 @@ template<typename T>
 }
 
 /**
- * Creates a variable for use in @c deferred expressions.
+ * @brief Creates a variable for use in @c deferred expressions.
  *
  * If @p t is a callable type, this function will force its evaluation through
  * <tt>t()</tt>. This applies even if @p t is a @c deferred expression.
  *
  * @tparam T The type of the value to deduce.
- * @param t The value to wrap in a \ref variable_.
+ * @param t The value to wrap in a @ref variable_.
  * @return A variable representing the evaluated type of @p t.
  */
 template<typename T>
