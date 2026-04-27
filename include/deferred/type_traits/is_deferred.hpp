@@ -31,7 +31,7 @@ struct is_deferred : public std::bool_constant<Deferred<T>>
 { };
 
 /**
- * @brief Alias for @c is_deferred_datatype::type.
+ * @brief Alias for @c is_deferred::type.
  * @tparam T The type to check.
  */
 template<typename T>
