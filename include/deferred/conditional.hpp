@@ -18,11 +18,11 @@ namespace deferred {
  * @p ConditionExpression evaluates to @c true, otherwise it evaluates
  * @p ElseExpression.
  *
- * @tparam ConditionExpression The type of the condition expression.
- * @tparam ThenExpression The type of the expression to evaluate if the condition is true.
- * @tparam ElseExpression The type of the expression to evaluate if the condition is false.
+ * @tparam ConditionExpression Type of the condition expression.
+ * @tparam ThenExpression Type of the expression to evaluate if the condition is @c true.
+ * @tparam ElseExpression Type of the expression to evaluate if the condition is @c false.
  */
-template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
+template<Deferred ConditionExpression, Deferred ThenExpression, Deferred ElseExpression>
 class if_then_else_expression
 {
 public:
@@ -34,7 +34,9 @@ public:
   using subexpression_types       = std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
 
 private:
-  [[no_unique_address]] subexpression_types m_expressions;
+  [[no_unique_address]] condition_expression_type m_condition;
+  [[no_unique_address]] then_expression_type m_then;
+  [[no_unique_address]] else_expression_type m_else;
 
 public:
   /**
@@ -42,61 +44,60 @@ public:
    * @tparam Condition Type of the condition expression.
    * @tparam ThenEx Type of the then expression.
    * @tparam ElseEx Type of the else expression.
-   * @param condition The condition expression.
-   * @param then_ The then expression.
-   * @param else_ The else expression.
+   * @param condition Condition expression.
+   * @param then_ Then expression.
+   * @param else_ Else expression.
    */
   template<typename Condition, typename ThenEx, typename ElseEx>
   constexpr explicit if_then_else_expression(Condition&& condition,
                                              ThenEx&& then_,
                                              ElseEx&& else_) :
-    m_expressions(std::forward<Condition>(condition),
-                  std::forward<ThenEx>(then_),
-                  std::forward<ElseEx>(else_))
+    m_condition(std::forward<Condition>(condition)), m_then(std::forward<ThenEx>(then_)),
+    m_else(std::forward<ElseEx>(else_))
   { }
 
   /**
    * @brief Evaluates the conditional expression.
-   * @return The result of the conditional expression.
+   * @return Result of the conditional expression.
    */
   [[nodiscard]] constexpr result_type operator()() const
   {
-    if (evaluate(std::get<0>(m_expressions)))
+    if (evaluate(m_condition))
     {
-      return evaluate(std::get<1>(m_expressions));
+      return evaluate(m_then);
     }
     else
     {
-      return evaluate(std::get<2>(m_expressions));
+      return evaluate(m_else);
     }
   }
 
   /// @copydoc if_then_else_expression::operator()() const
   [[nodiscard]] constexpr result_type operator()()
   {
-    if (evaluate(std::get<0>(m_expressions)))
+    if (evaluate(m_condition))
     {
-      return evaluate(std::get<1>(m_expressions));
+      return evaluate(m_then);
     }
     else
     {
-      return evaluate(std::get<2>(m_expressions));
+      return evaluate(m_else);
     }
   }
 
   /**
    * @brief Visits the expression with a visitor.
-   * @tparam Visitor The type of the visitor.
-   * @param v The visitor.
-   * @param nesting The nesting level.
+   * @tparam Visitor Type of the visitor.
+   * @param v Visitor.
+   * @param nesting Nesting level.
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    std::apply([&v, nesting](
-                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
-               m_expressions);
+    std::forward<Visitor>(v)(m_condition, nesting + 1);
+    std::forward<Visitor>(v)(m_then, nesting + 1);
+    std::forward<Visitor>(v)(m_else, nesting + 1);
   }
 };
 
@@ -107,12 +108,12 @@ public:
  * The result type of <tt>if_then_else_expression(...)()</tt> is the
  * @c std::common_type of the result types of @p then_ and @p else_.
  *
- * @tparam ConditionExpression The type of the condition expression.
- * @tparam ThenExpression The type of the then expression.
- * @tparam ElseExpression The type of the else expression.
- * @param condition The condition expression.
- * @param then_ The then expression.
- * @param else_ The else expression.
+ * @tparam ConditionExpression Type of the condition expression.
+ * @tparam ThenExpression Type of the then expression.
+ * @tparam ElseExpression Type of the else expression.
+ * @param condition Condition expression.
+ * @param then_ Then expression.
+ * @param else_ Else expression.
  * @return An @ref if_then_else_expression that will perform the deferred evaluation.
  */
 template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>

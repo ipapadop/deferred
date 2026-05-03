@@ -14,10 +14,10 @@ namespace deferred {
 
 /**
  * @brief Deferred binary operator +
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -29,10 +29,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator -
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -44,8 +44,8 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred prefix or unary operator +
- * @tparam T The type of the operand.
- * @param t The operand.
+ * @tparam T Type of the operand.
+ * @param t Operand.
  * @return A deferred expression representing the operation.
  */
 template<Deferred T>
@@ -56,8 +56,8 @@ template<Deferred T>
 
 /**
  * @brief Deferred prefix or unary operator -
- * @tparam T The type of the operand.
- * @param t The operand.
+ * @tparam T Type of the operand.
+ * @param t Operand.
  * @return A deferred expression representing the operation.
  */
 template<Deferred T>
@@ -68,10 +68,10 @@ template<Deferred T>
 
 /**
  * @brief Deferred binary operator *
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -83,10 +83,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator /
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -98,10 +98,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator %
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -113,8 +113,8 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred prefix or unary operator ++
- * @tparam T The type of the operand.
- * @param t The operand.
+ * @tparam T Type of the operand.
+ * @param t Operand.
  * @return A deferred expression representing the operation.
  */
 template<Deferred T>
@@ -125,8 +125,8 @@ template<Deferred T>
 
 /**
  * @brief Deferred postfix operator ++
- * @tparam T The type of the operand.
- * @param t The operand.
+ * @tparam T Type of the operand.
+ * @param t Operand.
  * @param \<unnamed\> An int for postfix differentiation.
  * @return A deferred expression representing the operation.
  */
@@ -138,8 +138,8 @@ template<Deferred T>
 
 /**
  * @brief Deferred prefix or unary operator --
- * @tparam T The type of the operand.
- * @param t The operand.
+ * @tparam T Type of the operand.
+ * @param t Operand.
  * @return A deferred expression representing the operation.
  */
 template<Deferred T>
@@ -150,8 +150,8 @@ template<Deferred T>
 
 /**
  * @brief Deferred postfix operator --
- * @tparam T The type of the operand.
- * @param t The operand.
+ * @tparam T Type of the operand.
+ * @param t Operand.
  * @param \<unnamed\> An int for postfix differentiation.
  * @return A deferred expression representing the operation.
  */
@@ -163,10 +163,10 @@ template<Deferred T>
 
 /**
  * @brief Deferred binary operator ==
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -178,10 +178,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator !=
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -193,10 +193,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator >
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -208,10 +208,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator <
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -223,10 +223,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator >=
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -238,10 +238,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator <=
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -253,10 +253,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator &&
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -268,10 +268,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator ||
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -283,8 +283,8 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred prefix or unary operator !
- * @tparam T The type of the operand.
- * @param t The operand.
+ * @tparam T Type of the operand.
+ * @param t Operand.
  * @return A deferred expression representing the operation.
  */
 template<Deferred T>
@@ -295,10 +295,10 @@ template<Deferred T>
 
 /**
  * @brief Deferred binary operator &
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -310,10 +310,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator |
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -325,10 +325,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator ^
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -340,8 +340,8 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred prefix or unary operator ~
- * @tparam T The type of the operand.
- * @param t The operand.
+ * @tparam T Type of the operand.
+ * @param t Operand.
  * @return A deferred expression representing the operation.
  */
 template<Deferred T>
@@ -352,10 +352,10 @@ template<Deferred T>
 
 /**
  * @brief Deferred binary operator <<
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
@@ -370,10 +370,10 @@ template<typename T, typename U>
 
 /**
  * @brief Deferred binary operator >>
- * @tparam T The type of the left operand.
- * @tparam U The type of the right operand.
- * @param t The left operand.
- * @param u The right operand.
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>

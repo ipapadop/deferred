@@ -19,8 +19,8 @@ namespace deferred {
  * @brief Deferred expression that is composed of an operator @p Operator applied to
  * subexpressions @p Expressions....
  *
- * @tparam Operator The type of the operator.
- * @tparam Expressions The types of the subexpressions.
+ * @tparam Operator Type of the operator.
+ * @tparam Expressions Types of the subexpressions.
  */
 template<typename Operator, typename... Expressions>
 class expression_
@@ -37,10 +37,10 @@ private:
 public:
   /**
    * @brief Constructs an expression.
-   * @tparam Op The type of the operator.
-   * @tparam Ex The types of the subexpressions.
-   * @param op The operator.
-   * @param ex The subexpressions.
+   * @tparam Op Type of the operator.
+   * @tparam Ex Types of the subexpressions.
+   * @param op Operator.
+   * @param ex Subexpressions.
    */
   template<typename Op, typename... Ex>
     requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
@@ -117,7 +117,7 @@ struct make_deferred<T>
  * - If @p T is a callable type, it is transformed to an @ref expression_.
  * - If @p T is not a callable type, it is transformed to an @ref constant_.
  *
- * @tparam T The type to transform.
+ * @tparam T Type to transform.
  */
 template<typename T>
 using make_deferred_t =

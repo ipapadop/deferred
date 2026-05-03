@@ -16,81 +16,83 @@ namespace deferred {
  * @brief Deferred while loop that evaluates @p BodyExpression while
  * @p ConditionExpression evaluates to @c true.
  *
- * @tparam ConditionExpression The type of the condition expression.
- * @tparam BodyExpression The type of the body expression.
+ * @tparam ConditionExpression Type of the condition expression.
+ * @tparam BodyExpression Type of the body expression.
  */
-template<typename ConditionExpression, typename BodyExpression>
+template<Deferred ConditionExpression, Deferred BodyExpression>
 class while_expression
 {
-  [[no_unique_address]] std::tuple<ConditionExpression, BodyExpression> m_expressions;
-
 public:
   using condition_expression_type = ConditionExpression;
   using body_expression_type      = BodyExpression;
   using subexpression_types       = std::tuple<ConditionExpression, BodyExpression>;
 
+private:
+  [[no_unique_address]] ConditionExpression m_condition;
+  [[no_unique_address]] BodyExpression m_body;
+
+public:
   /**
    * @brief Constructs a while_expression.
-   * @tparam Condition The type of the condition expression.
-   * @tparam Body The type of the body expression.
-   * @param condition The condition expression.
-   * @param body The body expression.
+   * @tparam Condition Type of the condition expression.
+   * @tparam Body Type of the body expression.
+   * @param condition Condition expression.
+   * @param body Body expression.
    */
   template<typename Condition, typename Body>
   constexpr explicit while_expression(Condition&& condition, Body&& body) :
-    m_expressions(std::forward<Condition>(condition), std::forward<Body>(body))
+    m_condition(std::forward<Condition>(condition)), m_body(std::forward<Body>(body))
   { }
 
   /// @brief Evaluates the while loop.
   constexpr void operator()() const&
   {
-    while (evaluate(std::get<0>(m_expressions)))
+    while (evaluate(m_condition))
     {
-      evaluate(std::get<1>(m_expressions));
+      evaluate(m_body);
     }
   }
 
   /// @copydoc while_expression::operator()() const&
   constexpr void operator()() &
   {
-    while (evaluate(std::get<0>(m_expressions)))
+    while (evaluate(m_condition))
     {
-      evaluate(std::get<1>(m_expressions));
+      evaluate(m_body);
     }
   }
 
   /// @copydoc while_expression::operator()() const&
   constexpr void operator()() &&
   {
-    while (evaluate(std::get<0>(m_expressions)))
+    while (evaluate(m_condition))
     {
-      evaluate(std::get<1>(m_expressions));
+      evaluate(m_body);
     }
   }
 
   /**
    * @brief Visits the while expression with a visitor.
-   * @tparam Visitor The type of the visitor.
-   * @param v The visitor.
-   * @param nesting The nesting level.
+   * @tparam Visitor Type of the visitor.
+   * @param v Visitor.
+   * @param nesting Nesting level.
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    std::apply([&v, nesting](
-                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
-               m_expressions);
+    std::forward<Visitor>(v)(m_condition, nesting + 1);
+    std::forward<Visitor>(v)(m_body, nesting + 1);
   }
 };
 
 /**
  * @brief Creates a @c deferred while that calls @p body while @p condition is @c true.
  *
- * @tparam ConditionExpression The type of the condition expression.
- * @tparam BodyExpression The type of the body expression.
- * @param condition The condition expression.
- * @param body The body expression.
+ * @tparam ConditionExpression Type of the condition expression.
+ * @tparam BodyExpression Type of the body expression.
+ * @param condition Condition expression.
+ * @param body Body expression.
  * @return A @ref while_expression capturing the condition and body.
  */
 template<typename ConditionExpression, typename BodyExpression>
