@@ -153,8 +153,8 @@ public:
                                          decltype(std::declval<CaseExpression>()())...>;
 
 private:
-  [[no_unique_address]] std::tuple<ConditionExpression, DefaultExpression, CaseExpression...>
-    m_expressions;
+  [[no_unique_address]] ConditionExpression m_condition;
+  [[no_unique_address]] std::tuple<DefaultExpression, CaseExpression...> m_cases;
 
 public:
   /**
@@ -168,9 +168,8 @@ public:
    */
   template<typename Condition, typename Default, typename... Case>
   constexpr explicit switch_expression(Condition&& condition, Default&& df, Case&&... cs) :
-    m_expressions(std::forward<Condition>(condition),
-                  std::forward<Default>(df),
-                  std::forward<Case>(cs)...)
+    m_condition(std::forward<Condition>(condition)),
+    m_cases(std::forward<Default>(df), std::forward<Case>(cs)...)
   { }
 
 private:
@@ -182,18 +181,18 @@ private:
   template<std::size_t I, typename T>
   [[nodiscard]] constexpr result_type choose_case(T&& t) const
   {
-    if constexpr (I < std::tuple_size<subexpression_types>::value)
+    if constexpr (I < std::tuple_size<decltype(m_cases)>::value)
     {
-      if (std::get<I>(m_expressions).compare(std::forward<T>(t)))
+      if (std::get<I>(m_cases).compare(std::forward<T>(t)))
       {
-        return std::get<I>(m_expressions)();
+        return std::get<I>(m_cases)();
       }
 
       return choose_case<I + 1>(std::forward<T>(t));
     }
     else
     {
-      return std::get<DefaultExpression>(m_expressions)();
+      return std::get<0>(m_cases)();
     }
   }
 
@@ -201,18 +200,18 @@ private:
   template<std::size_t I, typename T>
   [[nodiscard]] constexpr result_type choose_case(T&& t)
   {
-    if constexpr (I < std::tuple_size<subexpression_types>::value)
+    if constexpr (I < std::tuple_size<decltype(m_cases)>::value)
     {
-      if (std::get<I>(m_expressions).compare(std::forward<T>(t)))
+      if (std::get<I>(m_cases).compare(std::forward<T>(t)))
       {
-        return std::get<I>(m_expressions)();
+        return std::get<I>(m_cases)();
       }
 
       return choose_case<I + 1>(std::forward<T>(t));
     }
     else
     {
-      return std::get<DefaultExpression>(m_expressions)();
+      return std::get<0>(m_cases)();
     }
   }
 
@@ -224,14 +223,14 @@ public:
   [[nodiscard]] constexpr result_type operator()() const
   {
     // start from second case, as first is the default
-    return choose_case<2>(evaluate(std::get<ConditionExpression>(m_expressions)));
+    return choose_case<1>(evaluate(m_condition));
   }
 
   /// @copydoc switch_expression::operator()() const
   [[nodiscard]] constexpr result_type operator()()
   {
     // start from second case, as first is the default
-    return choose_case<2>(evaluate(std::get<ConditionExpression>(m_expressions)));
+    return choose_case<1>(evaluate(m_condition));
   }
 
   /**
@@ -244,9 +243,10 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
+    std::forward<Visitor>(v)(m_condition, nesting + 1);
     std::apply([&v, nesting](
                  auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
-               m_expressions);
+               m_cases);
   }
 };
 

@@ -34,9 +34,9 @@ TEST_CASE("switch with c-strings", "[switch-c-strings]")
 {
   auto var = deferred::variable<int>();
   auto ex  = deferred::switch_(var,
-                               deferred::default_("unknown"),
-                               deferred::case_(10, [] { return "10"; }),
-                               deferred::case_(12, [] { return "12"; }));
+                              deferred::default_("unknown"),
+                              deferred::case_(10, [] { return "10"; }),
+                              deferred::case_(12, [] { return "12"; }));
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   var = 10;
@@ -63,8 +63,8 @@ TEST_CASE("switch with expressions", "[switch-expressions]")
   auto condition = deferred::variable<int>();
   auto label     = deferred::variable<int>();
   auto ex        = deferred::switch_(condition,
-                                     deferred::default_(condition + 1),
-                                     deferred::case_(label, condition + 2));
+                              deferred::default_(condition + 1),
+                              deferred::case_(label, condition + 2));
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
 
