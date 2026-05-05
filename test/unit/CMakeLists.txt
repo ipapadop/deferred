@@ -7,6 +7,7 @@ set(SOURCES
   make_function_object.cpp
   switch.cpp
   variable.cpp
+  homogenized_type.cpp
   while.cpp)
 
 add_executable(unit_tests ${SOURCES})
