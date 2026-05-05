@@ -82,9 +82,7 @@ TEST_CASE("switch with three literals defaulting", "[switch-three-literals-defau
 
 TEST_CASE("switch with heterogeneous types", "[switch-variant]")
 {
-  auto ex = deferred::switch_(1,
-                              deferred::default_("unknown"),
-                              deferred::case_(1, 42));
+  auto ex = deferred::switch_(1, deferred::default_("unknown"), deferred::case_(1, 42));
 
   using result_type = decltype(ex());
   static_assert(std::is_same_v<result_type, std::variant<char const*, int>>);
@@ -92,9 +90,7 @@ TEST_CASE("switch with heterogeneous types", "[switch-variant]")
   auto res = ex();
   CHECK(std::get<int>(res) == 42);
 
-  auto ex2 = deferred::switch_(2,
-                               deferred::default_("unknown"),
-                               deferred::case_(1, 42));
+  auto ex2  = deferred::switch_(2, deferred::default_("unknown"), deferred::case_(1, 42));
   auto res2 = ex2();
   CHECK(std::get<char const*>(res2) == std::string("unknown"));
 }

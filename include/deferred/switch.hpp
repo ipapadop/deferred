@@ -193,8 +193,9 @@ public:
   /**
    * @brief Result type of the switch expression (common type or variant).
    */
-  using result_type = homogenized_type_t<decltype(std::declval<typename DefaultExpression::body_type>()()),
-                                         decltype(std::declval<typename CaseExpression::body_type>()())...>;
+  using result_type =
+    homogenized_type_t<decltype(std::declval<typename DefaultExpression::body_type>()()),
+                       decltype(std::declval<typename CaseExpression::body_type>()())...>;
 
 private:
   [[no_unique_address]] ConditionExpression m_condition;
