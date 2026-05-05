@@ -7,9 +7,11 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/homogenized_type.hpp"
 
 namespace deferred {
 
@@ -22,6 +24,7 @@ class default_expression
 {
 public:
   using subexpression_types = std::tuple<Expression>;
+  using body_type           = Expression;
 
 private:
   [[no_unique_address]] Expression m_expression;
@@ -37,6 +40,12 @@ public:
   { }
 
   [[nodiscard]] constexpr decltype(auto) operator()() const
+  {
+    return evaluate(m_expression);
+  }
+
+  /// @copydoc default_expression::operator()() const
+  [[nodiscard]] constexpr decltype(auto) operator()()
   {
     return evaluate(m_expression);
   }
@@ -67,6 +76,7 @@ public:
   using label_expression_type = LabelExpression;
   using body_expression_type  = BodyExpression;
   using subexpression_types   = std::tuple<LabelExpression, BodyExpression>;
+  using body_type             = BodyExpression;
 
 private:
   [[no_unique_address]] LabelExpression m_label;
@@ -94,6 +104,12 @@ public:
 
   /// @brief Returns the result of the body expression.
   [[nodiscard]] constexpr decltype(auto) operator()() const
+  {
+    return evaluate(m_body);
+  }
+
+  /// @copydoc case_expression::operator()() const
+  [[nodiscard]] constexpr decltype(auto) operator()()
   {
     return evaluate(m_body);
   }
@@ -131,6 +147,31 @@ template<typename T, typename U>
 struct is_valid_case<case_expression<T, U>> : public std::true_type
 { };
 
+/**
+ * @brief Maps the result of an evaluation to the target result type.
+ * @tparam Result Target result type.
+ * @tparam T Type of the evaluated expression.
+ * @param t Evaluated expression.
+ * @return Mapped result.
+ */
+template<typename Result, typename T>
+constexpr decltype(auto) map_switch_result(T&& t)
+{
+  if constexpr (std::is_void_v<Result>)
+  {
+    static_cast<void>(t);
+  }
+  else if constexpr (std::is_void_v<T>)
+  {
+    static_cast<void>(t);
+    return std::monostate{};
+  }
+  else
+  {
+    return std::forward<T>(t);
+  }
+}
+
 } // namespace detail
 
 /**
@@ -149,8 +190,11 @@ public:
   using case_expression_types     = std::tuple<CaseExpression...>;
   using subexpression_types = std::tuple<ConditionExpression, DefaultExpression, CaseExpression...>;
 
-  using result_type = std::common_type_t<decltype(std::declval<DefaultExpression>()()),
-                                         decltype(std::declval<CaseExpression>()())...>;
+  /**
+   * @brief Result type of the switch expression (common type or variant).
+   */
+  using result_type = homogenized_type_t<decltype(std::declval<typename DefaultExpression::body_type>()()),
+                                         decltype(std::declval<typename CaseExpression::body_type>()())...>;
 
 private:
   [[no_unique_address]] ConditionExpression m_condition;
@@ -176,7 +220,7 @@ private:
   /**
    * @brief Traverses the cases until one matches.
    *
-   * If none does, the default (@c std::tuple_element<1>) is returned.
+   * If none does, the default (@c std::tuple_element<0>) is returned.
    */
   template<std::size_t I, typename T>
   [[nodiscard]] constexpr result_type choose_case(T&& t) const
@@ -185,14 +229,14 @@ private:
     {
       if (std::get<I>(m_cases).compare(std::forward<T>(t)))
       {
-        return std::get<I>(m_cases)();
+        return detail::map_switch_result<result_type>(std::get<I>(m_cases)());
       }
 
       return choose_case<I + 1>(std::forward<T>(t));
     }
     else
     {
-      return std::get<0>(m_cases)();
+      return detail::map_switch_result<result_type>(std::get<0>(m_cases)());
     }
   }
 
@@ -204,14 +248,14 @@ private:
     {
       if (std::get<I>(m_cases).compare(std::forward<T>(t)))
       {
-        return std::get<I>(m_cases)();
+        return detail::map_switch_result<result_type>(std::get<I>(m_cases)());
       }
 
       return choose_case<I + 1>(std::forward<T>(t));
     }
     else
     {
-      return std::get<0>(m_cases)();
+      return detail::map_switch_result<result_type>(std::get<0>(m_cases)());
     }
   }
 
@@ -309,7 +353,7 @@ template<typename ConditionExpression, typename DefaultExpression, typename... C
 [[nodiscard]] constexpr auto
 switch_(ConditionExpression&& condition, DefaultExpression&& default_, CaseExpressions&&... case_)
 {
-  static_assert(std::conjunction_v<detail::is_valid_default<std::decay_t<DefaultExpression>>>,
+  static_assert(detail::is_valid_default<std::decay_t<DefaultExpression>>::value,
                 "Default case is not a valid deferred case expression");
   static_assert(std::conjunction_v<detail::is_valid_case<std::decay_t<CaseExpressions>>...>,
                 "One or more cases are not valid deferred case expressions");
