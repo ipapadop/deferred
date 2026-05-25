@@ -60,8 +60,18 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    std::forward<Visitor>(v)(m_expression, nesting + 1);
+    m_expression.visit(std::forward<Visitor>(v), nesting + 1);
   }
+};
+
+/**
+ * @brief Concept for a valid switch default expression.
+ * @tparam T Type to check.
+ */
+template<typename T>
+concept DefaultExpression = requires(std::remove_cvref_t<T> t) {
+  []<Deferred E>(default_expression<E>&) {
+  }(t);
 };
 
 /**
@@ -124,28 +134,22 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    std::forward<Visitor>(v)(m_label, nesting + 1);
-    std::forward<Visitor>(v)(m_body, nesting + 1);
+    m_label.visit(std::forward<Visitor>(v), nesting + 1);
+    m_body.visit(std::forward<Visitor>(v), nesting + 1);
   }
 };
 
-namespace detail {
-
-template<typename>
-struct is_valid_default : public std::false_type
-{ };
-
+/**
+ * @brief Concept for a valid switch case expression.
+ * @tparam T The type to check.
+ */
 template<typename T>
-struct is_valid_default<default_expression<T>> : public std::true_type
-{ };
+concept CaseExpression = requires(std::remove_cvref_t<T> t) {
+  []<Deferred L, Deferred B>(case_expression<L, B>&) {
+  }(t);
+};
 
-template<typename>
-struct is_valid_case : public std::false_type
-{ };
-
-template<typename T, typename U>
-struct is_valid_case<case_expression<T, U>> : public std::true_type
-{ };
+namespace detail {
 
 /**
  * @brief Maps the result of an evaluation to the target result type.
@@ -288,10 +292,10 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    std::forward<Visitor>(v)(m_condition, nesting + 1);
-    std::apply([&v, nesting](
-                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
-               m_cases);
+    m_condition.visit(std::forward<Visitor>(v), nesting + 1);
+    std::apply(
+      [&](auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
+      m_cases);
   }
 };
 
@@ -343,28 +347,25 @@ template<typename LabelExpression, typename BodyExpression>
  * @endcode
  *
  * @tparam ConditionExpression Type of the condition expression.
- * @tparam DefaultExpression Type of the default expression.
+ * @tparam DefaultExpression_ Type of the default expression.
  * @tparam CaseExpressions Types of the case expressions.
  * @param condition Condition expression.
  * @param default_ Default case expression.
  * @param case_ Case expressions.
  * @return A tuple-like expression representing the switch construct.
  */
-template<typename ConditionExpression, typename DefaultExpression, typename... CaseExpressions>
+template<typename ConditionExpression,
+         DefaultExpression DefaultExpression_,
+         CaseExpression... CaseExpressions>
 [[nodiscard]] constexpr auto
-switch_(ConditionExpression&& condition, DefaultExpression&& default_, CaseExpressions&&... case_)
+switch_(ConditionExpression&& condition, DefaultExpression_&& default_, CaseExpressions&&... case_)
 {
-  static_assert(detail::is_valid_default<std::decay_t<DefaultExpression>>::value,
-                "Default case is not a valid deferred case expression");
-  static_assert(std::conjunction_v<detail::is_valid_case<std::decay_t<CaseExpressions>>...>,
-                "One or more cases are not valid deferred case expressions");
-
   using condition_expression = make_deferred_t<ConditionExpression>;
   return switch_expression<condition_expression,
-                           std::decay_t<DefaultExpression>,
+                           std::decay_t<DefaultExpression_>,
                            std::decay_t<CaseExpressions>...>(
     std::forward<ConditionExpression>(condition),
-    std::forward<DefaultExpression>(default_),
+    std::forward<DefaultExpression_>(default_),
     std::forward<CaseExpressions>(case_)...);
 }
 

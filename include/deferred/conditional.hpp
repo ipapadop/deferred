@@ -263,14 +263,14 @@ public:
     std::forward<Visitor>(v)(*this, nesting);
     std::apply(
       [&](auto const&... branch) {
-        ((std::forward<Visitor>(v)(branch.condition, nesting + 1),
-          std::forward<Visitor>(v)(branch.then, nesting + 1)),
+        ((branch.condition.visit(std::forward<Visitor>(v), nesting + 1),
+          branch.then.visit(std::forward<Visitor>(v), nesting + 1)),
          ...);
       },
       m_branches);
     if constexpr (finalized)
     {
-      std::forward<Visitor>(v)(m_else, nesting + 1);
+      m_else.visit(std::forward<Visitor>(v), nesting + 1);
     }
   }
 };

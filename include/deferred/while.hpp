@@ -81,8 +81,8 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    std::forward<Visitor>(v)(m_condition, nesting + 1);
-    std::forward<Visitor>(v)(m_body, nesting + 1);
+    m_condition.visit(std::forward<Visitor>(v), nesting + 1);
+    m_body.visit(std::forward<Visitor>(v), nesting + 1);
   }
 };
 
