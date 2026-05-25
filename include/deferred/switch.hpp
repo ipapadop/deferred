@@ -107,9 +107,9 @@ public:
 
   /// @brief Compares @p T with the label expression.
   template<typename T>
-  [[nodiscard]] constexpr decltype(auto) compare(T&& t) const
+  [[nodiscard]] constexpr decltype(auto) compare(T const& t) const
   {
-    return std::forward<T>(t) == evaluate(m_label);
+    return t == evaluate(m_label);
   }
 
   /// @brief Returns the result of the body expression.
@@ -228,35 +228,16 @@ private:
    * If none does, the default (@c std::tuple_element<0>) is returned.
    */
   template<std::size_t I, typename T>
-  [[nodiscard]] constexpr result_type choose_case(T&& t) const
+  [[nodiscard]] constexpr result_type choose_case(T const& t) const
   {
     if constexpr (I < std::tuple_size<decltype(m_cases)>::value)
     {
-      if (std::get<I>(m_cases).compare(std::forward<T>(t)))
+      if (std::get<I>(m_cases).compare(t))
       {
         return detail::map_switch_result<result_type>(std::get<I>(m_cases)());
       }
 
-      return choose_case<I + 1>(std::forward<T>(t));
-    }
-    else
-    {
-      return detail::map_switch_result<result_type>(std::get<0>(m_cases)());
-    }
-  }
-
-  /// @copydoc switch_expression::choose_case(T&&) const
-  template<std::size_t I, typename T>
-  [[nodiscard]] constexpr result_type choose_case(T&& t)
-  {
-    if constexpr (I < std::tuple_size<decltype(m_cases)>::value)
-    {
-      if (std::get<I>(m_cases).compare(std::forward<T>(t)))
-      {
-        return detail::map_switch_result<result_type>(std::get<I>(m_cases)());
-      }
-
-      return choose_case<I + 1>(std::forward<T>(t));
+      return choose_case<I + 1>(t);
     }
     else
     {
