@@ -189,10 +189,10 @@ public:
     using then_type   = make_deferred_t<T>;
     using branch_type = conditional_branch<cond_type, then_type>;
 
-    return conditional_expression<false, Else, Branches..., branch_type>(std::tuple_cat(
-      std::move(m_branches),
-      std::tuple<branch_type>{branch_type{cond_type(std::forward<C>(condition)),
-                                          then_type(std::forward<T>(then_))}}));
+    return conditional_expression<false, Else, Branches..., branch_type>(
+      std::tuple_cat(std::move(m_branches),
+                     std::tuple<branch_type>{branch_type{cond_type(std::forward<C>(condition)),
+                                                         then_type(std::forward<T>(then_))}}));
   }
 
   /// @copydoc else_if
@@ -222,7 +222,8 @@ public:
   {
     using else_expr = make_deferred_t<E>;
     return conditional_expression<true, else_expr, Branches...>(
-      std::move(m_branches), else_expr(std::forward<E>(else_branch)));
+      std::move(m_branches),
+      else_expr(std::forward<E>(else_branch)));
   }
 
   /// @copydoc else_
