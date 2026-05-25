@@ -277,21 +277,6 @@ public:
 };
 
 /**
- * @brief Alias for an @c if expression.
- * @tparam Branches Types of the branches.
- */
-template<typename... Branches>
-using if_expression = conditional_expression<false, detail::no_else, Branches...>;
-
-/**
- * @brief Alias for an @c if-else expression.
- * @tparam Else Type of the @c else branch.
- * @tparam Branches Types of the branches.
- */
-template<typename Else, typename... Branches>
-using if_else_expression = conditional_expression<true, Else, Branches...>;
-
-/**
  * @brief Starts a deferred conditional chain.
  *
  * Example:
@@ -305,7 +290,7 @@ using if_else_expression = conditional_expression<true, Else, Branches...>;
  * @tparam Then Type of the then expression.
  * @param condition Condition expression.
  * @param then_ Then expression.
- * @return An @ref if_expression builder.
+ * @return An @ref conditional_expression builder.
  */
 template<typename Condition, typename Then>
 [[nodiscard]] constexpr auto if_(Condition&& condition, Then&& then_)
@@ -313,7 +298,7 @@ template<typename Condition, typename Then>
   using cond_type   = make_deferred_t<Condition>;
   using then_type   = make_deferred_t<Then>;
   using branch_type = conditional_branch<cond_type, then_type>;
-  return if_expression<branch_type>(
+  return conditional_expression<false, detail::no_else, branch_type>(
     std::tuple<branch_type>{branch_type{cond_type(std::forward<Condition>(condition)),
                                         then_type(std::forward<Then>(then_))}});
 }
