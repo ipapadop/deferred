@@ -19,8 +19,8 @@ namespace deferred {
  * @brief Deferred expression that is composed of an operator @p Operator applied to
  * subexpressions @p Expressions....
  *
- * @tparam Operator The type of the operator.
- * @tparam Expressions The types of the subexpressions.
+ * @tparam Operator Type of the operator.
+ * @tparam Expressions Types of the subexpressions.
  */
 template<typename Operator, typename... Expressions>
 class expression_
@@ -37,10 +37,10 @@ private:
 public:
   /**
    * @brief Constructs an expression.
-   * @tparam Op The type of the operator.
-   * @tparam Ex The types of the subexpressions.
-   * @param op The operator.
-   * @param ex The subexpressions.
+   * @tparam Op Type of the operator.
+   * @tparam Ex Types of the subexpressions.
+   * @param op Operator.
+   * @param ex Subexpressions.
    */
   template<typename Op, typename... Ex>
     requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
@@ -95,18 +95,34 @@ public:
 
 namespace detail {
 
+/**
+ * @brief Deduce the deferred type for @p T.
+ *
+ * - If @p T is already a @c deferred type, it does not change.
+ * - If @p T is a callable type, it is transformed to an @ref expression_.
+ * - If @p T is not a callable type, it is transformed to an @ref constant_.
+ *
+ * @tparam T Type to transform.
+ * @return A @c std::type_identity containing the deduced deferred type.
+ */
 template<typename T>
-struct make_deferred
+consteval auto deduce_deferred_type()
 {
-  using type = constant_<T>;
-};
-
-template<typename T>
-  requires std::is_invocable_v<T>
-struct make_deferred<T>
-{
-  using type = expression_<std::decay_t<decltype(make_function_object(std::declval<T>()))>>;
-};
+  using U = std::decay_t<T>;
+  if constexpr (Deferred<T>)
+  {
+    return std::type_identity<T>{};
+  }
+  else if constexpr (std::is_invocable_v<U>)
+  {
+    return std::type_identity<
+      expression_<std::decay_t<decltype(make_function_object(std::declval<U>()))>>>{};
+  }
+  else
+  {
+    return std::type_identity<constant_<U>>{};
+  }
+}
 
 } // namespace detail
 
@@ -117,11 +133,10 @@ struct make_deferred<T>
  * - If @p T is a callable type, it is transformed to an @ref expression_.
  * - If @p T is not a callable type, it is transformed to an @ref constant_.
  *
- * @tparam T The type to transform.
+ * @tparam T Type to transform.
  */
 template<typename T>
-using make_deferred_t =
-  std::conditional_t<Deferred<T>, T, typename detail::make_deferred<std::decay_t<T>>::type>;
+using make_deferred_t = typename decltype(detail::deduce_deferred_type<T>())::type;
 
 } // namespace deferred
 

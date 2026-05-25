@@ -4,128 +4,302 @@
 #ifndef DEFERRED_CONDITIONAL_HPP
 #define DEFERRED_CONDITIONAL_HPP
 
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/homogenized_type.hpp"
 
 namespace deferred {
 
+namespace detail {
+
 /**
- * @brief Deferred conditional that evaluates @p ThenExpression if
- * @p ConditionExpression evaluates to @c true, otherwise it evaluates
- * @p ElseExpression.
- *
- * @tparam ConditionExpression The type of the condition expression.
- * @tparam ThenExpression The type of the expression to evaluate if the condition is true.
- * @tparam ElseExpression The type of the expression to evaluate if the condition is false.
+ * @brief Maps the result of an evaluation to the target result type.
+ * @tparam Result Target result type.
+ * @tparam T Type of the evaluated expression.
+ * @param t Evaluated expression.
+ * @return Mapped result.
  */
-template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
-class if_then_else_expression
+template<typename Result, typename T>
+constexpr decltype(auto) map_conditional_result(T&& t)
 {
+  if constexpr (std::is_void_v<Result>)
+  {
+    static_cast<void>(t);
+  }
+  else if constexpr (std::is_void_v<T>)
+  {
+    static_cast<void>(t);
+    return std::monostate{};
+  }
+  else
+  {
+    return std::forward<T>(t);
+  }
+}
+
+/**
+ * @brief Tag for conditional expressions without an @c else branch.
+ */
+struct no_else
+{ };
+
+/**
+ * @brief Deduces the base result type of a conditional expression.
+ */
+template<typename Else, typename... Branches>
+struct conditional_base_result_deducer
+{
+  using type = homogenized_type_t<decltype(std::declval<typename Branches::then_type>()())...,
+                                  decltype(std::declval<Else>()())>;
+};
+
+/**
+ * @brief Specialization for non-finalized conditional expressions.
+ */
+template<typename... Branches>
+struct conditional_base_result_deducer<no_else, Branches...>
+{
+  using type = homogenized_type_t<decltype(std::declval<typename Branches::then_type>()())...>;
+};
+
+} // namespace detail
+
+/**
+ * @brief Represents a single branch in a conditional expression.
+ * @tparam Condition Type of the condition expression.
+ * @tparam Then Type of the then expression.
+ */
+template<Deferred Condition, Deferred Then>
+struct conditional_branch
+{
+  using condition_type      = Condition;
+  using then_type           = Then;
+  using subexpression_types = std::tuple<Condition, Then>;
+  [[no_unique_address]] Condition condition;
+  [[no_unique_address]] Then then;
+};
+
+/**
+ * @brief Deferred conditional expression.
+ * @tparam Else Type of the @c else branch.
+ * @tparam Branches Types of the @c if and @c else_if branches.
+ */
+template<typename Else, typename... Branches>
+class conditional_expression
+{
+  constexpr static inline bool finalized = !std::is_same_v<Else, detail::no_else>;
+
 public:
-  using condition_expression_type = ConditionExpression;
-  using then_expression_type      = ThenExpression;
-  using else_expression_type      = ElseExpression;
-  using result_type               = std::common_type_t<decltype(std::declval<ThenExpression>()()),
-                                                       decltype(std::declval<ElseExpression>()())>;
-  using subexpression_types       = std::tuple<ConditionExpression, ThenExpression, ElseExpression>;
+  using branches_tuple = std::tuple<Branches...>;
+  using subexpression_types =
+    std::conditional_t<finalized, std::tuple<Branches..., Else>, branches_tuple>;
+
+  /**
+   * @brief Result type of the underlying expressions (common type or variant).
+   */
+  using base_result_type =
+    typename detail::conditional_base_result_deducer<Else, Branches...>::type;
+
+  /**
+   * @brief Final result type of the conditional expression.
+   */
+  using result_type = std::conditional_t<
+    finalized,
+    base_result_type,
+    std::conditional_t<std::is_void_v<base_result_type>, void, std::optional<base_result_type>>>;
 
 private:
-  [[no_unique_address]] subexpression_types m_expressions;
+  [[no_unique_address]] branches_tuple m_branches;
+  [[no_unique_address]] Else m_else;
 
-public:
-  /**
-   * @brief Constructs an if_then_else_expression.
-   * @tparam Condition Type of the condition expression.
-   * @tparam ThenEx Type of the then expression.
-   * @tparam ElseEx Type of the else expression.
-   * @param condition The condition expression.
-   * @param then_ The then expression.
-   * @param else_ The else expression.
-   */
-  template<typename Condition, typename ThenEx, typename ElseEx>
-  constexpr explicit if_then_else_expression(Condition&& condition,
-                                             ThenEx&& then_,
-                                             ElseEx&& else_) :
-    m_expressions(std::forward<Condition>(condition),
-                  std::forward<ThenEx>(then_),
-                  std::forward<ElseEx>(else_))
-  { }
-
-  /**
-   * @brief Evaluates the conditional expression.
-   * @return The result of the conditional expression.
-   */
-  [[nodiscard]] constexpr result_type operator()() const
+  template<std::size_t I = 0, typename Self>
+  static constexpr result_type evaluate_impl(Self&& self)
   {
-    if (evaluate(std::get<0>(m_expressions)))
+    if constexpr (I < sizeof...(Branches))
     {
-      return evaluate(std::get<1>(m_expressions));
+      auto&& branch = std::get<I>(self.m_branches);
+      if (evaluate(branch.condition))
+      {
+        if constexpr (std::is_void_v<result_type>)
+        {
+          evaluate(branch.then);
+          return;
+        }
+        else
+        {
+          return detail::map_conditional_result<base_result_type>(evaluate(branch.then));
+        }
+      }
+      return evaluate_impl<I + 1>(std::forward<Self>(self));
     }
     else
     {
-      return evaluate(std::get<2>(m_expressions));
+      if constexpr (!finalized)
+      {
+        if constexpr (!std::is_void_v<result_type>)
+        {
+          return std::nullopt;
+        }
+      }
+      else
+      {
+        return detail::map_conditional_result<result_type>(evaluate(self.m_else));
+      }
     }
   }
 
-  /// @copydoc if_then_else_expression::operator()() const
+public:
+  /**
+   * @brief Constructs a non-finalized conditional expression.
+   * @param branches Tuple of branches.
+   */
+  constexpr explicit conditional_expression(branches_tuple&& branches)
+    requires(!finalized)
+    : m_branches(std::move(branches)), m_else{}
+  { }
+
+  /**
+   * @brief Constructs a finalized conditional expression.
+   * @param branches Tuple of branches.
+   * @param else_branch Else expression.
+   */
+  constexpr explicit conditional_expression(branches_tuple&& branches, Else&& else_branch)
+    requires finalized
+    : m_branches(std::move(branches)), m_else(std::forward<Else>(else_branch))
+  { }
+
+  /**
+   * @brief Appends an @c else_if branch to the conditional chain.
+   * @tparam C Type of the condition expression.
+   * @tparam T Type of the then expression.
+   * @param condition Condition expression.
+   * @param then_ Then expression.
+   * @return A new @ref conditional_expression with the added branch.
+   */
+  template<typename C, typename T>
+  [[nodiscard]] constexpr auto else_if(C&& condition, T&& then_) &&
+    requires(!finalized)
+  {
+    using cond_type   = make_deferred_t<C>;
+    using then_type   = make_deferred_t<T>;
+    using branch_type = conditional_branch<cond_type, then_type>;
+
+    return conditional_expression<Else, Branches..., branch_type>(
+      std::tuple_cat(std::move(m_branches),
+                     std::tuple<branch_type>{branch_type{cond_type(std::forward<C>(condition)),
+                                                         then_type(std::forward<T>(then_))}}));
+  }
+
+  /// @copydoc else_if
+  template<typename C, typename T>
+  [[nodiscard]] constexpr auto else_if(C&& condition, T&& then_) const&
+    requires(!finalized)
+  {
+    using cond_type   = make_deferred_t<C>;
+    using then_type   = make_deferred_t<T>;
+    using branch_type = conditional_branch<cond_type, then_type>;
+
+    return conditional_expression<Else, Branches..., branch_type>(
+      std::tuple_cat(m_branches,
+                     std::tuple<branch_type>{branch_type{cond_type(std::forward<C>(condition)),
+                                                         then_type(std::forward<T>(then_))}}));
+  }
+
+  /**
+   * @brief Finalizes the conditional chain with an @c else branch.
+   * @tparam E Type of the else expression.
+   * @param else_branch Else expression.
+   * @return A finalized @ref conditional_expression.
+   */
+  template<typename E>
+  [[nodiscard]] constexpr auto else_(E&& else_branch) &&
+    requires(!finalized)
+  {
+    using else_expr = make_deferred_t<E>;
+    return conditional_expression<else_expr, Branches...>(std::move(m_branches),
+                                                          else_expr(std::forward<E>(else_branch)));
+  }
+
+  /// @copydoc else_
+  template<typename E>
+  [[nodiscard]] constexpr auto else_(E&& else_branch) const&
+    requires(!finalized)
+  {
+    using else_expr = make_deferred_t<E>;
+    return conditional_expression<else_expr, Branches...>(m_branches,
+                                                          else_expr(std::forward<E>(else_branch)));
+  }
+
+  /**
+   * @brief Evaluates the conditional expression.
+   * @return Result of the conditional expression.
+   */
+  [[nodiscard]] constexpr result_type operator()() const
+  {
+    return evaluate_impl(*this);
+  }
+
+  /// @copydoc operator()() const
   [[nodiscard]] constexpr result_type operator()()
   {
-    if (evaluate(std::get<0>(m_expressions)))
-    {
-      return evaluate(std::get<1>(m_expressions));
-    }
-    else
-    {
-      return evaluate(std::get<2>(m_expressions));
-    }
+    return evaluate_impl(*this);
   }
 
   /**
    * @brief Visits the expression with a visitor.
-   * @tparam Visitor The type of the visitor.
-   * @param v The visitor.
-   * @param nesting The nesting level.
+   * @tparam Visitor Type of the visitor.
+   * @param v Visitor.
+   * @param nesting Nesting level.
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
     std::forward<Visitor>(v)(*this, nesting);
-    std::apply([&v, nesting](
-                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
-               m_expressions);
+    std::apply(
+      [&](auto const&... branch) {
+        ((branch.condition.visit(std::forward<Visitor>(v), nesting + 1),
+          branch.then.visit(std::forward<Visitor>(v), nesting + 1)),
+         ...);
+      },
+      m_branches);
+    if constexpr (finalized)
+    {
+      m_else.visit(std::forward<Visitor>(v), nesting + 1);
+    }
   }
 };
 
 /**
- * @brief Creates a @c deferred conditional that evaluates @p then_ if @p condition
- * evaluates to @c true, otherwise it evaluates @p else_.
+ * @brief Starts a deferred conditional chain.
  *
- * The result type of <tt>if_then_else_expression(...)()</tt> is the
- * @c std::common_type of the result types of @p then_ and @p else_.
+ * Example:
+ * @code
+ * auto ex = if_(cond1, then1)
+ *            .else_if(cond2, then2)
+ *            .else_(else_expr);
+ * @endcode
  *
- * @tparam ConditionExpression The type of the condition expression.
- * @tparam ThenExpression The type of the then expression.
- * @tparam ElseExpression The type of the else expression.
- * @param condition The condition expression.
- * @param then_ The then expression.
- * @param else_ The else expression.
- * @return An @ref if_then_else_expression that will perform the deferred evaluation.
+ * @tparam Condition Type of the condition expression.
+ * @tparam Then Type of the then expression.
+ * @param condition Condition expression.
+ * @param then_ Then expression.
+ * @return An @ref conditional_expression builder.
  */
-template<typename ConditionExpression, typename ThenExpression, typename ElseExpression>
-[[nodiscard]] constexpr auto
-if_then_else(ConditionExpression&& condition, ThenExpression&& then_, ElseExpression&& else_)
+template<typename Condition, typename Then>
+[[nodiscard]] constexpr auto if_(Condition&& condition, Then&& then_)
 {
-  using condition_expression = make_deferred_t<ConditionExpression>;
-  using then_expression      = make_deferred_t<ThenExpression>;
-  using else_expression      = make_deferred_t<ElseExpression>;
-  return if_then_else_expression<condition_expression, then_expression, else_expression>(
-    std::forward<ConditionExpression>(condition),
-    std::forward<ThenExpression>(then_),
-    std::forward<ElseExpression>(else_));
+  using cond_type   = make_deferred_t<Condition>;
+  using then_type   = make_deferred_t<Then>;
+  using branch_type = conditional_branch<cond_type, then_type>;
+  return conditional_expression<detail::no_else, branch_type>(
+    std::tuple<branch_type>{branch_type{cond_type(std::forward<Condition>(condition)),
+                                        then_type(std::forward<Then>(then_))}});
 }
 
 } // namespace deferred

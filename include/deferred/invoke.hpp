@@ -18,16 +18,16 @@ namespace deferred {
  * If @p args... are not @c deferred objects, then they will be tranformed to
  * @ref constant_ objects.
  *
- * @tparam F The type of the callable object.
- * @tparam Args The types of the parameters.
- * @param f The callable object.
- * @param args The parameters to pass to the callable object.
+ * @tparam F Type of the callable object.
+ * @tparam Args Types of the parameters.
+ * @param f Callable object.
+ * @param args Parameters to pass to the callable object.
  * @return An expression representing the invocation.
  */
 template<typename F, typename... Args>
 [[nodiscard]] constexpr auto invoke(F&& f, Args&&... args)
 {
-  if constexpr (is_deferred_v<std::remove_reference_t<F>>)
+  if constexpr (Deferred<F>)
   {
     static_assert(sizeof...(Args) == 0);
     return std::forward<F>(f);

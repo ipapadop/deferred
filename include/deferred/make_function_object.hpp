@@ -22,7 +22,7 @@ struct fun_ptr_wrapper
 
   /**
    * @brief Constructs a fun_ptr_wrapper.
-   * @param f The function pointer to wrap.
+   * @param f Function pointer to wrap.
    */
   constexpr fun_ptr_wrapper(F f) noexcept : m_f{f}
   { }
@@ -39,8 +39,8 @@ struct fun_ptr_wrapper
 
 /**
  * @brief Creates a function object from @p f.
- * @tparam F The type of the function or callable.
- * @param f The function or callable to wrap.
+ * @tparam F Type of the function or callable.
+ * @param f Function or callable to wrap.
  * @return A callable object representing @p f.
  */
 template<typename F>

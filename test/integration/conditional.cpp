@@ -7,9 +7,8 @@
 
 TEST_CASE("conditional with constants", "[conditional-constants]")
 {
-  auto ex = deferred::if_then_else(deferred::constant(true),
-                                   deferred::constant(42),
-                                   deferred::constant(10));
+  auto ex =
+    deferred::if_(deferred::constant(true), deferred::constant(42)).else_(deferred::constant(10));
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == 42);
@@ -21,7 +20,7 @@ TEST_CASE("conditional with constants", "[conditional-constants]")
 TEST_CASE("conditional with variable", "[conditional-variable]")
 {
   auto v  = deferred::variable<bool>();
-  auto ex = deferred::if_then_else(v, deferred::constant(42), deferred::constant(10));
+  auto ex = deferred::if_(v, deferred::constant(42)).else_(deferred::constant(10));
   v       = true;
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
@@ -31,8 +30,8 @@ TEST_CASE("conditional with variable", "[conditional-variable]")
 TEST_CASE("conditional chain", "[conditional-chain]")
 {
   auto v   = deferred::variable<bool>();
-  auto ex1 = deferred::if_then_else(v, 42, 10);
-  auto ex2 = deferred::if_then_else(ex1 == 42, 1337, 0);
+  auto ex1 = deferred::if_(v, 42).else_(10);
+  auto ex2 = deferred::if_(ex1 == 42, 1337).else_(0);
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex2)>);
 
@@ -46,7 +45,7 @@ TEST_CASE("conditional chain", "[conditional-chain]")
 TEST_CASE("conditional with expression", "[conditional-expression]")
 {
   auto v  = deferred::variable<int>();
-  auto ex = deferred::if_then_else((v + 1) > 10, 42, 10);
+  auto ex = deferred::if_((v + 1) > 10, 42).else_(10);
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
 
@@ -60,7 +59,7 @@ TEST_CASE("conditional with expression", "[conditional-expression]")
 TEST_CASE("conditional with nested expression", "[conditional-nested-expression]")
 {
   auto v  = deferred::variable<int>();
-  auto ex = deferred::if_then_else([&] { return (v + 1) > 10; }, 42, 10);
+  auto ex = deferred::if_([&] { return (v + 1) > 10; }, 42).else_(10);
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
 
