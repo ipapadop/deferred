@@ -3,6 +3,7 @@ set(SOURCES
   conditional.cpp
   constant.cpp
   invoke.cpp
+  is_deferred.cpp
   main.cpp
   make_function_object.cpp
   switch.cpp
