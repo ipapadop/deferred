@@ -43,8 +43,7 @@ TEST_CASE("is_deferred trait and Deferred concept", "[is_deferred]")
     static_assert(!is_deferred_v<std::vector<int>>);
 
     struct dummy
-    {
-    };
+    { };
     static_assert(!Deferred<dummy>);
     static_assert(!is_deferred_v<dummy>);
   }
