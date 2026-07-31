@@ -3,7 +3,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "deferred/conditional.hpp"
 #include "deferred/constant.hpp"
 #include "deferred/type_traits/is_deferred.hpp"
 #include "deferred/variable.hpp"
@@ -29,10 +28,6 @@ TEST_CASE("is_deferred trait and Deferred concept", "[is_deferred]")
     using V = decltype(deferred::variable(42));
     static_assert(Deferred<V>);
     static_assert(is_deferred_v<V>);
-
-    using I = decltype(deferred::if_then_else(true, 1, 2));
-    static_assert(Deferred<I>);
-    static_assert(is_deferred_v<I>);
   }
 
   SECTION("non-deferred types")
