@@ -8,6 +8,7 @@
 #include "deferred/type_traits/is_deferred.hpp"
 #include "deferred/variable.hpp"
 
+#include <type_traits>
 #include <vector>
 
 TEST_CASE("is_deferred trait and Deferred concept", "[is_deferred]")
@@ -63,6 +64,12 @@ TEST_CASE("is_deferred trait and Deferred concept", "[is_deferred]")
 
     static_assert(Deferred<C&&>);
     static_assert(is_deferred_v<C&&>);
+
+    static_assert(Deferred<C volatile>);
+    static_assert(is_deferred_v<C volatile>);
+
+    static_assert(Deferred<C const volatile&>);
+    static_assert(is_deferred_v<C const volatile&>);
   }
 }
 
@@ -80,6 +87,7 @@ TEST_CASE("AnyDeferred concept", "[is_deferred]")
   static_assert(AnyDeferred<C, V>);
   static_assert(AnyDeferred<int, C, float>);
 
+  static_assert(!AnyDeferred<>);
   static_assert(!AnyDeferred<int>);
   static_assert(!AnyDeferred<int, float, double>);
   static_assert(!AnyDeferred<std::vector<int>>);
