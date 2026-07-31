@@ -45,25 +45,13 @@ template<typename T>
   static constexpr auto lref_suffix     = "&"sv;
   static constexpr auto rref_suffix     = "&&"sv;
 
-  std::size_t extra_size = 0;
-  if constexpr (std::is_const_v<TR>)
-  {
-    extra_size += const_suffix.size();
-  }
-  if constexpr (std::is_volatile_v<TR>)
-  {
-    extra_size += volatile_suffix.size();
-  }
-  if constexpr (std::is_lvalue_reference_v<T>)
-  {
-    extra_size += lref_suffix.size();
-  }
-  else if constexpr (std::is_rvalue_reference_v<T>)
-  {
-    extra_size += rref_suffix.size();
-  }
+  static constexpr std::size_t extra_size = (std::is_const_v<TR> ? const_suffix.size() : 0)
+                                            + (std::is_volatile_v<TR> ? volatile_suffix.size() : 0)
+                                            + (std::is_lvalue_reference_v<T>   ? lref_suffix.size()
+                                               : std::is_rvalue_reference_v<T> ? rref_suffix.size()
+                                                                               : 0);
 
-  if (extra_size > 0)
+  if constexpr (extra_size > 0)
   {
     r.reserve(r.size() + extra_size);
     if constexpr (std::is_const_v<TR>)
