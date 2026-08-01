@@ -5,6 +5,7 @@
 #define DEFERRED_TYPE_NAME_HPP
 
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <typeinfo>
 
@@ -26,6 +27,8 @@ namespace deferred {
 template<typename T>
 [[nodiscard]] std::string type_name()
 {
+  using namespace std::literals;
+
   using TR = std::remove_reference_t<T>;
 
 #ifdef __GNUG__
@@ -37,22 +40,38 @@ template<typename T>
   std::string r = typeid(TR).name();
 #endif
 
-  if (std::is_const<TR>::value)
+  static constexpr auto const_suffix    = " const"sv;
+  static constexpr auto volatile_suffix = " volatile"sv;
+  static constexpr auto lref_suffix     = "&"sv;
+  static constexpr auto rref_suffix     = "&&"sv;
+
+  static constexpr std::size_t extra_size = (std::is_const_v<TR> ? const_suffix.size() : 0)
+                                            + (std::is_volatile_v<TR> ? volatile_suffix.size() : 0)
+                                            + (std::is_lvalue_reference_v<T>   ? lref_suffix.size()
+                                               : std::is_rvalue_reference_v<T> ? rref_suffix.size()
+                                                                               : 0);
+
+  if constexpr (extra_size > 0)
   {
-    r += " const";
+    r.reserve(r.size() + extra_size);
+    if constexpr (std::is_const_v<TR>)
+    {
+      r += const_suffix;
+    }
+    if constexpr (std::is_volatile_v<TR>)
+    {
+      r += volatile_suffix;
+    }
+    if constexpr (std::is_lvalue_reference_v<T>)
+    {
+      r += lref_suffix;
+    }
+    else if constexpr (std::is_rvalue_reference_v<T>)
+    {
+      r += rref_suffix;
+    }
   }
-  if (std::is_volatile<TR>::value)
-  {
-    r += " volatile";
-  }
-  if (std::is_lvalue_reference<T>::value)
-  {
-    r += "&";
-  }
-  else if (std::is_rvalue_reference<T>::value)
-  {
-    r += "&&";
-  }
+
   return r;
 }
 
