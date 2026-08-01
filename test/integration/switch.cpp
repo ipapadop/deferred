@@ -76,3 +76,25 @@ TEST_CASE("switch with expressions", "[switch-expressions]")
   label     = 5;
   CHECK(ex() == 2);
 }
+
+TEST_CASE("append case to switch", "[switch-append]")
+{
+  auto var           = deferred::variable<int>();
+  auto ex            = deferred::switch_(var,
+                                         deferred::default_("unknown"),
+                                         deferred::case_(10, [] { return "10"; }),
+                                         deferred::case_(12, [] { return "12"; }));
+  auto const& source = ex;
+  auto expanded      = source.append(deferred::case_(10, [] { return "new 10"; }),
+                                     deferred::case_(11, [] { return "11"; }));
+
+  var = 10;
+  CHECK(std::strcmp(expanded(), "10") == 0);
+
+  var = 11;
+  CHECK(std::strcmp(ex(), "unknown") == 0);
+  CHECK(std::strcmp(expanded(), "11") == 0);
+
+  var = 13;
+  CHECK(std::strcmp(expanded(), "unknown") == 0);
+}

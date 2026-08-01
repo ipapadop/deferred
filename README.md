@@ -5,6 +5,7 @@ Library for creating deferred evaluation expressions in C++23.
 ``deferred`` provides:
 - functions to declare constants and variables,
 - functions to create deferred evaluation expressions from functions,
+- expandable deferred switch expressions,
 - ``deferred``-enabled commonly used operators.
 
 Requirements

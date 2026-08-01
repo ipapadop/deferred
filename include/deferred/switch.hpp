@@ -7,8 +7,8 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <variant>
 
+#include "detail/map_result.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
 #include "type_traits/homogenized_type.hpp"
@@ -149,35 +149,6 @@ concept CaseExpression = requires(std::remove_cvref_t<T> t) {
   }(t);
 };
 
-namespace detail {
-
-/**
- * @brief Maps the result of an evaluation to the target result type.
- * @tparam Result Target result type.
- * @tparam T Type of the evaluated expression.
- * @param t Evaluated expression.
- * @return Mapped result.
- */
-template<typename Result, typename T>
-constexpr decltype(auto) map_switch_result(T&& t)
-{
-  if constexpr (std::is_void_v<Result>)
-  {
-    static_cast<void>(t);
-  }
-  else if constexpr (std::is_void_v<T>)
-  {
-    static_cast<void>(t);
-    return std::monostate{};
-  }
-  else
-  {
-    return std::forward<T>(t);
-  }
-}
-
-} // namespace detail
-
 /**
  * @brief Deferred switch
  *
@@ -221,6 +192,53 @@ public:
     m_cases(std::forward<Default>(df), std::forward<Case>(cs)...)
   { }
 
+  /**
+   * @brief Appends cases to the switch expression.
+   *
+   * Existing cases are evaluated before the appended cases. This overload copies
+   * owned expressions and preserves referenced expressions.
+   *
+   * @tparam NewCases Types of the case expressions to append.
+   * @param new_cases Case expressions to append.
+   * @return A new switch expression containing the appended cases.
+   */
+  template<typename... NewCases>
+    requires(sizeof...(NewCases) > 0 && (deferred::CaseExpression<NewCases> && ...))
+  [[nodiscard]] constexpr auto append(NewCases&&... new_cases) const&
+  {
+    using expanded_expression = switch_expression<ConditionExpression,
+                                                  DefaultExpression,
+                                                  CaseExpression...,
+                                                  std::decay_t<NewCases>...>;
+    return std::apply(
+      [&](auto const& df, auto const&... cases) {
+        return expanded_expression(m_condition, df, cases..., std::forward<NewCases>(new_cases)...);
+      },
+      m_cases);
+  }
+
+  /**
+   * @brief Appends cases by moving owned expressions from this switch expression.
+   * @copydetails append
+   */
+  template<typename... NewCases>
+    requires(sizeof...(NewCases) > 0 && (deferred::CaseExpression<NewCases> && ...))
+  [[nodiscard]] constexpr auto append(NewCases&&... new_cases) &&
+  {
+    using expanded_expression = switch_expression<ConditionExpression,
+                                                  DefaultExpression,
+                                                  CaseExpression...,
+                                                  std::decay_t<NewCases>...>;
+    return std::apply(
+      [&](auto&& df, auto&&... cases) {
+        return expanded_expression(std::forward<ConditionExpression>(m_condition),
+                                   std::forward<decltype(df)>(df),
+                                   std::forward<decltype(cases)>(cases)...,
+                                   std::forward<NewCases>(new_cases)...);
+      },
+      std::move(m_cases));
+  }
+
 private:
   /**
    * @brief Traverses the cases until one matches.
@@ -230,18 +248,18 @@ private:
   template<std::size_t I, typename T>
   [[nodiscard]] constexpr result_type choose_case(T const& t) const
   {
-    if constexpr (I < std::tuple_size<decltype(m_cases)>::value)
+    if constexpr (I < std::tuple_size_v<decltype(m_cases)>)
     {
       if (std::get<I>(m_cases).compare(t))
       {
-        return detail::map_switch_result<result_type>(std::get<I>(m_cases)());
+        return detail::map_result<result_type>([&] { return std::get<I>(m_cases)(); });
       }
 
       return choose_case<I + 1>(t);
     }
     else
     {
-      return detail::map_switch_result<result_type>(std::get<0>(m_cases)());
+      return detail::map_result<result_type>([&] { return std::get<0>(m_cases)(); });
     }
   }
 
@@ -325,6 +343,7 @@ template<typename LabelExpression, typename BodyExpression>
  *                         [] { return "10"; }),
  *                   case_([] { return foo(); },
  *                         [] { return "result of foo"; }));
+ * auto expanded = ex.append(case_(11, [] { return "11"; }));
  * @endcode
  *
  * @tparam ConditionExpression Type of the condition expression.

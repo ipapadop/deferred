@@ -3,6 +3,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <memory>
+
 #include "deferred/switch.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
 
@@ -93,4 +95,37 @@ TEST_CASE("switch with heterogeneous types", "[switch-variant]")
   auto ex2  = deferred::switch_(2, deferred::default_("unknown"), deferred::case_(1, 42));
   auto res2 = ex2();
   CHECK(std::get<char const*>(res2) == std::string("unknown"));
+}
+
+TEST_CASE("append case with heterogeneous type", "[switch-append-variant]")
+{
+  auto ex       = deferred::switch_(2, deferred::default_("unknown"), deferred::case_(1, 42));
+  auto expanded = std::move(ex).append(deferred::case_(2, 2.5));
+
+  using result_type = decltype(expanded());
+  static_assert(std::is_same_v<result_type, std::variant<char const*, int, double>>);
+
+  CHECK(std::get<double>(expanded()) == 2.5);
+}
+
+TEST_CASE("append case to switch with move-only body", "[switch-append-move-only]")
+{
+  auto ex =
+    deferred::switch_(1,
+                      deferred::default_(0),
+                      deferred::case_(1, [value = std::make_unique<int>(42)] { return *value; }));
+  auto expanded = std::move(ex).append(deferred::case_(2, 2));
+
+  CHECK(expanded() == 42);
+}
+
+TEST_CASE("append case with void result", "[switch-append-void]")
+{
+  auto ex       = deferred::switch_(2, deferred::default_(0), deferred::case_(1, 1));
+  auto expanded = std::move(ex).append(deferred::case_(2, [] { }));
+
+  using result_type = decltype(expanded());
+  static_assert(std::is_same_v<result_type, std::variant<int, std::monostate>>);
+
+  CHECK(std::holds_alternative<std::monostate>(expanded()));
 }

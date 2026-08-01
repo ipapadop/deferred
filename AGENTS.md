@@ -5,6 +5,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
 ## Project Overview
 
 - **Purpose**: Provides a mechanism to define expressions (using constants, variables, and operators) that are evaluated lazily at a later point.
+- **Switch expressions**: Existing switch expressions can be expanded with `append()`.
 - **Main Technologies**: 
   - **Language**: C++23
   - **Build System**: CMake (3.28.1+)
