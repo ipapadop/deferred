@@ -8,8 +8,8 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <variant>
 
+#include "detail/map_result.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
 #include "type_traits/homogenized_type.hpp"
@@ -17,31 +17,6 @@
 namespace deferred {
 
 namespace detail {
-
-/**
- * @brief Maps the result of an evaluation to the target result type.
- * @tparam Result Target result type.
- * @tparam T Type of the evaluated expression.
- * @param t Evaluated expression.
- * @return Mapped result.
- */
-template<typename Result, typename T>
-constexpr decltype(auto) map_conditional_result(T&& t)
-{
-  if constexpr (std::is_void_v<Result>)
-  {
-    static_cast<void>(t);
-  }
-  else if constexpr (std::is_void_v<T>)
-  {
-    static_cast<void>(t);
-    return std::monostate{};
-  }
-  else
-  {
-    return std::forward<T>(t);
-  }
-}
 
 /**
  * @brief Tag for conditional expressions without an @c else branch.
@@ -133,7 +108,7 @@ private:
         }
         else
         {
-          return detail::map_conditional_result<base_result_type>(evaluate(branch.then));
+          return detail::map_result<base_result_type>(evaluate(branch.then));
         }
       }
       return evaluate_impl<I + 1>(std::forward<Self>(self));
@@ -149,7 +124,7 @@ private:
       }
       else
       {
-        return detail::map_conditional_result<result_type>(evaluate(self.m_else));
+        return detail::map_result<result_type>(evaluate(self.m_else));
       }
     }
   }

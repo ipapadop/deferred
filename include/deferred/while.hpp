@@ -45,7 +45,7 @@ public:
   { }
 
   /// @brief Evaluates the while loop.
-  constexpr void operator()() const&
+  constexpr void operator()() const
   {
     while (evaluate(m_condition))
     {
@@ -53,17 +53,8 @@ public:
     }
   }
 
-  /// @copydoc while_expression::operator()() const&
-  constexpr void operator()() &
-  {
-    while (evaluate(m_condition))
-    {
-      evaluate(m_body);
-    }
-  }
-
-  /// @copydoc while_expression::operator()() const&
-  constexpr void operator()() &&
+  /// @copydoc while_expression::operator()() const
+  constexpr void operator()()
   {
     while (evaluate(m_condition))
     {

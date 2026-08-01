@@ -7,8 +7,8 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <variant>
 
+#include "detail/map_result.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
 #include "type_traits/homogenized_type.hpp"
@@ -149,35 +149,6 @@ concept CaseExpression = requires(std::remove_cvref_t<T> t) {
   }(t);
 };
 
-namespace detail {
-
-/**
- * @brief Maps the result of an evaluation to the target result type.
- * @tparam Result Target result type.
- * @tparam T Type of the evaluated expression.
- * @param t Evaluated expression.
- * @return Mapped result.
- */
-template<typename Result, typename T>
-constexpr decltype(auto) map_switch_result(T&& t)
-{
-  if constexpr (std::is_void_v<Result>)
-  {
-    static_cast<void>(t);
-  }
-  else if constexpr (std::is_void_v<T>)
-  {
-    static_cast<void>(t);
-    return std::monostate{};
-  }
-  else
-  {
-    return std::forward<T>(t);
-  }
-}
-
-} // namespace detail
-
 /**
  * @brief Deferred switch
  *
@@ -230,18 +201,18 @@ private:
   template<std::size_t I, typename T>
   [[nodiscard]] constexpr result_type choose_case(T const& t) const
   {
-    if constexpr (I < std::tuple_size<decltype(m_cases)>::value)
+    if constexpr (I < std::tuple_size_v<decltype(m_cases)>)
     {
       if (std::get<I>(m_cases).compare(t))
       {
-        return detail::map_switch_result<result_type>(std::get<I>(m_cases)());
+        return detail::map_result<result_type>(std::get<I>(m_cases)());
       }
 
       return choose_case<I + 1>(t);
     }
     else
     {
-      return detail::map_switch_result<result_type>(std::get<0>(m_cases)());
+      return detail::map_result<result_type>(std::get<0>(m_cases)());
     }
   }
 
