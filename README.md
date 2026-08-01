@@ -99,7 +99,9 @@ expression.visit([](auto const& node, std::size_t nesting) {
 Composite nodes visit their children from left to right. Constants and variables
 are leaves; their stored values and expression operator objects are not visited.
 Conditional branch, switch case, and switch default wrappers are structural
-nodes and are included in the traversal.
+nodes and are included in the traversal. Nodes are exposed as read-only
+references. A visitor may be passed as an lvalue or rvalue, but traversal invokes
+the same visitor object as an lvalue for every node.
 
 Testing
 ------------

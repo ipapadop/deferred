@@ -14,7 +14,7 @@ TEST_CASE("visitor traverses an expression composed through the public API", "[v
   auto expression = deferred::if_(variable > 0, variable + 1).else_(0);
   std::vector<std::size_t> nesting_levels;
 
-  expression.visit([&](auto const&, std::size_t nesting) { nesting_levels.push_back(nesting); });
+  expression.visit([&](auto const&, std::size_t nesting) { nesting_levels.push_back(nesting); }, 7);
 
-  CHECK(nesting_levels == std::vector<std::size_t>{0, 1, 2, 3, 3, 2, 3, 3, 1});
+  CHECK(nesting_levels == std::vector<std::size_t>{7, 8, 9, 10, 10, 9, 10, 10, 8});
 }
