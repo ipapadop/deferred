@@ -192,6 +192,53 @@ public:
     m_cases(std::forward<Default>(df), std::forward<Case>(cs)...)
   { }
 
+  /**
+   * @brief Appends cases to the switch expression.
+   *
+   * Existing cases are evaluated before the appended cases. This overload copies
+   * owned expressions and preserves referenced expressions.
+   *
+   * @tparam NewCases Types of the case expressions to append.
+   * @param new_cases Case expressions to append.
+   * @return A new switch expression containing the appended cases.
+   */
+  template<typename... NewCases>
+    requires(sizeof...(NewCases) > 0 && (deferred::CaseExpression<NewCases> && ...))
+  [[nodiscard]] constexpr auto append(NewCases&&... new_cases) const&
+  {
+    using expanded_expression = switch_expression<ConditionExpression,
+                                                  DefaultExpression,
+                                                  CaseExpression...,
+                                                  std::decay_t<NewCases>...>;
+    return std::apply(
+      [&](auto const& df, auto const&... cases) {
+        return expanded_expression(m_condition, df, cases..., std::forward<NewCases>(new_cases)...);
+      },
+      m_cases);
+  }
+
+  /**
+   * @brief Appends cases by moving owned expressions from this switch expression.
+   * @copydetails append
+   */
+  template<typename... NewCases>
+    requires(sizeof...(NewCases) > 0 && (deferred::CaseExpression<NewCases> && ...))
+  [[nodiscard]] constexpr auto append(NewCases&&... new_cases) &&
+  {
+    using expanded_expression = switch_expression<ConditionExpression,
+                                                  DefaultExpression,
+                                                  CaseExpression...,
+                                                  std::decay_t<NewCases>...>;
+    return std::apply(
+      [&](auto&& df, auto&&... cases) {
+        return expanded_expression(std::forward<ConditionExpression>(m_condition),
+                                   std::forward<decltype(df)>(df),
+                                   std::forward<decltype(cases)>(cases)...,
+                                   std::forward<NewCases>(new_cases)...);
+      },
+      std::move(m_cases));
+  }
+
 private:
   /**
    * @brief Traverses the cases until one matches.
@@ -296,6 +343,7 @@ template<typename LabelExpression, typename BodyExpression>
  *                         [] { return "10"; }),
  *                   case_([] { return foo(); },
  *                         [] { return "result of foo"; }));
+ * auto expanded = ex.append(case_(11, [] { return "11"; }));
  * @endcode
  *
  * @tparam ConditionExpression Type of the condition expression.
