@@ -252,14 +252,14 @@ private:
     {
       if (std::get<I>(m_cases).compare(t))
       {
-        return detail::map_result<result_type>(std::get<I>(m_cases)());
+        return detail::map_result<result_type>([&] { return std::get<I>(m_cases)(); });
       }
 
       return choose_case<I + 1>(t);
     }
     else
     {
-      return detail::map_result<result_type>(std::get<0>(m_cases)());
+      return detail::map_result<result_type>([&] { return std::get<0>(m_cases)(); });
     }
   }
 

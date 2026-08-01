@@ -108,7 +108,7 @@ private:
         }
         else
         {
-          return detail::map_result<base_result_type>(evaluate(branch.then));
+          return detail::map_result<base_result_type>([&] { return evaluate(branch.then); });
         }
       }
       return evaluate_impl<I + 1>(std::forward<Self>(self));
@@ -124,7 +124,7 @@ private:
       }
       else
       {
-        return detail::map_result<result_type>(evaluate(self.m_else));
+        return detail::map_result<result_type>([&] { return evaluate(self.m_else); });
       }
     }
   }

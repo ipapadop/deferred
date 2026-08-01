@@ -118,3 +118,14 @@ TEST_CASE("append case to switch with move-only body", "[switch-append-move-only
 
   CHECK(expanded() == 42);
 }
+
+TEST_CASE("append case with void result", "[switch-append-void]")
+{
+  auto ex       = deferred::switch_(2, deferred::default_(0), deferred::case_(1, 1));
+  auto expanded = std::move(ex).append(deferred::case_(2, [] { }));
+
+  using result_type = decltype(expanded());
+  static_assert(std::is_same_v<result_type, std::variant<int, std::monostate>>);
+
+  CHECK(std::holds_alternative<std::monostate>(expanded()));
+}
