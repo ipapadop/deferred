@@ -112,8 +112,8 @@ TEST_CASE("if_ visit", "[if-visit]")
   auto ex   = deferred::if_(true, 42);
   int count = 0;
   ex.visit([&](auto const&, std::size_t) { ++count; });
-  // 1 (if_expression) + 1 (condition) + 1 (then) = 3
-  CHECK(count == 3);
+  // 1 (if_expression) + 1 (branch) + 1 (condition) + 1 (then) = 4
+  CHECK(count == 4);
 }
 
 TEST_CASE("conditional with else_if", "[conditional-else-if]")

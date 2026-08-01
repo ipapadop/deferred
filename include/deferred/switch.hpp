@@ -59,8 +59,8 @@ public:
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    m_expression.visit(std::forward<Visitor>(v), nesting + 1);
+    v(*this, nesting);
+    m_expression.visit(v, nesting + 1);
   }
 };
 
@@ -133,9 +133,9 @@ public:
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    m_label.visit(std::forward<Visitor>(v), nesting + 1);
-    m_body.visit(std::forward<Visitor>(v), nesting + 1);
+    v(*this, nesting);
+    m_label.visit(v, nesting + 1);
+    m_body.visit(v, nesting + 1);
   }
 };
 
@@ -290,11 +290,9 @@ public:
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    m_condition.visit(std::forward<Visitor>(v), nesting + 1);
-    std::apply(
-      [&](auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
-      m_cases);
+    v(*this, nesting);
+    m_condition.visit(v, nesting + 1);
+    std::apply([&](auto const&... args) { (args.visit(v, nesting + 1), ...); }, m_cases);
   }
 };
 

@@ -89,8 +89,7 @@ public:
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    std::forward<Visitor>(v)(m_t, nesting + 1);
+    v(*this, nesting);
   }
 };
 

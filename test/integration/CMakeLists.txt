@@ -6,6 +6,7 @@ set(SOURCES
   operators.cpp
   switch.cpp
   variable.cpp
+  visitor.cpp
   while.cpp)
 
 add_executable(integration_tests ${SOURCES})

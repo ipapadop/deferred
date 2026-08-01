@@ -83,6 +83,24 @@ int main()
 
 Examples can be found in the ``examples/`` directory. They are compiled by default.
 
+Visiting expressions
+--------------------
+
+Deferred expressions provide a ``visit`` member for inspecting their expression
+tree without evaluating it. Traversal is preorder and passes each structural
+node with its nesting level to the visitor:
+
+```C++
+expression.visit([](auto const& node, std::size_t nesting) {
+  // Inspect node at nesting depth.
+});
+```
+
+Composite nodes visit their children from left to right. Constants and variables
+are leaves; their stored values and expression operator objects are not visited.
+Conditional branch, switch case, and switch default wrappers are structural
+nodes and are included in the traversal.
+
 Testing
 ------------
 

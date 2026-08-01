@@ -58,6 +58,20 @@ struct conditional_branch
   using subexpression_types = std::tuple<Condition, Then>;
   [[no_unique_address]] Condition condition;
   [[no_unique_address]] Then then;
+
+  /**
+   * @brief Visits the conditional branch with a visitor.
+   * @tparam Visitor Type of the visitor.
+   * @param v Visitor.
+   * @param nesting Nesting level.
+   */
+  template<typename Visitor>
+  constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+  {
+    v(*this, nesting);
+    condition.visit(v, nesting + 1);
+    then.visit(v, nesting + 1);
+  }
 };
 
 /**
@@ -235,17 +249,11 @@ public:
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    std::apply(
-      [&](auto const&... branch) {
-        ((branch.condition.visit(std::forward<Visitor>(v), nesting + 1),
-          branch.then.visit(std::forward<Visitor>(v), nesting + 1)),
-         ...);
-      },
-      m_branches);
+    v(*this, nesting);
+    std::apply([&](auto const&... branch) { (branch.visit(v, nesting + 1), ...); }, m_branches);
     if constexpr (finalized)
     {
-      m_else.visit(std::forward<Visitor>(v), nesting + 1);
+      m_else.visit(v, nesting + 1);
     }
   }
 };

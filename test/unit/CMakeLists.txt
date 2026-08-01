@@ -9,6 +9,7 @@ set(SOURCES
   switch.cpp
   variable.cpp
   homogenized_type.cpp
+  visitor.cpp
   while.cpp)
 
 add_executable(unit_tests ${SOURCES})
