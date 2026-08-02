@@ -4,6 +4,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <functional>
+#include <type_traits>
+#include <utility>
 
 #include "deferred/constant.hpp"
 #include "deferred/invoke.hpp"
@@ -40,6 +42,14 @@ struct get_int_t
   }
 };
 
+struct throwing_get_int_t
+{
+  constexpr int operator()(int i) const
+  {
+    return i;
+  }
+};
+
 } // namespace
 
 TEST_CASE("invoke functions", "[invoke-function]")
@@ -47,6 +57,7 @@ TEST_CASE("invoke functions", "[invoke-function]")
   SECTION("no arguments")
   {
     auto ex = deferred::invoke(get_int);
+    static_assert(std::is_same_v<typename decltype(ex)::operator_type, decltype(&get_int)>);
     CHECK(ex() == get_int());
   }
 
@@ -151,6 +162,17 @@ TEST_CASE("invoke mutable lambda", "[invoke-mutable-lambda]")
   auto ex = deferred::invoke([i = 0]() mutable { return ++i; });
   CHECK(ex() == 1);
   CHECK(ex() == 2);
+}
+
+TEST_CASE("invoke propagates exception specifications", "[invoke-noexcept]")
+{
+  auto no_throw = deferred::invoke(get_int_t{}, 42);
+  static_assert(noexcept(no_throw()));
+  static_assert(noexcept(std::as_const(no_throw)()));
+
+  auto throwing = deferred::invoke(throwing_get_int_t{}, 42);
+  static_assert(!noexcept(throwing()));
+  static_assert(!noexcept(std::as_const(throwing)()));
 }
 
 TEST_CASE("invoke expression", "[invoke-expression]")

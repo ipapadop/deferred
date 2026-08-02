@@ -103,6 +103,31 @@ nodes and are included in the traversal. Nodes are exposed as read-only
 references. A visitor may be passed as an lvalue or rvalue, but traversal invokes
 the same visitor object as an lvalue for every node.
 
+Invoking member pointers
+------------------------
+
+``deferred::invoke`` follows the standard ``std::invoke`` model, including
+pointers to member functions and member data:
+
+```C++
+struct counter {
+  int value{};
+  int read() const noexcept { return value; }
+  void increment() noexcept { ++value; }
+};
+
+counter c;
+auto read_copy = deferred::invoke(&counter::read, c);
+auto increment_original = deferred::invoke(&counter::increment, std::ref(c));
+auto value_reference = deferred::invoke(&counter::value, &c);
+```
+
+Ordinary arguments retain the library's existing ownership behavior and are
+stored as constants, so ``read_copy`` operates on a copy. Use a pointer,
+``std::ref``, or ``std::cref`` when the deferred expression should refer to the
+original object. Owned constants expose their values as const references, so
+non-const member functions require a pointer or ``std::ref``.
+
 Testing
 ------------
 

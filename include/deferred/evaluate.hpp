@@ -4,6 +4,7 @@
 #ifndef DEFERRED_EVALUATE_HPP
 #define DEFERRED_EVALUATE_HPP
 
+#include <functional>
 #include <type_traits>
 #include <utility>
 
@@ -22,13 +23,13 @@ constexpr auto evaluate(T&& t)
 {
   if constexpr (Deferred<T>)
   {
-    if constexpr (std::is_void_v<decltype(std::forward<T>(t)())>)
+    if constexpr (std::is_void_v<decltype(std::invoke(std::forward<T>(t)))>)
     {
-      std::forward<T>(t)();
+      std::invoke(std::forward<T>(t));
     }
     else
     {
-      return evaluate(std::forward<T>(t)());
+      return evaluate(std::invoke(std::forward<T>(t)));
     }
   }
   else
@@ -46,7 +47,7 @@ constexpr auto recursive_evaluate(T&& t)
 {
   if constexpr (std::is_invocable_v<T>)
   {
-    return recursive_evaluate(std::forward<T>(t)());
+    return recursive_evaluate(std::invoke(std::forward<T>(t)));
   }
   else
   {

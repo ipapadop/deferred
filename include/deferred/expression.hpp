@@ -10,7 +10,6 @@
 
 #include "apply.hpp"
 #include "constant.hpp"
-#include "make_function_object.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -56,13 +55,15 @@ public:
   expression_& operator=(expression_ const&) = delete;
   expression_& operator=(expression_&&)      = delete;
 
-  [[nodiscard]] constexpr decltype(auto) operator()() const
+  [[nodiscard]] constexpr decltype(auto)
+  operator()() const noexcept(noexcept(deferred::apply(m_op, m_expressions)))
   {
     return deferred::apply(m_op, m_expressions);
   }
 
   /// @copydoc operator()() const
-  [[nodiscard]] constexpr decltype(auto) operator()()
+  [[nodiscard]] constexpr decltype(auto)
+  operator()() noexcept(noexcept(deferred::apply(m_op, m_expressions)))
   {
     return deferred::apply(m_op, m_expressions);
   }
@@ -114,8 +115,7 @@ consteval auto deduce_deferred_type()
   }
   else if constexpr (std::is_invocable_v<U>)
   {
-    return std::type_identity<
-      expression_<std::decay_t<decltype(make_function_object(std::declval<U>()))>>>{};
+    return std::type_identity<expression_<U>>{};
   }
   else
   {

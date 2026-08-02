@@ -5,7 +5,6 @@ set(SOURCES
   invoke.cpp
   is_deferred.cpp
   main.cpp
-  make_function_object.cpp
   switch.cpp
   variable.cpp
   homogenized_type.cpp

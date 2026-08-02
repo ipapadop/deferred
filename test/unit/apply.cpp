@@ -3,7 +3,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <functional>
+#include <memory>
 #include <tuple>
+#include <type_traits>
 
 #include "deferred/apply.hpp"
 #include "deferred/constant.hpp"
@@ -21,6 +24,38 @@ struct multiply_t
   constexpr int operator()(int a, int b) const
   {
     return a * b;
+  }
+};
+
+struct widget
+{
+  int value;
+
+  constexpr int get() const noexcept
+  {
+    return value;
+  }
+
+  constexpr int add(int increment) noexcept
+  {
+    value += increment;
+    return value;
+  }
+};
+
+struct no_throw_identity
+{
+  constexpr int operator()(int value) const noexcept
+  {
+    return value;
+  }
+};
+
+struct throwing_identity
+{
+  constexpr int operator()(int value) const
+  {
+    return value;
   }
 };
 
@@ -94,4 +129,70 @@ TEST_CASE("apply constexpr", "[apply]")
   constexpr auto res = deferred::apply(add, t);
   static_assert(res == 3, "constexpr apply failed");
   CHECK(res == 3);
+}
+
+TEST_CASE("apply member pointers", "[apply]")
+{
+  widget object{40};
+
+  SECTION("const member function through owned object")
+  {
+    auto arguments = std::make_tuple(deferred::constant(object));
+    CHECK(deferred::apply(&widget::get, arguments) == 40);
+  }
+
+  SECTION("member function through pointer")
+  {
+    auto arguments = std::make_tuple(deferred::constant(&object), deferred::constant(2));
+    CHECK(deferred::apply(&widget::add, arguments) == 42);
+    CHECK(object.value == 42);
+  }
+
+  SECTION("member function through reference wrapper")
+  {
+    auto arguments = std::make_tuple(deferred::constant(std::ref(object)), deferred::constant(2));
+    CHECK(deferred::apply(&widget::add, arguments) == 42);
+    CHECK(object.value == 42);
+  }
+
+  SECTION("const member function through const reference wrapper")
+  {
+    auto arguments = std::make_tuple(deferred::constant(std::cref(object)));
+    CHECK(deferred::apply(&widget::get, arguments) == 40);
+  }
+
+  SECTION("member data")
+  {
+    auto arguments = std::make_tuple(deferred::constant(std::ref(object)));
+    static_assert(std::is_same_v<decltype(deferred::apply(&widget::value, arguments)), int&>);
+
+    auto& value = deferred::apply(&widget::value, arguments);
+    value       = 42;
+    CHECK(object.value == 42);
+  }
+}
+
+TEST_CASE("apply preserves forwarding and exception specifications", "[apply]")
+{
+  SECTION("move-only evaluated argument")
+  {
+    auto arguments = std::make_tuple(deferred::constant(std::make_unique<int>(42)));
+    auto result =
+      deferred::apply([](std::unique_ptr<int> value) { return *value; }, std::move(arguments));
+    CHECK(result == 42);
+  }
+
+  SECTION("noexcept callable")
+  {
+    auto arguments = std::make_tuple(deferred::constant(42));
+    static_assert(noexcept(deferred::apply(no_throw_identity{}, arguments)));
+    CHECK(deferred::apply(no_throw_identity{}, arguments) == 42);
+  }
+
+  SECTION("throwing callable")
+  {
+    auto arguments = std::make_tuple(deferred::constant(42));
+    static_assert(!noexcept(deferred::apply(throwing_identity{}, arguments)));
+    CHECK(deferred::apply(throwing_identity{}, arguments) == 42);
+  }
 }

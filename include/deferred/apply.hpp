@@ -4,8 +4,8 @@
 #ifndef DEFERRED_APPLY_HPP
 #define DEFERRED_APPLY_HPP
 
+#include <functional>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 
 namespace deferred {
@@ -13,16 +13,21 @@ namespace deferred {
 namespace detail {
 
 /**
- * @brief Helper function to apply a callable to the elements of a tuple.
- * @copydoc apply(F&&, Tuple&&)
- * @tparam I Index sequence for tuple elements.
- * @param I Index sequence for tuple elements.
+ * @brief Invokes a callable with evaluated deferred arguments.
+ * @tparam F Type of the callable.
  */
-template<typename F, typename Tuple, std::size_t... I>
-constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>)
+template<typename F>
+struct apply_invoker
 {
-  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))()...);
-}
+  F&& f;
+
+  template<typename... Expressions>
+  constexpr decltype(auto) operator()(Expressions&&... expressions) const
+    noexcept(noexcept(std::invoke(std::forward<F>(f), std::forward<Expressions>(expressions)()...)))
+  {
+    return std::invoke(std::forward<F>(f), std::forward<Expressions>(expressions)()...);
+  }
+};
 
 } // namespace detail
 
@@ -35,12 +40,11 @@ constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>)
  * @return The result of invoking @p f with the evaluated elements of @p t.
  */
 template<typename F, typename Tuple>
-constexpr decltype(auto) apply(F&& f, Tuple&& t)
+constexpr decltype(auto)
+apply(F&& f, Tuple&& t) noexcept(noexcept(std::apply(detail::apply_invoker<F>{std::forward<F>(f)},
+                                                     std::forward<Tuple>(t))))
 {
-  return detail::apply_impl(
-    std::forward<F>(f),
-    std::forward<Tuple>(t),
-    std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Tuple>>>{});
+  return std::apply(detail::apply_invoker<F>{std::forward<F>(f)}, std::forward<Tuple>(t));
 }
 
 } // namespace deferred

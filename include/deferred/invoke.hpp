@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "expression.hpp"
-#include "make_function_object.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -34,9 +33,7 @@ template<typename F, typename... Args>
   }
   else
   {
-    using expression_type =
-      expression_<std::decay_t<decltype(make_function_object(std::forward<F>(f)))>,
-                  make_deferred_t<Args>...>;
+    using expression_type = expression_<std::decay_t<F>, make_deferred_t<Args>...>;
     return expression_type(std::forward<F>(f), std::forward<Args>(args)...);
   }
 }
