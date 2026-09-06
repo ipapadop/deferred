@@ -128,6 +128,14 @@ stored as constants, so ``read_copy`` operates on a copy. Use a pointer,
 original object. Owned constants expose their values as const references, so
 non-const member functions require a pointer or ``std::ref``.
 
+Exception guarantees
+--------------------
+
+Deferred storage, invocation, recursive evaluation, control-flow expressions,
+and visitor traversal propagate ``noexcept`` from the user operations and value
+construction they perform. Operations involving a potentially throwing callable,
+conversion, move, comparison, or visitor remain potentially throwing.
+
 Testing
 ------------
 

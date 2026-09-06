@@ -50,6 +50,22 @@ struct throwing_get_int_t
   }
 };
 
+struct nested_no_throw
+{
+  constexpr get_int_t operator()() const noexcept
+  {
+    return {};
+  }
+};
+
+struct nested_throwing
+{
+  constexpr throwing_get_int_t operator()() const
+  {
+    return {};
+  }
+};
+
 } // namespace
 
 TEST_CASE("invoke functions", "[invoke-function]")
@@ -173,6 +189,12 @@ TEST_CASE("invoke propagates exception specifications", "[invoke-noexcept]")
   auto throwing = deferred::invoke(throwing_get_int_t{}, 42);
   static_assert(!noexcept(throwing()));
   static_assert(!noexcept(std::as_const(throwing)()));
+
+  static_assert(noexcept(deferred::evaluate(no_throw)));
+  static_assert(!noexcept(deferred::evaluate(throwing)));
+  static_assert(noexcept(deferred::recursive_evaluate(nested_no_throw{})));
+  static_assert(!noexcept(deferred::recursive_evaluate(nested_throwing{})));
+  static_assert(noexcept(deferred::recursive_evaluate([]() noexcept { })));
 }
 
 TEST_CASE("invoke expression", "[invoke-expression]")

@@ -3,10 +3,37 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "deferred/constant.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
 
-#include <vector>
+namespace {
+
+struct throwing_move
+{
+  throwing_move()                     = default;
+  throwing_move(throwing_move const&) = delete;
+  throwing_move(throwing_move&&) noexcept(false);
+};
+
+} // namespace
+
+static_assert(!noexcept(std::declval<deferred::constant_<throwing_move>&&>()()));
+
+TEST_CASE("constant from array decays without throwing", "[constant-array-decay]")
+{
+  static_assert(noexcept(deferred::evaluate("hello")));
+  static_assert(noexcept(deferred::constant("hello")));
+
+  auto c = deferred::constant("hello");
+
+  static_assert(std::is_same_v<decltype(c)::value_type, char const*>);
+  CHECK(std::string(c()) == "hello");
+}
 
 TEST_CASE("constant from lvalue", "[constant-lvalue]")
 {

@@ -15,6 +15,10 @@ TEST_CASE("arithmetic operators", "[arithmetic-operators]")
   auto c1 = deferred::constant(i);
   auto c2 = deferred::constant(j);
 
+  static_assert(noexcept(c1 + c2));
+  static_assert(noexcept(+c1));
+  static_assert(noexcept(c1 << c2));
+
   SECTION("x+y")
   {
     auto e1 = c1 + c2;

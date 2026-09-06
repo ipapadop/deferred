@@ -88,6 +88,20 @@ struct lvalue_visitor
   void operator()(T const&, std::size_t) && = delete;
 };
 
+struct no_throw_visitor
+{
+  template<typename T>
+  constexpr void operator()(T const&, std::size_t) const noexcept
+  { }
+};
+
+struct throwing_visitor
+{
+  template<typename T>
+  void operator()(T const&, std::size_t) const
+  { }
+};
+
 } // namespace
 
 TEST_CASE("constant visitor treats the stored value as data", "[visitor]")
@@ -119,6 +133,15 @@ TEST_CASE("temporary visitor is reused as an lvalue", "[visitor]")
   expression.visit(lvalue_visitor{&visited_nodes});
 
   CHECK(visited_nodes == 3);
+}
+
+TEST_CASE("visitor propagates exception specifications", "[visitor]")
+{
+  auto variable   = deferred::variable(42);
+  auto expression = variable + 1;
+
+  static_assert(noexcept(expression.visit(no_throw_visitor{})));
+  static_assert(!noexcept(expression.visit(throwing_visitor{})));
 }
 
 TEST_CASE("conditional visitor includes branch nodes in preorder", "[visitor]")

@@ -10,6 +10,7 @@
 
 #include "apply.hpp"
 #include "constant.hpp"
+#include "detail/is_nothrow_visitable.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -43,7 +44,9 @@ public:
    */
   template<typename Op, typename... Ex>
     requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
-  constexpr explicit expression_(Op&& op, Ex&&... ex) :
+  constexpr explicit expression_(Op&& op, Ex&&... ex) noexcept(
+    std::is_nothrow_constructible_v<operator_type, Op&&>
+    && std::is_nothrow_constructible_v<expression_types, Ex&&...>) :
     m_op(std::forward<Op>(op)), m_expressions(std::forward<Ex>(ex)...)
   { }
 
@@ -86,6 +89,7 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, expression_, expression_types>)
   {
     v(*this, nesting);
     std::apply([&v, nesting](auto const&... args) { (args.visit(v, nesting + 1), ...); },

@@ -4,8 +4,11 @@
 #ifndef DEFERRED_VARIABLE_HPP
 #define DEFERRED_VARIABLE_HPP
 
+#include <tuple>
 #include <type_traits>
 #include <utility>
+
+#include "detail/is_nothrow_visitable.hpp"
 
 #include "evaluate.hpp"
 
@@ -32,14 +35,16 @@ public:
    * @brief Constructs a variable_ with a copy of @p t.
    * @param t Value to initialize the variable with.
    */
-  constexpr explicit variable_(T const& t) : m_t(t)
+  constexpr explicit variable_(T const& t) noexcept(std::is_nothrow_copy_constructible_v<T>) :
+    m_t(t)
   { }
 
   /**
    * @brief Constructs a variable_ by moving @p t.
    * @param t Value to initialize the variable with.
    */
-  constexpr explicit variable_(T&& t) noexcept : m_t(std::move(t))
+  constexpr explicit variable_(T&& t) noexcept(std::is_nothrow_move_constructible_v<T>) :
+    m_t(std::move(t))
   { }
 
   variable_(variable_ const&) = delete;
@@ -49,14 +54,14 @@ public:
   variable_& operator=(variable_&&)      = delete;
 
   /// @brief Assigns a value to the variable.
-  constexpr variable_& operator=(T const& t)
+  constexpr variable_& operator=(T const& t) noexcept(std::is_nothrow_copy_assignable_v<T>)
   {
     m_t = t;
     return *this;
   }
 
   /// @copydoc variable_::operator=(T const&)
-  constexpr variable_& operator=(T&& t) noexcept
+  constexpr variable_& operator=(T&& t) noexcept(std::is_nothrow_move_assignable_v<T>)
   {
     m_t = std::move(t);
     return *this;
@@ -75,7 +80,7 @@ public:
   }
 
   /// @copydoc variable_::operator()() const& noexcept
-  [[nodiscard]] constexpr T operator()() && noexcept
+  [[nodiscard]] constexpr T operator()() && noexcept(std::is_nothrow_move_constructible_v<T>)
   {
     return std::move(m_t);
   }
@@ -88,6 +93,7 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, variable_, std::tuple<>>)
   {
     v(*this, nesting);
   }
@@ -99,7 +105,7 @@ public:
  * @return A newly constructed variable.
  */
 template<typename T>
-[[nodiscard]] constexpr auto variable() noexcept
+[[nodiscard]] constexpr auto variable() noexcept(std::is_nothrow_default_constructible_v<T>)
 {
   return variable_<T>{};
 }
@@ -115,7 +121,8 @@ template<typename T>
  * @return A variable representing the evaluated type of @p t.
  */
 template<typename T>
-[[nodiscard]] constexpr auto variable(T&& t)
+[[nodiscard]] constexpr auto
+variable(T&& t) noexcept(detail::make_node_is_nothrow<variable_, T&&>())
 {
   using result_type = std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
   return variable_<result_type>(recursive_evaluate(std::forward<T>(t)));

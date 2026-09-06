@@ -11,6 +11,37 @@
 
 namespace deferred {
 
+namespace detail {
+
+/**
+ * @brief Expression type produced by a deferred invocation.
+ * @tparam F Callable argument type.
+ * @tparam Args Invocation argument types.
+ */
+template<typename F, typename... Args>
+using invoke_expression_t = expression_<std::decay_t<F>, make_deferred_t<Args>...>;
+
+/**
+ * @brief Checks whether constructing a deferred invocation cannot throw.
+ * @tparam F Callable argument type.
+ * @tparam Args Invocation argument types.
+ * @return @c true when storing the callable and arguments cannot throw.
+ */
+template<typename F, typename... Args>
+consteval bool invoke_is_nothrow()
+{
+  if constexpr (Deferred<F>)
+  {
+    return std::is_nothrow_constructible_v<std::decay_t<F>, F&&>;
+  }
+  else
+  {
+    return std::is_nothrow_constructible_v<invoke_expression_t<F, Args...>, F&&, Args&&...>;
+  }
+}
+
+} // namespace detail
+
 /**
  * @brief Invoke the callable object @p f with the parameters @p args....
  *
@@ -24,7 +55,8 @@ namespace deferred {
  * @return An expression representing the invocation.
  */
 template<typename F, typename... Args>
-[[nodiscard]] constexpr auto invoke(F&& f, Args&&... args)
+[[nodiscard]] constexpr auto
+invoke(F&& f, Args&&... args) noexcept(detail::invoke_is_nothrow<F, Args...>())
 {
   if constexpr (Deferred<F>)
   {
@@ -33,8 +65,7 @@ template<typename F, typename... Args>
   }
   else
   {
-    using expression_type = expression_<std::decay_t<F>, make_deferred_t<Args>...>;
-    return expression_type(std::forward<F>(f), std::forward<Args>(args)...);
+    return detail::invoke_expression_t<F, Args...>(std::forward<F>(f), std::forward<Args>(args)...);
   }
 }
 
