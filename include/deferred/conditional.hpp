@@ -14,6 +14,7 @@
 #include "detail/is_nothrow_evaluable.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/map_result.hpp"
+#include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
 
@@ -221,8 +222,8 @@ private:
   [[no_unique_address]] Else m_else;
 
   template<std::size_t I = 0, typename Self>
-  static constexpr result_type evaluate_impl(Self&& self) noexcept(
-    detail::conditional_evaluation_is_nothrow<result_type, Else, Self, Branches...>())
+  static constexpr result_type
+  evaluate_impl(Self&& self) noexcept(detail::is_nothrow_evaluable_v<Self>)
   {
     if constexpr (I < sizeof...(Branches))
     {
@@ -357,7 +358,7 @@ public:
     noexcept(detail::is_nothrow_visitable_v<Visitor, conditional_expression, subexpression_types>)
   {
     v(*this, nesting);
-    std::apply([&](auto const&... branch) { (branch.visit(v, nesting + 1), ...); }, m_branches);
+    detail::visit_children(m_branches, v, nesting + 1);
     if constexpr (finalized)
     {
       m_else.visit(v, nesting + 1);

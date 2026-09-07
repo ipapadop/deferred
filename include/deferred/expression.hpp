@@ -8,9 +8,10 @@
 #include <type_traits>
 #include <utility>
 
-#include "apply.hpp"
 #include "constant.hpp"
+#include "detail/apply_evaluated.hpp"
 #include "detail/is_nothrow_visitable.hpp"
+#include "detail/visit_children.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -59,16 +60,16 @@ public:
   expression_& operator=(expression_&&)      = delete;
 
   [[nodiscard]] constexpr decltype(auto)
-  operator()() const noexcept(noexcept(deferred::apply(m_op, m_expressions)))
+  operator()() const noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
-    return deferred::apply(m_op, m_expressions);
+    return detail::apply_evaluated(m_op, m_expressions);
   }
 
   /// @copydoc operator()() const
   [[nodiscard]] constexpr decltype(auto)
-  operator()() noexcept(noexcept(deferred::apply(m_op, m_expressions)))
+  operator()() noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
-    return deferred::apply(m_op, m_expressions);
+    return detail::apply_evaluated(m_op, m_expressions);
   }
 
   [[nodiscard]] constexpr operator_type const& operator_() const noexcept
@@ -92,8 +93,7 @@ public:
     noexcept(detail::is_nothrow_visitable_v<Visitor, expression_, expression_types>)
   {
     v(*this, nesting);
-    std::apply([&v, nesting](auto const&... args) { (args.visit(v, nesting + 1), ...); },
-               m_expressions);
+    detail::visit_children(m_expressions, v, nesting + 1);
   }
 };
 

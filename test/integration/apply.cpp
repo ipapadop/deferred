@@ -34,7 +34,7 @@ TEST_CASE("apply with constants", "[apply-constants]")
   auto c2 = deferred::constant(10);
   auto ex = c1 + c2;
 
-  CHECK(deferred::apply(std::plus<int>{}, std::make_tuple(c1, c2)) == ex());
+  CHECK(deferred::apply(std::plus<int>{}, std::make_tuple(c1, c2))() == ex());
 }
 
 TEST_CASE("invoke member pointers", "[invoke-member-pointer]")

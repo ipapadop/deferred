@@ -10,14 +10,15 @@ set(SOURCES
   variable.cpp
   visitor.cpp
   while.cpp
-  detail/deduce_homogenized_type.cpp
+  detail/apply_evaluated.cpp
   detail/expression_reference.cpp
   detail/homogenized_type.cpp
   detail/is_nothrow_evaluable.cpp
   detail/is_nothrow_visitable.cpp
   detail/map_result.cpp
   detail/map_void.cpp
-  detail/unique_list.cpp)
+  detail/unique_list.cpp
+  detail/visit_children.cpp)
 
 add_executable(unit_tests ${SOURCES})
 target_compile_options(unit_tests

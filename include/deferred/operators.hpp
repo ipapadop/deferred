@@ -19,7 +19,7 @@ struct unary_plus
 {
   /// @brief Applies unary plus to @p value.
   template<typename T>
-  constexpr decltype(auto) operator()(T&& value) const noexcept(noexcept(+std::forward<T>(value)))
+  constexpr auto operator()(T&& value) const noexcept(noexcept(+std::forward<T>(value)))
   {
     return +std::forward<T>(value);
   }
@@ -30,7 +30,7 @@ struct pre_increment
 {
   /// @brief Prefix-increments @p value.
   template<typename T>
-  constexpr decltype(auto) operator()(T&& value) const noexcept(noexcept(++std::forward<T>(value)))
+  constexpr auto operator()(T&& value) const noexcept(noexcept(++std::forward<T>(value)))
   {
     return ++std::forward<T>(value);
   }
@@ -41,7 +41,7 @@ struct post_increment
 {
   /// @brief Postfix-increments @p value.
   template<typename T>
-  constexpr decltype(auto) operator()(T&& value) const noexcept(noexcept(std::forward<T>(value)++))
+  constexpr auto operator()(T&& value) const noexcept(noexcept(std::forward<T>(value)++))
   {
     return std::forward<T>(value)++;
   }
@@ -52,7 +52,7 @@ struct pre_decrement
 {
   /// @brief Prefix-decrements @p value.
   template<typename T>
-  constexpr decltype(auto) operator()(T&& value) const noexcept(noexcept(--std::forward<T>(value)))
+  constexpr auto operator()(T&& value) const noexcept(noexcept(--std::forward<T>(value)))
   {
     return --std::forward<T>(value);
   }
@@ -63,7 +63,7 @@ struct post_decrement
 {
   /// @brief Postfix-decrements @p value.
   template<typename T>
-  constexpr decltype(auto) operator()(T&& value) const noexcept(noexcept(std::forward<T>(value)--))
+  constexpr auto operator()(T&& value) const noexcept(noexcept(std::forward<T>(value)--))
   {
     return std::forward<T>(value)--;
   }

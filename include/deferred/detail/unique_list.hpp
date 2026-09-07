@@ -34,12 +34,25 @@ struct unique_list<T, Ts...>
   using tail = typename unique_list<Ts...>::type;
 
   /**
-   * @brief Resulting type list after potentially prepending @p T.
+   * @brief Prepends @p T to a tuple of types.
    */
-  using type = std::conditional_t<(std::is_same_v<T, Ts> || ...),
-                                  tail,
-                                  decltype(std::tuple_cat(std::declval<std::tuple<T>>(),
-                                                          std::declval<tail>()))>;
+  template<typename Tuple>
+  struct prepend;
+
+  /// @copydoc prepend
+  template<typename... Us>
+  struct prepend<std::tuple<Us...>>
+  {
+    using type = std::tuple<T, Us...>;
+  };
+
+  /**
+   * @brief Resulting type list after potentially prepending @p T.
+   *
+   * The discarded branch stays uninstantiated, so a duplicate costs no tuple concatenation.
+   */
+  using type = typename std::
+    conditional_t<(std::is_same_v<T, Ts> || ...), std::type_identity<tail>, prepend<tail>>::type;
 };
 
 } // namespace deferred::detail

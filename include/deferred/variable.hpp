@@ -124,8 +124,7 @@ template<typename T>
 [[nodiscard]] constexpr auto
 variable(T&& t) noexcept(detail::make_node_is_nothrow<variable_, T&&>())
 {
-  using result_type = std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
-  return variable_<result_type>(recursive_evaluate(std::forward<T>(t)));
+  return variable_<detail::node_result_t<T&&>>(recursive_evaluate(std::forward<T>(t)));
 }
 
 } // namespace deferred

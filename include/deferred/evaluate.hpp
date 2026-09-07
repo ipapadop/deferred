@@ -113,6 +113,13 @@ consteval bool evaluation_result_is_nothrow()
 }
 
 /**
+ * @brief Result type stored by a leaf node created from an argument of type @p T.
+ * @tparam T Node argument type.
+ */
+template<typename T>
+using node_result_t = std::decay_t<decltype(recursive_evaluate(std::declval<T>()))>;
+
+/**
  * @brief Checks whether creating a leaf node from an argument cannot throw.
  * @tparam Node Leaf node template, such as @ref constant_ or @ref variable_.
  * @tparam T Node argument type.
@@ -122,9 +129,8 @@ template<template<typename> class Node, typename T>
 consteval bool make_node_is_nothrow()
 {
   using evaluated_type = decltype(recursive_evaluate(std::declval<T>()));
-  using result_type    = std::decay_t<evaluated_type>;
   return noexcept(recursive_evaluate(std::declval<T>()))
-         && std::is_nothrow_constructible_v<Node<result_type>, evaluated_type>;
+         && std::is_nothrow_constructible_v<Node<node_result_t<T>>, evaluated_type>;
 }
 
 } // namespace detail

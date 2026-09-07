@@ -106,7 +106,9 @@ Or simply copy the `include/deferred` directory to your project's include path.
     does not belong in `detail/` — put it in that root header, inside `namespace detail`.
 - **`detail/` Header Contents**: Each header in `detail/` defines exactly one entity and is named
   after it. A trait's primary template, its specializations, and its `_v`/`_t` alias count as one
-  entity and stay together.
+  entity and stay together, as does any helper that exists solely to implement that entity — a
+  function object handed to an algorithm, a `deduce_*` metafunction. Give a helper its own header
+  only when it carries meaning independently and could serve another caller.
 - **`detail/` Tests**: Every header in `detail/` has a matching test file at
   `test/unit/detail/<name>.cpp`, giving a 1:1 pairing with no orphans in either direction.
 - **CI**: GitHub Actions workflow (`.github/workflows/c-cpp.yml`) builds the project on Ubuntu, Windows (MSVC), and macOS.

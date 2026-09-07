@@ -128,6 +128,25 @@ stored as constants, so ``read_copy`` operates on a copy. Use a pointer,
 original object. Owned constants expose their values as const references, so
 non-const member functions require a pointer or ``std::ref``.
 
+Applying a tuple of arguments
+-----------------------------
+
+``deferred::apply`` is the tuple form of ``deferred::invoke``, standing in the
+same relation to it as ``std::apply`` does to ``std::invoke``. It *builds* a
+deferred expression rather than evaluating one:
+
+```C++
+auto from_pack  = deferred::invoke(std::plus<>{}, 1, 2);
+auto from_tuple = deferred::apply(std::plus<>{}, std::make_tuple(1, 2));
+
+// identical types; neither has run yet
+static_assert(std::is_same_v<decltype(from_pack), decltype(from_tuple)>);
+int result = from_tuple();  // 3
+```
+
+Everything ``invoke`` supports carries over, including member pointers and the
+storage rules described above.
+
 Exception guarantees
 --------------------
 

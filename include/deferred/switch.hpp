@@ -13,6 +13,7 @@
 #include "detail/is_nothrow_evaluable.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/map_result.hpp"
+#include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
 
@@ -380,7 +381,7 @@ public:
   {
     v(*this, nesting);
     m_condition.visit(v, nesting + 1);
-    std::apply([&](auto const&... args) { (args.visit(v, nesting + 1), ...); }, m_cases);
+    detail::visit_children(m_cases, v, nesting + 1);
   }
 };
 
