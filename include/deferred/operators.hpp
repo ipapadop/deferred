@@ -74,7 +74,7 @@ struct shift_left
 {
   /// @brief Shifts @p left left by @p right.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& left, U&& right) const
+  constexpr auto operator()(T&& left, U&& right) const
     noexcept(noexcept(std::forward<T>(left) << std::forward<U>(right)))
   {
     return std::forward<T>(left) << std::forward<U>(right);
@@ -86,7 +86,7 @@ struct shift_right
 {
   /// @brief Shifts @p left right by @p right.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& left, U&& right) const
+  constexpr auto operator()(T&& left, U&& right) const
     noexcept(noexcept(std::forward<T>(left) >> std::forward<U>(right)))
   {
     return std::forward<T>(left) >> std::forward<U>(right);

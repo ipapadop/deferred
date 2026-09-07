@@ -10,6 +10,46 @@
 #include "deferred/operators.hpp"
 #include "deferred/variable.hpp"
 
+namespace {
+
+/// @brief Chainable sink whose shift operators return a reference to themselves.
+struct sink
+{
+  int total = 0;
+
+  sink& operator<<(int value)
+  {
+    total += value;
+    return *this;
+  }
+
+  sink& operator>>(int value)
+  {
+    total -= value;
+    return *this;
+  }
+};
+
+sink make_sink()
+{
+  return sink{100};
+}
+
+} // namespace
+
+TEST_CASE("shift operators return a value, not a reference to a temporary", "[shift-operators]")
+{
+  // The left operand evaluates to a prvalue, so a propagated reference would
+  // dangle once the temporary holding it dies.
+  auto shifted_left = deferred::invoke(make_sink) << deferred::constant(7);
+  STATIC_CHECK(!std::is_reference_v<decltype(shifted_left())>);
+  CHECK(shifted_left().total == 107);
+
+  auto shifted_right = deferred::invoke(make_sink) >> deferred::constant(7);
+  STATIC_CHECK(!std::is_reference_v<decltype(shifted_right())>);
+  CHECK(shifted_right().total == 93);
+}
+
 TEST_CASE("arithmetic operators", "[arithmetic-operators]")
 {
   auto i = 41;
