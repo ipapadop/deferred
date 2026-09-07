@@ -19,9 +19,10 @@ int foo()
 TEST_CASE("switch with constants", "[switch-constants]")
 {
   auto c  = deferred::constant(10);
-  auto ex = deferred::switch_(c,
-                              deferred::default_(std::string("unknown")),
-                              deferred::case_(10, [] { return std::string("10"); }));
+  auto ex = deferred::switch_(c)
+              .case_(10)
+              .then_([] { return std::string("10"); })
+              .default_(std::string("unknown"));
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == "10");
@@ -33,10 +34,12 @@ TEST_CASE("switch with constants", "[switch-constants]")
 TEST_CASE("switch with c-strings", "[switch-c-strings]")
 {
   auto var = deferred::variable<int>();
-  auto ex  = deferred::switch_(var,
-                               deferred::default_("unknown"),
-                               deferred::case_(10, [] { return "10"; }),
-                               deferred::case_(12, [] { return "12"; }));
+  auto ex  = deferred::switch_(var)
+               .case_(10)
+               .then_([] { return "10"; })
+               .case_(12)
+               .then_([] { return "12"; })
+               .default_("unknown");
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   var = 10;
@@ -48,11 +51,11 @@ TEST_CASE("switch with c-strings", "[switch-c-strings]")
 
 TEST_CASE("switch checking against function", "[switch-function]")
 {
-  auto c = deferred::constant(foo());
-  auto ex =
-    deferred::switch_(c,
-                      deferred::default_(std::string("unknown")),
-                      deferred::case_([] { return foo(); }, [] { return std::string("foo"); }));
+  auto c  = deferred::constant(foo());
+  auto ex = deferred::switch_(c)
+              .case_([] { return foo(); })
+              .then_([] { return std::string("foo"); })
+              .default_(std::string("unknown"));
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
   CHECK(ex() == "foo");
@@ -62,9 +65,7 @@ TEST_CASE("switch with expressions", "[switch-expressions]")
 {
   auto condition = deferred::variable<int>();
   auto label     = deferred::variable<int>();
-  auto ex        = deferred::switch_(condition,
-                                     deferred::default_(condition + 1),
-                                     deferred::case_(label, condition + 2));
+  auto ex = deferred::switch_(condition).case_(label).then_(condition + 2).default_(condition + 1);
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
 
@@ -77,16 +78,18 @@ TEST_CASE("switch with expressions", "[switch-expressions]")
   CHECK(ex() == 2);
 }
 
-TEST_CASE("append case to switch", "[switch-append]")
+TEST_CASE("cases appended to switch", "[switch-append]")
 {
   auto var           = deferred::variable<int>();
-  auto ex            = deferred::switch_(var,
-                                         deferred::default_("unknown"),
-                                         deferred::case_(10, [] { return "10"; }),
-                                         deferred::case_(12, [] { return "12"; }));
+  auto ex            = deferred::switch_(var)
+                         .case_(10)
+                         .then_([] { return "10"; })
+                         .case_(12)
+                         .then_([] { return "12"; })
+                         .default_("unknown");
   auto const& source = ex;
-  auto expanded      = source.append(deferred::case_(10, [] { return "new 10"; }),
-                                     deferred::case_(11, [] { return "11"; }));
+  auto expanded =
+    source.case_(10).then_([] { return "new 10"; }).case_(11).then_([] { return "11"; });
 
   var = 10;
   CHECK(std::strcmp(expanded(), "10") == 0);

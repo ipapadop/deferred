@@ -146,7 +146,7 @@ TEST_CASE("visitor propagates exception specifications", "[visitor]")
 
 TEST_CASE("conditional visitor includes branch nodes in preorder", "[visitor]")
 {
-  auto expression = deferred::if_(false, 1).else_if(true, 2).else_(3);
+  auto expression = deferred::if_(false).then_(1).else_if_(true).then_(2).else_(3);
   std::vector<std::pair<node_kind, std::size_t>> visited;
 
   expression.visit([&](auto const& node, std::size_t nesting) {
@@ -184,7 +184,7 @@ TEST_CASE("expression visitor traverses operands but not the operator", "[visito
 
 TEST_CASE("while visitor traverses condition before body", "[visitor]")
 {
-  auto expression = deferred::while_(false, 1);
+  auto expression = deferred::while_(false).do_(1);
   std::vector<std::pair<node_kind, std::size_t>> visited;
 
   expression.visit([&](auto const& node, std::size_t nesting) {
@@ -198,10 +198,47 @@ TEST_CASE("while visitor traverses condition before body", "[visitor]")
                        entry{node_kind::constant, 1}});
 }
 
+TEST_CASE("switch visitor skips the default of an unfinalized switch", "[visitor]")
+{
+  auto expression = deferred::switch_(1).case_(1).then_(10);
+  std::vector<std::pair<node_kind, std::size_t>> visited;
+
+  expression.visit([&](auto const& node, std::size_t nesting) {
+    visited.emplace_back(node_kind_of_v<decltype(node)>, nesting);
+  });
+
+  using entry = std::pair<node_kind, std::size_t>;
+  CHECK(visited
+        == std::vector{entry{node_kind::switch_, 0},
+                       entry{node_kind::constant, 1},
+                       entry{node_kind::case_, 1},
+                       entry{node_kind::constant, 2},
+                       entry{node_kind::constant, 2}});
+}
+
+TEST_CASE("conditional visitor skips the else of an unfinalized chain", "[visitor]")
+{
+  auto expression = deferred::if_(false).then_(1).else_if_(true).then_(2);
+  std::vector<std::pair<node_kind, std::size_t>> visited;
+
+  expression.visit([&](auto const& node, std::size_t nesting) {
+    visited.emplace_back(node_kind_of_v<decltype(node)>, nesting);
+  });
+
+  using entry = std::pair<node_kind, std::size_t>;
+  CHECK(visited
+        == std::vector{entry{node_kind::conditional, 0},
+                       entry{node_kind::branch, 1},
+                       entry{node_kind::constant, 2},
+                       entry{node_kind::constant, 2},
+                       entry{node_kind::branch, 1},
+                       entry{node_kind::constant, 2},
+                       entry{node_kind::constant, 2}});
+}
+
 TEST_CASE("switch visitor includes default and case wrappers", "[visitor]")
 {
-  auto expression =
-    deferred::switch_(1, deferred::default_(0), deferred::case_(1, 10), deferred::case_(2, 20));
+  auto expression = deferred::switch_(1).case_(1).then_(10).case_(2).then_(20).default_(0);
   std::vector<std::pair<node_kind, std::size_t>> visited;
 
   expression.visit([&](auto const& node, std::size_t nesting) {

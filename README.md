@@ -5,7 +5,7 @@ Library for creating deferred evaluation expressions in C++23.
 ``deferred`` provides:
 - functions to declare constants and variables,
 - functions to create deferred evaluation expressions from functions,
-- expandable deferred switch expressions,
+- deferred ``if``, ``switch`` and ``while`` built from chained expressions,
 - ``deferred``-enabled commonly used operators.
 
 Requirements
@@ -82,6 +82,42 @@ int main()
 ```
 
 Examples can be found in the ``examples/`` directory. They are compiled by default.
+
+Control flow
+------------
+
+Conditionals, switches and loops are built one piece at a time; every construct
+alternates between a pending builder and a complete expression:
+
+```C++
+auto ex = deferred::if_(cond1).then_(a)
+            .else_if_(cond2).then_(b)
+            .else_(c);
+
+auto s = deferred::switch_(var)
+           .case_(10).then_([] { return "10"; })
+           .case_(12).then_([] { return "12"; })
+           .default_("unknown");
+
+auto loop = deferred::while_(n != 0).do_(--n);
+```
+
+An ``if_`` chain without ``else_``, and a ``switch_`` without ``default_``, are
+usable expressions that return a ``std::optional`` (or nothing, when the branches
+return ``void``).
+
+Branch, case and default bodies are evaluated with ``deferred::evaluate``, which
+keeps evaluating while the result is itself a deferred expression. A body that
+returns a deferred expression therefore contributes the value that expression
+evaluates to, and the result of a construct is always a value -- never an
+expression type, and never a reference into a subexpression.
+
+A case may be added to a switch expression that already has a ``default_``; it is
+checked after the cases already present and before the default:
+
+```C++
+auto expanded = s.case_(11).then_([] { return "11"; });
+```
 
 Visiting expressions
 --------------------

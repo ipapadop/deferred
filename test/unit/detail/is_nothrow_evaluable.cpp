@@ -47,7 +47,7 @@ TEST_CASE("is_nothrow_evaluable_v reads through to the specialization", "[is-not
 
 TEST_CASE("is_nothrow_evaluable matches a conditional's own noexcept", "[is-nothrow-evaluable]")
 {
-  auto ex          = deferred::if_(true, 1).else_(2);
+  auto ex          = deferred::if_(true).then_(1).else_(2);
   using expression = decltype(ex);
 
   STATIC_CHECK(deferred::detail::is_nothrow_evaluable_v<expression const&> == noexcept(ex()));
@@ -56,7 +56,7 @@ TEST_CASE("is_nothrow_evaluable matches a conditional's own noexcept", "[is-noth
 
 TEST_CASE("is_nothrow_evaluable tracks a throwing conditional condition", "[is-nothrow-evaluable]")
 {
-  auto ex          = deferred::if_(deferred::constant(throwing_boolean{}), 1).else_(2);
+  auto ex          = deferred::if_(deferred::constant(throwing_boolean{})).then_(1).else_(2);
   using expression = decltype(ex);
 
   STATIC_CHECK(!deferred::detail::is_nothrow_evaluable_v<expression const&>);
@@ -66,7 +66,7 @@ TEST_CASE("is_nothrow_evaluable tracks a throwing conditional condition", "[is-n
 TEST_CASE("is_nothrow_evaluable distinguishes const and mutable references",
           "[is-nothrow-evaluable]")
 {
-  auto ex          = deferred::if_(true, 1).else_(2);
+  auto ex          = deferred::if_(true).then_(1).else_(2);
   using expression = decltype(ex);
 
   STATIC_CHECK(deferred::detail::is_nothrow_evaluable_v<expression&>);
@@ -75,7 +75,7 @@ TEST_CASE("is_nothrow_evaluable distinguishes const and mutable references",
 
 TEST_CASE("is_nothrow_evaluable matches a switch's own noexcept", "[is-nothrow-evaluable]")
 {
-  auto ex          = deferred::switch_(1, deferred::default_(0), deferred::case_(1, 10));
+  auto ex          = deferred::switch_(1).case_(1).then_(10).default_(0);
   using expression = decltype(ex);
 
   STATIC_CHECK(deferred::detail::is_nothrow_evaluable_v<expression const&> == noexcept(ex()));

@@ -18,7 +18,9 @@ set(SOURCES
   detail/is_nothrow_visitable.cpp
   detail/map_result.cpp
   detail/map_void.cpp
+  detail/no_match_is_nothrow.cpp
   detail/unique_list.cpp
+  detail/unmatched_result.cpp
   detail/visit_children.cpp)
 
 add_executable(unit_tests ${SOURCES})

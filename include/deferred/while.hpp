@@ -5,6 +5,7 @@
 #define DEFERRED_WHILE_HPP
 
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "detail/is_nothrow_visitable.hpp"
@@ -84,27 +85,71 @@ public:
 };
 
 /**
- * @brief Creates a @c deferred while that calls @p body while @p condition is @c true.
+ * @brief While loop waiting for its body expression.
+ * @tparam ConditionExpression Type of the condition expression.
+ */
+template<Deferred ConditionExpression>
+class while_builder
+{
+  [[no_unique_address]] ConditionExpression m_condition;
+
+public:
+  /**
+   * @brief Constructs a while_builder.
+   * @tparam Condition Type of the condition expression.
+   * @param condition Condition expression awaiting a body expression.
+   */
+  template<typename Condition>
+    requires(!std::is_same_v<std::remove_cvref_t<Condition>, while_builder>)
+  constexpr explicit while_builder(Condition&& condition) noexcept(
+    std::is_nothrow_constructible_v<ConditionExpression, Condition&&>) :
+    m_condition(std::forward<Condition>(condition))
+  { }
+
+  /**
+   * @brief Completes the loop with its body expression.
+   * @tparam BodyExpression Type of the body expression.
+   * @param body Body expression.
+   * @return A @ref while_expression capturing the condition and body.
+   */
+  template<typename BodyExpression>
+  [[nodiscard]] constexpr auto do_(BodyExpression&& body) &&
+  {
+    using body_expression = make_deferred_t<BodyExpression>;
+    return while_expression<ConditionExpression, body_expression>(
+      std::forward<ConditionExpression>(m_condition),
+      std::forward<BodyExpression>(body));
+  }
+
+  /// @copydoc do_
+  template<typename BodyExpression>
+  [[nodiscard]] constexpr auto do_(BodyExpression&& body) const&
+  {
+    using body_expression = make_deferred_t<BodyExpression>;
+    return while_expression<ConditionExpression, body_expression>(
+      m_condition,
+      std::forward<BodyExpression>(body));
+  }
+};
+
+/**
+ * @brief Starts a @c deferred while loop that runs while @p condition is @c true.
+ *
+ * Example:
+ * @code
+ * auto ex = while_(cond).do_(body);
+ * @endcode
  *
  * @tparam ConditionExpression Type of the condition expression.
- * @tparam BodyExpression Type of the body expression.
  * @param condition Condition expression.
- * @param body Body expression.
- * @return A @ref while_expression capturing the condition and body.
+ * @return A @ref while_builder awaiting the body expression.
  */
-template<typename ConditionExpression, typename BodyExpression>
-[[nodiscard]] constexpr auto
-while_(ConditionExpression&& condition, BodyExpression&& body) noexcept(
-  std::is_nothrow_constructible_v<
-    while_expression<make_deferred_t<ConditionExpression>, make_deferred_t<BodyExpression>>,
-    ConditionExpression&&,
-    BodyExpression&&>)
+template<typename ConditionExpression>
+[[nodiscard]] constexpr auto while_(ConditionExpression&& condition) noexcept(
+  std::is_nothrow_constructible_v<make_deferred_t<ConditionExpression>, ConditionExpression&&>)
 {
-  using condition_expression = make_deferred_t<ConditionExpression>;
-  using body_expression      = make_deferred_t<BodyExpression>;
-  return while_expression<condition_expression, body_expression>(
-    std::forward<ConditionExpression>(condition),
-    std::forward<BodyExpression>(body));
+  return while_builder<make_deferred_t<ConditionExpression>>(
+    std::forward<ConditionExpression>(condition));
 }
 
 } // namespace deferred
