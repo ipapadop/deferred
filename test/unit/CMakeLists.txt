@@ -11,6 +11,7 @@ set(SOURCES
   visitor.cpp
   while.cpp
   detail/apply_evaluated.cpp
+  detail/callable_storage.cpp
   detail/expression_reference.cpp
   detail/homogenized_type.cpp
   detail/is_nothrow_evaluable.cpp

@@ -8,6 +8,8 @@
 #include <tuple>
 #include <utility>
 
+#include "callable_storage.hpp"
+
 namespace deferred::detail {
 
 /**
@@ -21,13 +23,15 @@ namespace deferred::detail {
 template<typename F>
 struct apply_invoker
 {
-  F&& f;
+  callable_storage_t<F> f;
 
   template<typename... Expressions>
   constexpr decltype(auto) operator()(Expressions&&... expressions) const
-    noexcept(noexcept(std::invoke(std::forward<F>(f), std::forward<Expressions>(expressions)()...)))
+    noexcept(noexcept(std::invoke(std::declval<callable_storage_t<F>>(),
+                                  std::forward<Expressions>(expressions)()...)))
   {
-    return std::invoke(std::forward<F>(f), std::forward<Expressions>(expressions)()...);
+    return std::invoke(static_cast<callable_storage_t<F>>(f),
+                       std::forward<Expressions>(expressions)()...);
   }
 };
 

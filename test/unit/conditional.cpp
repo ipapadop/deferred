@@ -5,6 +5,7 @@
 
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <variant>
 
 #include "deferred/conditional.hpp"
@@ -112,7 +113,10 @@ TEST_CASE("if_ with void return", "[if-void]")
 TEST_CASE("if_ with constexpr", "[if-constexpr]")
 {
   constexpr auto ex = deferred::if_(true, 42);
-  static_assert(noexcept(ex()));
+  // Wrapping the result in std::optional is only nothrow where the standard
+  // library says it is: optional's converting constructor has no noexcept
+  // specification, and libc++ does not add one.
+  static_assert(noexcept(ex()) == std::is_nothrow_constructible_v<std::optional<int>, int>);
   static_assert(ex().has_value());
   static_assert(*ex() == 42);
 
