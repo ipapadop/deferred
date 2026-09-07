@@ -3,9 +3,52 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <type_traits>
+
 #include "deferred/constant.hpp"
+#include "deferred/invoke.hpp"
 #include "deferred/operators.hpp"
 #include "deferred/variable.hpp"
+
+namespace {
+
+/// @brief Chainable sink whose shift operators return a reference to themselves.
+struct sink
+{
+  int total = 0;
+
+  sink& operator<<(int value)
+  {
+    total += value;
+    return *this;
+  }
+
+  sink& operator>>(int value)
+  {
+    total -= value;
+    return *this;
+  }
+};
+
+sink make_sink()
+{
+  return sink{100};
+}
+
+} // namespace
+
+TEST_CASE("shift operators return a value, not a reference to a temporary", "[shift-operators]")
+{
+  // The left operand evaluates to a prvalue, so a propagated reference would
+  // dangle once the temporary holding it dies.
+  auto shifted_left = deferred::invoke(make_sink) << deferred::constant(7);
+  STATIC_CHECK(!std::is_reference_v<decltype(shifted_left())>);
+  CHECK(shifted_left().total == 107);
+
+  auto shifted_right = deferred::invoke(make_sink) >> deferred::constant(7);
+  STATIC_CHECK(!std::is_reference_v<decltype(shifted_right())>);
+  CHECK(shifted_right().total == 93);
+}
 
 TEST_CASE("arithmetic operators", "[arithmetic-operators]")
 {
@@ -14,6 +57,10 @@ TEST_CASE("arithmetic operators", "[arithmetic-operators]")
 
   auto c1 = deferred::constant(i);
   auto c2 = deferred::constant(j);
+
+  static_assert(noexcept(c1 + c2));
+  static_assert(noexcept(+c1));
+  static_assert(noexcept(c1 << c2));
 
   SECTION("x+y")
   {
@@ -316,4 +363,58 @@ TEST_CASE("bitwise operators", "[bitwise-operators]")
     auto e2 = c2 >> c1;
     CHECK(e2() == (j >> i));
   }
+}
+
+namespace {
+
+// A type whose ++/--/unary+ return a reference to *this, as is conventional.
+struct counter
+{
+  int value;
+
+  constexpr counter& operator++()
+  {
+    ++value;
+    return *this;
+  }
+
+  constexpr counter& operator--()
+  {
+    --value;
+    return *this;
+  }
+
+  constexpr counter const& operator+() const
+  {
+    return *this;
+  }
+};
+
+} // namespace
+
+TEST_CASE("increment and decrement operators return by value", "[operators-return-by-value]")
+{
+  // The operand yields a prvalue, so a reference result would dangle once the
+  // enclosing evaluation returns. These must decay to a value.
+  auto source = deferred::invoke([] { return counter{1}; });
+
+  STATIC_CHECK(!std::is_reference_v<decltype((++source)())>);
+  STATIC_CHECK(!std::is_reference_v<decltype((--source)())>);
+  STATIC_CHECK(!std::is_reference_v<decltype((+source)())>);
+
+  STATIC_CHECK(std::is_same_v<decltype((++source)()), counter>);
+
+  CHECK((++source)().value == 2);
+  CHECK((--source)().value == 0);
+  CHECK((+source)().value == 1);
+}
+
+TEST_CASE("increment through a variable still updates the original", "[operators-return-by-value]")
+{
+  auto v  = deferred::variable<int>(1);
+  auto ex = ++v;
+
+  CHECK(ex() == 2);
+  CHECK(v() == 2);
+  STATIC_CHECK(!std::is_reference_v<decltype(ex())>);
 }

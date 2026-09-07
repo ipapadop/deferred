@@ -4,8 +4,11 @@
 #ifndef DEFERRED_CONSTANT_HPP
 #define DEFERRED_CONSTANT_HPP
 
+#include <tuple>
 #include <type_traits>
 #include <utility>
+
+#include "detail/is_nothrow_visitable.hpp"
 
 #include "evaluate.hpp"
 
@@ -32,7 +35,8 @@ public:
    * @param u Value to initialize the constant with.
    */
   template<std::convertible_to<T> U>
-  constexpr explicit constant_(U&& u) : m_t(std::forward<U>(u))
+  constexpr explicit constant_(U&& u) noexcept(std::is_nothrow_constructible_v<T, U&&>) :
+    m_t(std::forward<U>(u))
   { }
 
   constant_(constant_ const&) = default;
@@ -48,7 +52,7 @@ public:
   }
 
   /// @copydoc operator()()
-  [[nodiscard]] constexpr T operator()() && noexcept
+  [[nodiscard]] constexpr T operator()() && noexcept(std::is_nothrow_move_constructible_v<T>)
   {
     return std::move(m_t);
   }
@@ -61,8 +65,9 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, constant_, subexpression_types>)
   {
-    std::forward<Visitor>(v)(*this, nesting);
+    v(*this, nesting);
   }
 };
 
@@ -77,10 +82,10 @@ public:
  * @return A constant_ object containing the evaluated value.
  */
 template<typename T>
-[[nodiscard]] constexpr auto constant(T&& t)
+[[nodiscard]] constexpr auto
+constant(T&& t) noexcept(detail::make_node_is_nothrow<constant_, T&&>())
 {
-  using result_type = std::decay_t<decltype(recursive_evaluate(std::forward<T>(t)))>;
-  return constant_<result_type>(recursive_evaluate(std::forward<T>(t)));
+  return constant_<detail::node_result_t<T&&>>(recursive_evaluate(std::forward<T>(t)));
 }
 
 } // namespace deferred

@@ -9,12 +9,19 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/expression_reference.hpp"
+#include "detail/homogenized_type.hpp"
+#include "detail/is_nothrow_evaluable.hpp"
+#include "detail/is_nothrow_visitable.hpp"
 #include "detail/map_result.hpp"
+#include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "type_traits/homogenized_type.hpp"
 
 namespace deferred {
+
+template<typename Else, typename... Branches>
+class conditional_expression;
 
 namespace detail {
 
@@ -58,7 +65,128 @@ struct conditional_branch
   using subexpression_types = std::tuple<Condition, Then>;
   [[no_unique_address]] Condition condition;
   [[no_unique_address]] Then then;
+
+  /**
+   * @brief Visits the conditional branch with a visitor.
+   * @tparam Visitor Type of the visitor.
+   * @param v Visitor.
+   * @param nesting Nesting level.
+   */
+  template<typename Visitor>
+  constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, conditional_branch, subexpression_types>)
+  {
+    v(*this, nesting);
+    condition.visit(v, nesting + 1);
+    then.visit(v, nesting + 1);
+  }
 };
+
+namespace detail {
+
+/** @brief Checks whether evaluating one conditional branch cannot throw. */
+template<typename Result, typename Self, typename Branch>
+consteval bool conditional_branch_is_nothrow()
+{
+  using branch_reference    = expression_reference_t<Self, Branch>;
+  using condition_reference = decltype((std::declval<branch_reference>().condition));
+  using then_reference      = decltype((std::declval<branch_reference>().then));
+  return noexcept(static_cast<bool>(evaluate(std::declval<condition_reference>())))
+         && (std::is_void_v<Result> ? noexcept(evaluate(std::declval<then_reference>()))
+                                    : evaluation_result_is_nothrow<Result, then_reference>());
+}
+
+/** @brief Checks whether evaluating every conditional path cannot throw. */
+template<typename Result, typename Else, typename Self, typename... Branches>
+consteval bool conditional_evaluation_is_nothrow()
+{
+  if constexpr (!(conditional_branch_is_nothrow<Result, Self, Branches>() && ...))
+  {
+    return false;
+  }
+  else if constexpr (std::is_same_v<Else, no_else>)
+  {
+    return std::is_void_v<Result> || std::is_nothrow_constructible_v<Result, std::nullopt_t>;
+  }
+  else
+  {
+    using else_reference = expression_reference_t<Self, Else>;
+    return std::is_void_v<Result> ? noexcept(evaluate(std::declval<else_reference>()))
+                                  : evaluation_result_is_nothrow<Result, else_reference>();
+  }
+}
+
+/** @brief Stores the exception guarantee for a conditional reference type. */
+template<typename Self, typename Else, typename... Branches>
+struct conditional_evaluation_traits
+{
+  using result = typename std::remove_cvref_t<Self>::result_type;
+  static constexpr bool value =
+    conditional_evaluation_is_nothrow<result, Else, Self, Branches...>();
+};
+
+/** @brief Specializes evaluation traits for a const conditional expression. */
+template<typename Else, typename... Branches>
+struct is_nothrow_evaluable<conditional_expression<Else, Branches...> const&> :
+  conditional_evaluation_traits<conditional_expression<Else, Branches...> const&, Else, Branches...>
+{ };
+
+/** @brief Specializes evaluation traits for a mutable conditional expression. */
+template<typename Else, typename... Branches>
+struct is_nothrow_evaluable<conditional_expression<Else, Branches...>&> :
+  conditional_evaluation_traits<conditional_expression<Else, Branches...>&, Else, Branches...>
+{ };
+
+/** @brief Deduces the conditional type for a branch tuple plus any appended branches. */
+template<typename Else, typename Branches, typename... Appended>
+struct conditional_from_branches;
+
+/** @brief Specializes conditional deduction for a branch tuple. */
+template<typename Else, typename... Branches, typename... Appended>
+struct conditional_from_branches<Else, std::tuple<Branches...>, Appended...>
+{
+  using type = conditional_expression<Else, Branches..., Appended...>;
+};
+
+/** @brief The conditional type for a branch tuple plus any appended branches. */
+template<typename Else, typename Branches, typename... Appended>
+using conditional_from_branches_t =
+  typename conditional_from_branches<Else, Branches, Appended...>::type;
+
+/** @brief Type of the branch produced from a condition and a then expression. */
+template<typename Condition, typename Then>
+using branch_t = conditional_branch<make_deferred_t<Condition>, make_deferred_t<Then>>;
+
+/** @brief Appends a branch to a conditional expression's branch tuple. */
+template<typename Else, typename Branches, typename C, typename T>
+constexpr auto append_conditional(Branches&& branches, C&& condition, T&& then_)
+{
+  using branch = branch_t<C, T>;
+  using result = conditional_from_branches_t<Else, std::remove_cvref_t<Branches>, branch>;
+  return result(
+    std::tuple_cat(std::forward<Branches>(branches),
+                   std::tuple<branch>{branch{make_deferred_t<C>(std::forward<C>(condition)),
+                                             make_deferred_t<T>(std::forward<T>(then_))}}));
+}
+
+/** @brief Finalizes a conditional expression with an else expression. */
+template<typename Branches, typename E>
+constexpr auto finalize_conditional(Branches&& branches, E&& else_branch)
+{
+  using else_expression = make_deferred_t<E>;
+  using result = conditional_from_branches_t<else_expression, std::remove_cvref_t<Branches>>;
+  if constexpr (std::is_lvalue_reference_v<Branches&&>)
+  {
+    return result(std::remove_cvref_t<Branches>(branches),
+                  else_expression(std::forward<E>(else_branch)));
+  }
+  else
+  {
+    return result(std::forward<Branches>(branches), else_expression(std::forward<E>(else_branch)));
+  }
+}
+
+} // namespace detail
 
 /**
  * @brief Deferred conditional expression.
@@ -94,7 +222,8 @@ private:
   [[no_unique_address]] Else m_else;
 
   template<std::size_t I = 0, typename Self>
-  static constexpr result_type evaluate_impl(Self&& self)
+  static constexpr result_type
+  evaluate_impl(Self&& self) noexcept(detail::is_nothrow_evaluable_v<Self>)
   {
     if constexpr (I < sizeof...(Branches))
     {
@@ -134,7 +263,9 @@ public:
    * @brief Constructs a non-finalized conditional expression.
    * @param branches Tuple of branches.
    */
-  constexpr explicit conditional_expression(branches_tuple&& branches)
+  constexpr explicit conditional_expression(branches_tuple&& branches) noexcept(
+    std::is_nothrow_move_constructible_v<branches_tuple>
+    && std::is_nothrow_default_constructible_v<Else>)
     requires(!finalized)
     : m_branches(std::move(branches)), m_else{}
   { }
@@ -144,7 +275,9 @@ public:
    * @param branches Tuple of branches.
    * @param else_branch Else expression.
    */
-  constexpr explicit conditional_expression(branches_tuple&& branches, Else&& else_branch)
+  constexpr explicit conditional_expression(branches_tuple&& branches, Else&& else_branch) noexcept(
+    std::is_nothrow_move_constructible_v<branches_tuple>
+    && std::is_nothrow_move_constructible_v<Else>)
     requires finalized
     : m_branches(std::move(branches)), m_else(std::forward<Else>(else_branch))
   { }
@@ -161,14 +294,9 @@ public:
   [[nodiscard]] constexpr auto else_if(C&& condition, T&& then_) &&
     requires(!finalized)
   {
-    using cond_type   = make_deferred_t<C>;
-    using then_type   = make_deferred_t<T>;
-    using branch_type = conditional_branch<cond_type, then_type>;
-
-    return conditional_expression<Else, Branches..., branch_type>(
-      std::tuple_cat(std::move(m_branches),
-                     std::tuple<branch_type>{branch_type{cond_type(std::forward<C>(condition)),
-                                                         then_type(std::forward<T>(then_))}}));
+    return detail::append_conditional<Else>(std::move(m_branches),
+                                            std::forward<C>(condition),
+                                            std::forward<T>(then_));
   }
 
   /// @copydoc else_if
@@ -176,14 +304,9 @@ public:
   [[nodiscard]] constexpr auto else_if(C&& condition, T&& then_) const&
     requires(!finalized)
   {
-    using cond_type   = make_deferred_t<C>;
-    using then_type   = make_deferred_t<T>;
-    using branch_type = conditional_branch<cond_type, then_type>;
-
-    return conditional_expression<Else, Branches..., branch_type>(
-      std::tuple_cat(m_branches,
-                     std::tuple<branch_type>{branch_type{cond_type(std::forward<C>(condition)),
-                                                         then_type(std::forward<T>(then_))}}));
+    return detail::append_conditional<Else>(m_branches,
+                                            std::forward<C>(condition),
+                                            std::forward<T>(then_));
   }
 
   /**
@@ -196,9 +319,7 @@ public:
   [[nodiscard]] constexpr auto else_(E&& else_branch) &&
     requires(!finalized)
   {
-    using else_expr = make_deferred_t<E>;
-    return conditional_expression<else_expr, Branches...>(std::move(m_branches),
-                                                          else_expr(std::forward<E>(else_branch)));
+    return detail::finalize_conditional(std::move(m_branches), std::forward<E>(else_branch));
   }
 
   /// @copydoc else_
@@ -206,22 +327,22 @@ public:
   [[nodiscard]] constexpr auto else_(E&& else_branch) const&
     requires(!finalized)
   {
-    using else_expr = make_deferred_t<E>;
-    return conditional_expression<else_expr, Branches...>(m_branches,
-                                                          else_expr(std::forward<E>(else_branch)));
+    return detail::finalize_conditional(m_branches, std::forward<E>(else_branch));
   }
 
   /**
    * @brief Evaluates the conditional expression.
    * @return Result of the conditional expression.
    */
-  [[nodiscard]] constexpr result_type operator()() const
+  [[nodiscard]] constexpr result_type
+  operator()() const noexcept(detail::is_nothrow_evaluable_v<conditional_expression const&>)
   {
     return evaluate_impl(*this);
   }
 
   /// @copydoc operator()() const
-  [[nodiscard]] constexpr result_type operator()()
+  [[nodiscard]] constexpr result_type
+  operator()() noexcept(detail::is_nothrow_evaluable_v<conditional_expression&>)
   {
     return evaluate_impl(*this);
   }
@@ -234,18 +355,13 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, conditional_expression, subexpression_types>)
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    std::apply(
-      [&](auto const&... branch) {
-        ((branch.condition.visit(std::forward<Visitor>(v), nesting + 1),
-          branch.then.visit(std::forward<Visitor>(v), nesting + 1)),
-         ...);
-      },
-      m_branches);
+    v(*this, nesting);
+    detail::visit_children(m_branches, v, nesting + 1);
     if constexpr (finalized)
     {
-      m_else.visit(std::forward<Visitor>(v), nesting + 1);
+      m_else.visit(v, nesting + 1);
     }
   }
 };
@@ -267,14 +383,16 @@ public:
  * @return An @ref conditional_expression builder.
  */
 template<typename Condition, typename Then>
-[[nodiscard]] constexpr auto if_(Condition&& condition, Then&& then_)
+[[nodiscard]] constexpr auto if_(Condition&& condition, Then&& then_) noexcept(
+  noexcept(conditional_expression<detail::no_else, detail::branch_t<Condition, Then>>(
+    std::tuple<detail::branch_t<Condition, Then>>{detail::branch_t<Condition, Then>{
+      make_deferred_t<Condition>(std::forward<Condition>(condition)),
+      make_deferred_t<Then>(std::forward<Then>(then_))}})))
 {
-  using cond_type   = make_deferred_t<Condition>;
-  using then_type   = make_deferred_t<Then>;
-  using branch_type = conditional_branch<cond_type, then_type>;
-  return conditional_expression<detail::no_else, branch_type>(
-    std::tuple<branch_type>{branch_type{cond_type(std::forward<Condition>(condition)),
-                                        then_type(std::forward<Then>(then_))}});
+  using branch = detail::branch_t<Condition, Then>;
+  return conditional_expression<detail::no_else, branch>(
+    std::tuple<branch>{branch{make_deferred_t<Condition>(std::forward<Condition>(condition)),
+                              make_deferred_t<Then>(std::forward<Then>(then_))}});
 }
 
 } // namespace deferred

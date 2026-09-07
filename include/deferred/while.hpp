@@ -7,6 +7,7 @@
 #include <tuple>
 #include <utility>
 
+#include "detail/is_nothrow_visitable.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
 
@@ -40,12 +41,15 @@ public:
    * @param body Body expression.
    */
   template<typename Condition, typename Body>
-  constexpr explicit while_expression(Condition&& condition, Body&& body) :
+  constexpr explicit while_expression(Condition&& condition, Body&& body) noexcept(
+    std::is_nothrow_constructible_v<ConditionExpression, Condition&&>
+    && std::is_nothrow_constructible_v<BodyExpression, Body&&>) :
     m_condition(std::forward<Condition>(condition)), m_body(std::forward<Body>(body))
   { }
 
   /// @brief Evaluates the while loop.
   constexpr void operator()() const
+    noexcept(noexcept(static_cast<bool>(evaluate(m_condition))) && noexcept(evaluate(m_body)))
   {
     while (evaluate(m_condition))
     {
@@ -54,7 +58,8 @@ public:
   }
 
   /// @copydoc while_expression::operator()() const
-  constexpr void operator()()
+  constexpr void operator()() noexcept(noexcept(static_cast<bool>(evaluate(m_condition)))
+                                       && noexcept(evaluate(m_body)))
   {
     while (evaluate(m_condition))
     {
@@ -70,10 +75,11 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, while_expression, subexpression_types>)
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    m_condition.visit(std::forward<Visitor>(v), nesting + 1);
-    m_body.visit(std::forward<Visitor>(v), nesting + 1);
+    v(*this, nesting);
+    m_condition.visit(v, nesting + 1);
+    m_body.visit(v, nesting + 1);
   }
 };
 
@@ -87,7 +93,12 @@ public:
  * @return A @ref while_expression capturing the condition and body.
  */
 template<typename ConditionExpression, typename BodyExpression>
-[[nodiscard]] constexpr auto while_(ConditionExpression&& condition, BodyExpression&& body)
+[[nodiscard]] constexpr auto
+while_(ConditionExpression&& condition, BodyExpression&& body) noexcept(
+  std::is_nothrow_constructible_v<
+    while_expression<make_deferred_t<ConditionExpression>, make_deferred_t<BodyExpression>>,
+    ConditionExpression&&,
+    BodyExpression&&>)
 {
   using condition_expression = make_deferred_t<ConditionExpression>;
   using body_expression      = make_deferred_t<BodyExpression>;

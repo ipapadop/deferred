@@ -6,6 +6,18 @@
 #include "deferred/type_traits/is_constant_expression.hpp"
 #include "deferred/while.hpp"
 
+namespace {
+
+struct throwing_boolean
+{
+  explicit operator bool() const noexcept(false)
+  {
+    return false;
+  }
+};
+
+} // namespace
+
 TEST_CASE("while with lambda", "[while-lambda]")
 {
   auto i  = 0;
@@ -20,8 +32,16 @@ TEST_CASE("while with lambda", "[while-lambda]")
 
 TEST_CASE("while with constexpr", "[while-constexpr]")
 {
-  auto ex = deferred::while_([] { return false; }, [] { });
+  auto ex = deferred::while_([]() noexcept { return false; }, []() noexcept { });
 
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  static_assert(noexcept(ex()));
   ex();
+}
+
+TEST_CASE("while accounts for throwing condition conversion", "[while-noexcept]")
+{
+  auto ex = deferred::while_([]() noexcept { return throwing_boolean{}; }, []() noexcept { });
+
+  static_assert(!noexcept(ex()));
 }

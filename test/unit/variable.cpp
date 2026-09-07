@@ -3,8 +3,30 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <type_traits>
+#include <utility>
+
 #include "deferred/type_traits/is_constant_expression.hpp"
 #include "deferred/variable.hpp"
+
+namespace {
+
+struct throwing_value
+{
+  throwing_value() noexcept(false);
+  throwing_value(throwing_value const&) noexcept(false);
+  throwing_value(throwing_value&&) noexcept(false);
+  throwing_value& operator=(throwing_value const&) noexcept(false);
+  throwing_value& operator=(throwing_value&&) noexcept(false);
+};
+
+} // namespace
+
+static_assert(!noexcept(deferred::variable<throwing_value>()));
+static_assert(!noexcept(deferred::variable_<throwing_value>(std::declval<throwing_value&&>())));
+static_assert(!noexcept(
+  std::declval<deferred::variable_<throwing_value>&>() = std::declval<throwing_value&&>()));
+static_assert(!noexcept(std::declval<deferred::variable_<throwing_value>&&>()()));
 
 TEST_CASE("empty variable", "[variable-empty]")
 {

@@ -7,6 +7,27 @@
 
 #include "deferred/switch.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
+#include "deferred/variable.hpp"
+
+namespace {
+
+struct throwing_boolean
+{
+  explicit operator bool() const noexcept(false)
+  {
+    return false;
+  }
+};
+
+struct comparable
+{ };
+
+throwing_boolean operator==(comparable const&, comparable const&) noexcept
+{
+  return {};
+}
+
+} // namespace
 
 TEST_CASE("default with literal", "[default-literal]")
 {
@@ -47,7 +68,12 @@ TEST_CASE("switch with two literals", "[switch-two-literals]")
                               deferred::case_(1, [] { return 0; }),
                               deferred::case_(2, [] { return 10; }));
   static_assert(deferred::is_constant_expression_v<decltype(ex)>);
+  static_assert(!noexcept(ex()));
   CHECK(ex() == 10);
+
+  constexpr auto no_throw_ex =
+    deferred::switch_(2, deferred::default_(100), deferred::case_(2, 10));
+  static_assert(noexcept(no_throw_ex()));
 }
 
 TEST_CASE("switch with three literals", "[switch-three-literals]")
@@ -119,6 +145,20 @@ TEST_CASE("append case to switch with move-only body", "[switch-append-move-only
   CHECK(expanded() == 42);
 }
 
+TEST_CASE("append case to switch with variable condition", "[switch-append-variable]")
+{
+  auto v = deferred::variable<int>();
+  v      = 2;
+
+  auto ex       = deferred::switch_(v, deferred::default_(0), deferred::case_(1, 10));
+  auto expanded = std::move(ex).append(deferred::case_(2, 20));
+
+  CHECK(expanded() == 20);
+
+  v = 1;
+  CHECK(expanded() == 10);
+}
+
 TEST_CASE("append case with void result", "[switch-append-void]")
 {
   auto ex       = deferred::switch_(2, deferred::default_(0), deferred::case_(1, 1));
@@ -128,4 +168,12 @@ TEST_CASE("append case with void result", "[switch-append-void]")
   static_assert(std::is_same_v<result_type, std::variant<int, std::monostate>>);
 
   CHECK(std::holds_alternative<std::monostate>(expanded()));
+}
+
+TEST_CASE("switch accounts for throwing comparison conversion", "[switch-noexcept]")
+{
+  auto ex =
+    deferred::switch_(comparable{}, deferred::default_(0), deferred::case_(comparable{}, 1));
+
+  static_assert(!noexcept(ex()));
 }

@@ -8,9 +8,10 @@
 #include <type_traits>
 #include <utility>
 
-#include "apply.hpp"
 #include "constant.hpp"
-#include "make_function_object.hpp"
+#include "detail/apply_evaluated.hpp"
+#include "detail/is_nothrow_visitable.hpp"
+#include "detail/visit_children.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -44,7 +45,9 @@ public:
    */
   template<typename Op, typename... Ex>
     requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
-  constexpr explicit expression_(Op&& op, Ex&&... ex) :
+  constexpr explicit expression_(Op&& op, Ex&&... ex) noexcept(
+    std::is_nothrow_constructible_v<operator_type, Op&&>
+    && std::is_nothrow_constructible_v<expression_types, Ex&&...>) :
     m_op(std::forward<Op>(op)), m_expressions(std::forward<Ex>(ex)...)
   { }
 
@@ -56,15 +59,17 @@ public:
   expression_& operator=(expression_ const&) = delete;
   expression_& operator=(expression_&&)      = delete;
 
-  [[nodiscard]] constexpr decltype(auto) operator()() const
+  [[nodiscard]] constexpr decltype(auto)
+  operator()() const noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
-    return deferred::apply(m_op, m_expressions);
+    return detail::apply_evaluated(m_op, m_expressions);
   }
 
   /// @copydoc operator()() const
-  [[nodiscard]] constexpr decltype(auto) operator()()
+  [[nodiscard]] constexpr decltype(auto)
+  operator()() noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
-    return deferred::apply(m_op, m_expressions);
+    return detail::apply_evaluated(m_op, m_expressions);
   }
 
   [[nodiscard]] constexpr operator_type const& operator_() const noexcept
@@ -85,11 +90,10 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, expression_, expression_types>)
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    std::apply([&v, nesting](
-                 auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
-               m_expressions);
+    v(*this, nesting);
+    detail::visit_children(m_expressions, v, nesting + 1);
   }
 };
 
@@ -115,8 +119,7 @@ consteval auto deduce_deferred_type()
   }
   else if constexpr (std::is_invocable_v<U>)
   {
-    return std::type_identity<
-      expression_<std::decay_t<decltype(make_function_object(std::declval<U>()))>>>{};
+    return std::type_identity<expression_<U>>{};
   }
   else
   {

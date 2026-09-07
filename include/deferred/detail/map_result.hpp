@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
 // SPDX-License-Identifier: MIT
 
-#ifndef DEFERRED_MAP_RESULT_HPP
-#define DEFERRED_MAP_RESULT_HPP
+#ifndef DEFERRED_DETAIL_MAP_RESULT_HPP
+#define DEFERRED_DETAIL_MAP_RESULT_HPP
 
-#include <functional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -19,20 +18,20 @@ namespace deferred::detail {
  * @return Mapped result.
  */
 template<typename Result, typename F>
-constexpr decltype(auto) map_result(F&& f)
+constexpr decltype(auto) map_result(F&& f) noexcept(std::is_nothrow_invocable_v<F>)
 {
   if constexpr (std::is_void_v<Result>)
   {
-    static_cast<void>(std::invoke(std::forward<F>(f)));
+    static_cast<void>(std::forward<F>(f)());
   }
   else if constexpr (std::is_void_v<std::invoke_result_t<F>>)
   {
-    std::invoke(std::forward<F>(f));
+    std::forward<F>(f)();
     return std::monostate{};
   }
   else
   {
-    return std::invoke(std::forward<F>(f));
+    return std::forward<F>(f)();
   }
 }
 

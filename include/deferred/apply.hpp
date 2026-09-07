@@ -5,42 +5,55 @@
 #define DEFERRED_APPLY_HPP
 
 #include <tuple>
-#include <type_traits>
 #include <utility>
+
+#include "detail/callable_storage.hpp"
+#include "invoke.hpp"
 
 namespace deferred {
 
 namespace detail {
 
 /**
- * @brief Helper function to apply a callable to the elements of a tuple.
- * @copydoc apply(F&&, Tuple&&)
- * @tparam I Index sequence for tuple elements.
- * @param I Index sequence for tuple elements.
+ * @brief Builds a deferred invocation from unpacked tuple elements.
+ * @tparam F Type of the callable.
  */
-template<typename F, typename Tuple, std::size_t... I>
-constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>)
+template<typename F>
+struct invoke_builder
 {
-  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))()...);
-}
+  callable_storage_t<F> f;
+
+  template<typename... Args>
+  constexpr auto operator()(Args&&... args) const
+    noexcept(noexcept(deferred::invoke(std::declval<callable_storage_t<F>>(),
+                                       std::forward<Args>(args)...)))
+  {
+    return deferred::invoke(static_cast<callable_storage_t<F>>(f), std::forward<Args>(args)...);
+  }
+};
 
 } // namespace detail
 
 /**
- * @brief Invoke callable @p f with the tuple of @c deferred objects @p t.
+ * @brief Creates a deferred invocation of @p f with the elements of the tuple @p t.
+ *
+ * This is the tuple form of @ref invoke(): <tt>apply(f, t)</tt> is equivalent to
+ * <tt>invoke(f, std::get<I>(t)...)</tt>, mirroring the relationship between
+ * @c std::apply and @c std::invoke. Nothing is evaluated; the returned expression
+ * is evaluated later like any other @c deferred object.
+ *
  * @tparam F Type of the callable.
- * @tparam Tuple Type of the tuple containing deferred objects.
+ * @tparam Tuple Type of the tuple containing the arguments.
  * @param f The callable to invoke.
- * @param t The tuple containing deferred objects.
- * @return The result of invoking @p f with the evaluated elements of @p t.
+ * @param t The tuple containing the arguments.
+ * @return An expression representing the invocation.
  */
 template<typename F, typename Tuple>
-constexpr decltype(auto) apply(F&& f, Tuple&& t)
+[[nodiscard]] constexpr auto
+apply(F&& f, Tuple&& t) noexcept(noexcept(std::apply(detail::invoke_builder<F>{std::forward<F>(f)},
+                                                     std::forward<Tuple>(t))))
 {
-  return detail::apply_impl(
-    std::forward<F>(f),
-    std::forward<Tuple>(t),
-    std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Tuple>>>{});
+  return std::apply(detail::invoke_builder<F>{std::forward<F>(f)}, std::forward<Tuple>(t));
 }
 
 } // namespace deferred

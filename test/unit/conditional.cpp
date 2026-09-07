@@ -5,10 +5,23 @@
 
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <variant>
 
 #include "deferred/conditional.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
+
+namespace {
+
+struct throwing_boolean
+{
+  explicit operator bool() const noexcept(false)
+  {
+    return false;
+  }
+};
+
+} // namespace
 
 TEST_CASE("conditional with literal", "[conditional-literal]")
 {
@@ -100,6 +113,10 @@ TEST_CASE("if_ with void return", "[if-void]")
 TEST_CASE("if_ with constexpr", "[if-constexpr]")
 {
   constexpr auto ex = deferred::if_(true, 42);
+  // Wrapping the result in std::optional is only nothrow where the standard
+  // library says it is: optional's converting constructor has no noexcept
+  // specification, and libc++ does not add one.
+  static_assert(noexcept(ex()) == std::is_nothrow_constructible_v<std::optional<int>, int>);
   static_assert(ex().has_value());
   static_assert(*ex() == 42);
 
@@ -112,8 +129,8 @@ TEST_CASE("if_ visit", "[if-visit]")
   auto ex   = deferred::if_(true, 42);
   int count = 0;
   ex.visit([&](auto const&, std::size_t) { ++count; });
-  // 1 (if_expression) + 1 (condition) + 1 (then) = 3
-  CHECK(count == 3);
+  // 1 (if_expression) + 1 (branch) + 1 (condition) + 1 (then) = 4
+  CHECK(count == 4);
 }
 
 TEST_CASE("conditional with else_if", "[conditional-else-if]")
@@ -123,6 +140,14 @@ TEST_CASE("conditional with else_if", "[conditional-else-if]")
 
   auto ex2 = deferred::if_(false, 1).else_if(false, 2).else_(3);
   CHECK(ex2() == 3);
+}
+
+TEST_CASE("conditional builders copy from const lvalues", "[conditional-builders]")
+{
+  auto const builder = deferred::if_(false, 1);
+
+  CHECK(builder.else_if(true, 2)().value() == 2);
+  CHECK(builder.else_(3)() == 3);
 }
 
 TEST_CASE("conditional with mixed types (variant)", "[conditional-variant]")
@@ -150,4 +175,11 @@ TEST_CASE("if_ with multiple else_if (optional)", "[if-else-if-optional]")
   auto ex2  = deferred::if_(false, 1).else_if(false, 2);
   auto res2 = ex2();
   CHECK(!res2.has_value());
+}
+
+TEST_CASE("conditional accounts for throwing condition conversion", "[conditional-noexcept]")
+{
+  auto ex = deferred::if_([]() noexcept { return throwing_boolean{}; }, 1).else_(2);
+
+  static_assert(!noexcept(ex()));
 }

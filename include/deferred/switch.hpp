@@ -8,12 +8,19 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/expression_reference.hpp"
+#include "detail/homogenized_type.hpp"
+#include "detail/is_nothrow_evaluable.hpp"
+#include "detail/is_nothrow_visitable.hpp"
 #include "detail/map_result.hpp"
+#include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
-#include "type_traits/homogenized_type.hpp"
 
 namespace deferred {
+
+template<Deferred ConditionExpression, Deferred DefaultExpression, Deferred... CaseExpression>
+class switch_expression;
 
 /**
  * @brief Switch default expression.
@@ -36,16 +43,18 @@ public:
    * @param t Arguments to forward to the underlying expression.
    */
   template<typename T>
-  constexpr explicit default_expression(T&& t) : m_expression(std::forward<T>(t))
+  constexpr explicit default_expression(T&& t) noexcept(
+    std::is_nothrow_constructible_v<Expression, T&&>) : m_expression(std::forward<T>(t))
   { }
 
-  [[nodiscard]] constexpr decltype(auto) operator()() const
+  [[nodiscard]] constexpr decltype(auto)
+  operator()() const noexcept(noexcept(evaluate(m_expression)))
   {
     return evaluate(m_expression);
   }
 
   /// @copydoc default_expression::operator()() const
-  [[nodiscard]] constexpr decltype(auto) operator()()
+  [[nodiscard]] constexpr decltype(auto) operator()() noexcept(noexcept(evaluate(m_expression)))
   {
     return evaluate(m_expression);
   }
@@ -58,9 +67,10 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, default_expression, subexpression_types>)
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    m_expression.visit(std::forward<Visitor>(v), nesting + 1);
+    v(*this, nesting);
+    m_expression.visit(v, nesting + 1);
   }
 };
 
@@ -101,25 +111,28 @@ public:
    * @param body The body expression.
    */
   template<typename LabelEx, typename BodyEx>
-  constexpr explicit case_expression(LabelEx&& label, BodyEx&& body) :
+  constexpr explicit case_expression(LabelEx&& label, BodyEx&& body) noexcept(
+    std::is_nothrow_constructible_v<LabelExpression, LabelEx&&>
+    && std::is_nothrow_constructible_v<BodyExpression, BodyEx&&>) :
     m_label(std::forward<LabelEx>(label)), m_body(std::forward<BodyEx>(body))
   { }
 
   /// @brief Compares @p T with the label expression.
   template<typename T>
-  [[nodiscard]] constexpr decltype(auto) compare(T const& t) const
+  [[nodiscard]] constexpr decltype(auto)
+  compare(T const& t) const noexcept(noexcept(t == evaluate(m_label)))
   {
     return t == evaluate(m_label);
   }
 
   /// @brief Returns the result of the body expression.
-  [[nodiscard]] constexpr decltype(auto) operator()() const
+  [[nodiscard]] constexpr decltype(auto) operator()() const noexcept(noexcept(evaluate(m_body)))
   {
     return evaluate(m_body);
   }
 
   /// @copydoc case_expression::operator()() const
-  [[nodiscard]] constexpr decltype(auto) operator()()
+  [[nodiscard]] constexpr decltype(auto) operator()() noexcept(noexcept(evaluate(m_body)))
   {
     return evaluate(m_body);
   }
@@ -132,10 +145,11 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, case_expression, subexpression_types>)
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    m_label.visit(std::forward<Visitor>(v), nesting + 1);
-    m_body.visit(std::forward<Visitor>(v), nesting + 1);
+    v(*this, nesting);
+    m_label.visit(v, nesting + 1);
+    m_body.visit(v, nesting + 1);
   }
 };
 
@@ -148,6 +162,90 @@ concept CaseExpression = requires(std::remove_cvref_t<T> t) {
   []<Deferred L, Deferred B>(case_expression<L, B>&) {
   }(t);
 };
+
+namespace detail {
+
+/** @brief Checks whether evaluating every switch path cannot throw. */
+template<typename Result,
+         typename Self,
+         typename ConditionExpression,
+         typename DefaultExpression,
+         typename... CaseExpression>
+consteval bool switch_evaluation_is_nothrow()
+{
+  using condition_reference = expression_reference_t<Self, ConditionExpression>;
+  using condition_result    = decltype(evaluate(std::declval<condition_reference>()));
+  return noexcept(evaluate(std::declval<condition_reference>()))
+         && (noexcept(static_cast<bool>(std::declval<CaseExpression const&>().compare(
+               std::declval<condition_result const&>())))
+             && ...)
+         && evaluation_result_is_nothrow<Result, DefaultExpression const&>()
+         && (evaluation_result_is_nothrow<Result, CaseExpression const&>() && ...);
+}
+
+/** @brief Deduces the switch type produced by appending cases. */
+template<typename Switch, typename... NewCases>
+struct expanded_switch;
+
+/** @brief Specializes expanded-switch deduction for a switch expression. */
+template<typename Condition, typename Default, typename... Cases, typename... NewCases>
+struct expanded_switch<switch_expression<Condition, Default, Cases...>, NewCases...>
+{
+  using type = switch_expression<Condition, Default, Cases..., std::decay_t<NewCases>...>;
+};
+
+/** @brief Appends cases to a switch expression. */
+template<typename Switch, typename Condition, typename Cases, typename... NewCases>
+constexpr auto append_switch(Condition&& condition, Cases&& cases, NewCases&&... new_cases)
+{
+  using result = typename expanded_switch<Switch, NewCases...>::type;
+  return std::apply(
+    [&](auto&&... existing_cases) {
+      return result(std::forward<Condition>(condition),
+                    std::forward<decltype(existing_cases)>(existing_cases)...,
+                    std::forward<NewCases>(new_cases)...);
+    },
+    std::forward<Cases>(cases));
+}
+
+/** @brief Stores the exception guarantee for a switch reference type. */
+template<typename Self,
+         typename ConditionExpression,
+         typename DefaultExpression,
+         typename... CaseExpression>
+struct switch_evaluation_traits
+{
+  using result                = typename std::remove_cvref_t<Self>::result_type;
+  static constexpr bool value = switch_evaluation_is_nothrow<result,
+                                                             Self,
+                                                             ConditionExpression,
+                                                             DefaultExpression,
+                                                             CaseExpression...>();
+};
+
+/** @brief Specializes evaluation traits for a const switch expression. */
+template<typename ConditionExpression, typename DefaultExpression, typename... CaseExpression>
+struct is_nothrow_evaluable<
+  switch_expression<ConditionExpression, DefaultExpression, CaseExpression...> const&> :
+  switch_evaluation_traits<
+    switch_expression<ConditionExpression, DefaultExpression, CaseExpression...> const&,
+    ConditionExpression,
+    DefaultExpression,
+    CaseExpression...>
+{ };
+
+/** @brief Specializes evaluation traits for a mutable switch expression. */
+template<typename ConditionExpression, typename DefaultExpression, typename... CaseExpression>
+struct is_nothrow_evaluable<
+  switch_expression<ConditionExpression, DefaultExpression, CaseExpression...>&> :
+  switch_evaluation_traits<
+    switch_expression<ConditionExpression, DefaultExpression, CaseExpression...>&,
+    ConditionExpression,
+    DefaultExpression,
+    CaseExpression...>
+{ };
+
+} // namespace detail
 
 /**
  * @brief Deferred switch
@@ -169,8 +267,8 @@ public:
    * @brief Result type of the switch expression (common type or variant).
    */
   using result_type =
-    homogenized_type_t<decltype(std::declval<typename DefaultExpression::body_type>()()),
-                       decltype(std::declval<typename CaseExpression::body_type>()())...>;
+    detail::homogenized_type_t<decltype(std::declval<typename DefaultExpression::body_type>()()),
+                               decltype(std::declval<typename CaseExpression::body_type>()())...>;
 
 private:
   [[no_unique_address]] ConditionExpression m_condition;
@@ -187,7 +285,9 @@ public:
    * @param cs Case expressions.
    */
   template<typename Condition, typename Default, typename... Case>
-  constexpr explicit switch_expression(Condition&& condition, Default&& df, Case&&... cs) :
+  constexpr explicit switch_expression(Condition&& condition, Default&& df, Case&&... cs) noexcept(
+    std::is_nothrow_constructible_v<ConditionExpression, Condition&&>
+    && std::is_nothrow_constructible_v<decltype(m_cases), Default&&, Case&&...>) :
     m_condition(std::forward<Condition>(condition)),
     m_cases(std::forward<Default>(df), std::forward<Case>(cs)...)
   { }
@@ -206,15 +306,9 @@ public:
     requires(sizeof...(NewCases) > 0 && (deferred::CaseExpression<NewCases> && ...))
   [[nodiscard]] constexpr auto append(NewCases&&... new_cases) const&
   {
-    using expanded_expression = switch_expression<ConditionExpression,
-                                                  DefaultExpression,
-                                                  CaseExpression...,
-                                                  std::decay_t<NewCases>...>;
-    return std::apply(
-      [&](auto const& df, auto const&... cases) {
-        return expanded_expression(m_condition, df, cases..., std::forward<NewCases>(new_cases)...);
-      },
-      m_cases);
+    return detail::append_switch<switch_expression>(m_condition,
+                                                    m_cases,
+                                                    std::forward<NewCases>(new_cases)...);
   }
 
   /**
@@ -225,18 +319,9 @@ public:
     requires(sizeof...(NewCases) > 0 && (deferred::CaseExpression<NewCases> && ...))
   [[nodiscard]] constexpr auto append(NewCases&&... new_cases) &&
   {
-    using expanded_expression = switch_expression<ConditionExpression,
-                                                  DefaultExpression,
-                                                  CaseExpression...,
-                                                  std::decay_t<NewCases>...>;
-    return std::apply(
-      [&](auto&& df, auto&&... cases) {
-        return expanded_expression(std::forward<ConditionExpression>(m_condition),
-                                   std::forward<decltype(df)>(df),
-                                   std::forward<decltype(cases)>(cases)...,
-                                   std::forward<NewCases>(new_cases)...);
-      },
-      std::move(m_cases));
+    return detail::append_switch<switch_expression>(std::forward<ConditionExpression>(m_condition),
+                                                    std::move(m_cases),
+                                                    std::forward<NewCases>(new_cases)...);
   }
 
 private:
@@ -246,7 +331,8 @@ private:
    * If none does, the default (@c std::tuple_element<0>) is returned.
    */
   template<std::size_t I, typename T>
-  [[nodiscard]] constexpr result_type choose_case(T const& t) const
+  [[nodiscard]] constexpr result_type
+  choose_case(T const& t) const noexcept(detail::is_nothrow_evaluable_v<switch_expression const&>)
   {
     if constexpr (I < std::tuple_size_v<decltype(m_cases)>)
     {
@@ -268,14 +354,16 @@ public:
    * @brief Evaluates the switch expression.
    * @return Result of the switch expression.
    */
-  [[nodiscard]] constexpr result_type operator()() const
+  [[nodiscard]] constexpr result_type
+  operator()() const noexcept(detail::is_nothrow_evaluable_v<switch_expression const&>)
   {
     // start from second case, as first is the default
     return choose_case<1>(evaluate(m_condition));
   }
 
   /// @copydoc switch_expression::operator()() const
-  [[nodiscard]] constexpr result_type operator()()
+  [[nodiscard]] constexpr result_type
+  operator()() noexcept(detail::is_nothrow_evaluable_v<switch_expression&>)
   {
     // start from second case, as first is the default
     return choose_case<1>(evaluate(m_condition));
@@ -289,12 +377,11 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
+    noexcept(detail::is_nothrow_visitable_v<Visitor, switch_expression, subexpression_types>)
   {
-    std::forward<Visitor>(v)(*this, nesting);
-    m_condition.visit(std::forward<Visitor>(v), nesting + 1);
-    std::apply(
-      [&](auto const&... args) { (args.visit(std::forward<Visitor>(v), nesting + 1), ...); },
-      m_cases);
+    v(*this, nesting);
+    m_condition.visit(v, nesting + 1);
+    detail::visit_children(m_cases, v, nesting + 1);
   }
 };
 
@@ -305,7 +392,8 @@ public:
  * @return A @ref default_expression wrapping the given expression.
  */
 template<typename Expression>
-[[nodiscard]] constexpr auto default_(Expression&& ex)
+[[nodiscard]] constexpr auto default_(Expression&& ex) noexcept(
+  std::is_nothrow_constructible_v<default_expression<make_deferred_t<Expression>>, Expression&&>)
 {
   using expression = make_deferred_t<Expression>;
   return default_expression<expression>(std::forward<Expression>(ex));
@@ -320,7 +408,11 @@ template<typename Expression>
  * @return A @ref case_expression wrapping the label and body.
  */
 template<typename LabelExpression, typename BodyExpression>
-[[nodiscard]] constexpr auto case_(LabelExpression&& label, BodyExpression&& body)
+[[nodiscard]] constexpr auto case_(LabelExpression&& label, BodyExpression&& body) noexcept(
+  std::is_nothrow_constructible_v<
+    case_expression<make_deferred_t<LabelExpression>, make_deferred_t<BodyExpression>>,
+    LabelExpression&&,
+    BodyExpression&&>)
 {
   using label_expression = make_deferred_t<LabelExpression>;
   using body_expression  = make_deferred_t<BodyExpression>;
@@ -357,8 +449,17 @@ template<typename LabelExpression, typename BodyExpression>
 template<typename ConditionExpression,
          DefaultExpression DefaultExpression_,
          CaseExpression... CaseExpressions>
-[[nodiscard]] constexpr auto
-switch_(ConditionExpression&& condition, DefaultExpression_&& default_, CaseExpressions&&... case_)
+[[nodiscard]] constexpr auto switch_(
+  ConditionExpression&& condition,
+  DefaultExpression_&& default_,
+  CaseExpressions&&... case_) noexcept(std::
+                                         is_nothrow_constructible_v<
+                                           switch_expression<make_deferred_t<ConditionExpression>,
+                                                             std::decay_t<DefaultExpression_>,
+                                                             std::decay_t<CaseExpressions>...>,
+                                           ConditionExpression&&,
+                                           DefaultExpression_&&,
+                                           CaseExpressions&&...>)
 {
   using condition_expression = make_deferred_t<ConditionExpression>;
   return switch_expression<condition_expression,

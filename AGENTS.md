@@ -6,6 +6,8 @@ This project is a C++23 header-only library for creating deferred evaluation exp
 
 - **Purpose**: Provides a mechanism to define expressions (using constants, variables, and operators) that are evaluated lazily at a later point.
 - **Switch expressions**: Existing switch expressions can be expanded with `append()`.
+- **Invocation**: Decayed callables are stored directly and evaluated with `std::invoke`, including member pointers.
+- **Exception guarantees**: Template APIs use conditional `noexcept` based on stored values and user operations.
 - **Main Technologies**: 
   - **Language**: C++23
   - **Build System**: CMake (3.28.1+)
@@ -14,6 +16,8 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   - **Documentation**: Doxygen
 - **Architecture**:
   - `include/deferred/`: Contains the library headers. `deferred.hpp` is the main entry point.
+    - `include/deferred/detail/`: Private implementation traits and helpers, in `namespace deferred::detail`.
+    - `include/deferred/type_traits/`: Public type traits and concepts.
   - `examples/`: Usage examples (e.g., `saxpy`, `trivial`).
   - `test/`: Unit and integration tests.
   - **Dependencies**: Catch2 is fetched automatically via CMake `FetchContent` in `test/CMakeLists.txt`.
@@ -92,5 +96,20 @@ Or simply copy the `include/deferred` directory to your project's include path.
 - **Source Control**: NEVER commit directly to the `main` branch. Always use feature branches and pull requests for any changes.
 - **Project Documentation**: After EVERY change, `README.md` and `AGENTS.md` MUST be reviewed and updated to reflect the current state of the project.
 - **License**: MIT License. All source files should include the standard MIT license header.
-- **Header Guards**: Use `#ifndef DEFERRED_FILENAME_HPP` format.
+- **Header Guards**: Use `#ifndef DEFERRED_FILENAME_HPP` format, qualified by directory for
+  subdirectories (`DEFERRED_DETAIL_MAP_VOID_HPP`, `DEFERRED_TYPE_TRAITS_IS_DEFERRED_HPP`).
+- **`detail/` Layering**: Headers in `include/deferred/detail/` MUST NOT include anything from the
+  source root or any other directory in the library — no `#include "../foo.hpp"`. Dependencies point
+  inward only: root headers may include `detail/`, never the reverse. A `detail/` header may only
+  include standard headers and other `detail/` headers.
+  - If an implementation helper needs something from a root header (for example `evaluate()`), it
+    does not belong in `detail/` — put it in that root header, inside `namespace detail`.
+- **`detail/` Header Contents**: Each header in `detail/` defines exactly one entity and is named
+  after it. A trait's primary template, its specializations, and its `_v`/`_t` alias count as one
+  entity and stay together, as does any helper that exists solely to implement that entity — a
+  function object handed to an algorithm, a `deduce_*` metafunction. Give a helper its own header
+  only when it carries meaning independently and could serve another caller.
+- **`detail/` Tests**: Every header in `detail/` has a matching test file at
+  `test/unit/detail/<name>.cpp`, giving a 1:1 pairing with no orphans in either direction.
 - **CI**: GitHub Actions workflow (`.github/workflows/c-cpp.yml`) builds the project on Ubuntu, Windows (MSVC), and macOS.
+  `.github/workflows/asan.yml` additionally builds with Clang and AddressSanitizer and runs the test suite under it.
