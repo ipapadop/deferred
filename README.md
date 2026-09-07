@@ -165,6 +165,15 @@ To run tests after building:
 ctest --output-on-failure
 ```
 
+CI also runs the suite under AddressSanitizer. To reproduce that build locally:
+
+```bash
+cmake -S . -B build-asan -D CMAKE_BUILD_TYPE=Debug \
+  -D CMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -g"
+cmake --build build-asan --parallel
+ASAN_OPTIONS=detect_stack_use_after_return=1 ctest --test-dir build-asan --output-on-failure
+```
+
 Formatting
 ----------
 

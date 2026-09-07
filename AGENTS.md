@@ -112,3 +112,4 @@ Or simply copy the `include/deferred` directory to your project's include path.
 - **`detail/` Tests**: Every header in `detail/` has a matching test file at
   `test/unit/detail/<name>.cpp`, giving a 1:1 pairing with no orphans in either direction.
 - **CI**: GitHub Actions workflow (`.github/workflows/c-cpp.yml`) builds the project on Ubuntu, Windows (MSVC), and macOS.
+  `.github/workflows/asan.yml` additionally builds with Clang and AddressSanitizer and runs the test suite under it.
