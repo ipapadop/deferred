@@ -268,7 +268,8 @@ public:
   /// @copydoc then_
   template<typename T>
   [[nodiscard]] constexpr auto then_(T&& then_) const& //
-    noexcept(detail::append_conditional_is_nothrow<Branches const&, Condition, T>())
+    noexcept(std::is_nothrow_constructible_v<Condition, Condition const&>
+             && detail::append_conditional_is_nothrow<Branches const&, Condition, T>())
   {
     // The branch stores the deduced type of the condition argument, so the condition is
     // passed as its stored type: a copy of an owned expression, or the same reference

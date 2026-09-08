@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 #include "deferred/conditional.hpp"
@@ -23,6 +24,17 @@ struct throwing_expression
   { }
 
   throwing_expression(throwing_expression&&) noexcept(false)
+  { }
+};
+
+struct throwing_copy
+{
+  throwing_copy() = default;
+
+  throwing_copy(throwing_copy const&) noexcept(false)
+  { }
+
+  throwing_copy(throwing_copy&&) noexcept
   { }
 };
 
@@ -337,6 +349,18 @@ TEST_CASE("building a conditional chain never over-promises", "[conditional-noex
   // A branch that throws while being carried over to the next link counts too.
   STATIC_CHECK(!noexcept(
     deferred::if_(true).then_(deferred::constant(throwing_expression{})).else_if_(false).then_(1)));
+}
+
+TEST_CASE("completing a const builder accounts for copying the condition", "[conditional-noexcept]")
+{
+  // The const& overload copies the stored condition, so a type whose copy throws but
+  // whose move does not must not be reported as nothrow.
+  auto const builder = deferred::if_(deferred::constant(throwing_copy{}));
+  STATIC_CHECK(!noexcept(builder.then_(1)));
+
+  // The && overload moves instead, and stays nothrow.
+  auto movable = deferred::if_(deferred::constant(throwing_copy{}));
+  STATIC_CHECK(noexcept(std::move(movable).then_(1)));
 }
 
 TEST_CASE("conditional accounts for throwing condition conversion", "[conditional-noexcept]")
