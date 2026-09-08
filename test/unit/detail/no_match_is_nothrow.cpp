@@ -35,9 +35,16 @@ TEST_CASE("no_match_is_nothrow_v tracks a throwing construction", "[no-match-is-
   STATIC_CHECK(!deferred::detail::no_match_is_nothrow_v<throwing_from_nullopt>);
 }
 
-TEST_CASE("no_match_is_nothrow_v agrees with a non-finalized conditional", "[no-match-is-nothrow]")
+TEST_CASE("no_match_is_nothrow_v is one half of a non-finalized conditional's guarantee",
+          "[no-match-is-nothrow]")
 {
   auto ex = deferred::if_(true).then_(1);
 
-  STATIC_CHECK(noexcept(ex()) == deferred::detail::no_match_is_nothrow_v<decltype(ex())>);
+  // The trait covers the path where nothing matched. Evaluating also wraps a matched
+  // branch in the optional, which is only nothrow where the standard library says it
+  // is: optional's converting constructor has no noexcept specification, and libc++
+  // does not add one.
+  STATIC_CHECK(noexcept(ex())
+               == (deferred::detail::no_match_is_nothrow_v<decltype(ex())>
+                   && std::is_nothrow_constructible_v<std::optional<int>, int>));
 }
