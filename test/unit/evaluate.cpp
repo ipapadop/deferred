@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -155,4 +156,27 @@ TEST_CASE("make_node_is_nothrow agrees with the factory it guards", "[evaluate-n
   STATIC_CHECK(noexcept(deferred::constant(1)) == make_nothrow_v<deferred::constant_, int>);
   STATIC_CHECK(noexcept(deferred::constant(std::declval<throwing_move>()))
                == make_nothrow_v<deferred::constant_, throwing_move>);
+}
+
+TEST_CASE("evaluated_result_t is the type evaluate() yields", "[evaluate-result]")
+{
+  STATIC_CHECK(std::is_same_v<deferred::detail::evaluated_result_t<deferred::constant_<int>>, int>);
+  STATIC_CHECK(std::is_same_v<deferred::detail::evaluated_result_t<void_node>, void>);
+}
+
+TEST_CASE("evaluated_result_t strips the references operator() returns", "[evaluate-result]")
+{
+  // variable_ returns int& for an lvalue and constant_ returns int const&, but
+  // evaluate() yields a value in both cases.
+  STATIC_CHECK(
+    std::is_same_v<deferred::detail::evaluated_result_t<deferred::variable_<int>&>, int>);
+  STATIC_CHECK(
+    std::is_same_v<deferred::detail::evaluated_result_t<deferred::constant_<int>&>, int>);
+}
+
+TEST_CASE("evaluated_result_t follows a nested deferred expression", "[evaluate-result]")
+{
+  using nested = deferred::constant_<deferred::constant_<int>>;
+
+  STATIC_CHECK(std::is_same_v<deferred::detail::evaluated_result_t<nested>, int>);
 }

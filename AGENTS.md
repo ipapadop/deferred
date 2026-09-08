@@ -5,7 +5,14 @@ This project is a C++23 header-only library for creating deferred evaluation exp
 ## Project Overview
 
 - **Purpose**: Provides a mechanism to define expressions (using constants, variables, and operators) that are evaluated lazily at a later point.
-- **Switch expressions**: Existing switch expressions can be expanded with `append()`.
+- **Control flow**: `if_`, `switch_` and `while_` are built by chaining: `if_(c).then_(a).else_if_(c2).then_(b).else_(d)`,
+  `switch_(c).case_(l).then_(b).default_(d)`, `while_(c).do_(b)`. An `if_` without `else_` and a `switch_` without
+  `default_` evaluate to a `std::optional`, or to `void` when every branch produces no value.
+- **Switch expressions**: Existing switch expressions can be expanded with `case_(label).then_(body)`, which adds the
+  case after the existing ones and before the `default_` case.
+- **Result types**: Control-flow result types are deduced with `detail::evaluated_result_t` — the type `evaluate()`
+  yields — so a branch, case or default body that returns a deferred expression contributes its evaluated value type,
+  and a result is never a reference into a subexpression.
 - **Invocation**: Decayed callables are stored directly and evaluated with `std::invoke`, including member pointers.
 - **Exception guarantees**: Template APIs use conditional `noexcept` based on stored values and user operations.
 - **Main Technologies**: 

@@ -99,6 +99,18 @@ constexpr auto recursive_evaluate(T&& t) noexcept(detail::evaluation_is_nothrow<
 namespace detail {
 
 /**
+ * @brief Type an expression yields when it is evaluated.
+ *
+ * A deferred expression may return another deferred expression; @ref evaluate()
+ * keeps evaluating until a value is produced, so this is the type a control-flow
+ * expression actually observes for a subexpression, and it is never a reference.
+ *
+ * @tparam Expression Expression type.
+ */
+template<typename Expression>
+using evaluated_result_t = decltype(evaluate(std::declval<Expression>()));
+
+/**
  * @brief Checks evaluation and conversion to a mapped result type.
  * @tparam Result Target result type.
  * @tparam ExpressionReference Expression reference type.
@@ -107,7 +119,7 @@ namespace detail {
 template<typename Result, typename ExpressionReference>
 consteval bool evaluation_result_is_nothrow()
 {
-  using mapped_result = map_void_t<decltype(evaluate(std::declval<ExpressionReference>()))>;
+  using mapped_result = map_void_t<evaluated_result_t<ExpressionReference>>;
   return noexcept(evaluate(std::declval<ExpressionReference>()))
          && std::is_nothrow_constructible_v<Result, mapped_result>;
 }

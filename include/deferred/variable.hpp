@@ -23,7 +23,10 @@ class [[nodiscard]] variable_
 {
 public:
   using value_type          = T;
-  using subexpression_types = void;
+  using subexpression_types = std::tuple<>;
+
+  /// @brief The stored value can change between evaluations.
+  static constexpr bool mutable_state = true;
 
 private:
   [[no_unique_address]] T m_t{};
@@ -93,7 +96,7 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
-    noexcept(detail::is_nothrow_visitable_v<Visitor, variable_, std::tuple<>>)
+    noexcept(detail::is_nothrow_visitable_v<Visitor, variable_, subexpression_types>)
   {
     v(*this, nesting);
   }
