@@ -5,12 +5,14 @@
 
 #include "deferred/deferred.hpp"
 
-TEST_CASE("for with deferred condition and step", "[for-body]")
+TEST_CASE("for built entirely from deferred clauses", "[for-body]")
 {
   auto i   = deferred::variable<int>();
   auto sum = 0;
 
-  auto ex = deferred::for_([&i] { i = 0; }, i < 5, ++i).do_([&] { sum += i(); });
+  // Assigning a deferred expression to a variable builds the init clause, so no
+  // clause needs a lambda wrapper.
+  auto ex = deferred::for_(i = deferred::constant(0), i < 5, ++i).do_([&] { sum += i(); });
   ex();
   CHECK(i() == 5);
   CHECK(sum == 10);
@@ -21,7 +23,7 @@ TEST_CASE("for re-runs its initialization on every evaluation", "[for-init]")
   auto i     = deferred::variable(100);
   auto count = 0;
 
-  auto ex = deferred::for_([&i] { i = 0; }, i != 3, ++i).do_([&count] { ++count; });
+  auto ex = deferred::for_(i = deferred::constant(0), i != 3, ++i).do_([&count] { ++count; });
   ex();
   ex();
   CHECK(i() == 3);
@@ -58,4 +60,20 @@ TEST_CASE("for with a nested do-while body", "[for-nested-do-while]")
   ex();
   CHECK(i() == 3);
   CHECK(total == 6);
+}
+
+
+TEST_CASE("for init assigns one variable to another by value", "[for-init]")
+{
+  auto i     = deferred::variable<int>();
+  auto start = deferred::variable(2);
+  auto seen  = 0;
+
+  auto ex = deferred::for_(i = start, i < 5, ++i).do_([&] { seen += i(); });
+  ex();
+  CHECK(seen == 2 + 3 + 4);
+
+  // The loop counter took a copy: running it to completion left `start` alone.
+  CHECK(i() == 5);
+  CHECK(start() == 2);
 }

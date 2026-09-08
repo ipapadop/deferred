@@ -10,10 +10,38 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `do_(b).while_(c)`, `for_(init, c, step).do_(b)`. An `if_` without `else_` and a `switch_` without
   `default_` evaluate to a `std::optional`, or to `void` when every branch produces no value.
 - **Loops**: loop constructs evaluate to `void` and may be evaluated more than once; `for_` re-runs its `init`
-  clause on every evaluation. There is no deferred assignment operator, so an `init` or `step` clause that assigns
-  must be written as a lambda (`[&i] { i = 0; }`), while `i < 10` and `++i` are deferred expressions already.
+  clause on every evaluation.
+- **`for_` is its own node, built from a composition**: `for_expression` holds
+  `seq(init, while_(condition).do_(seq(body, step)))` and runs it. A `for` loop is a construct in its own right, so
+  it gets a node in its own right; the composition is an implementation detail that a visitor sees *below* the
+  `for_expression`. Naming the node in `for_builder::do_` fixes its template arguments, which is what keeps the
+  builder's members from being deduced as references into the builder — `test/unit/for.cpp`'s "a loop outlives the
+  builder" case catches that under ASan, and only under ASan.
+- **Assignment**: `variable_::operator=` is overloaded on the right-hand side. A *value* is stored immediately and
+  returns `variable_&`; a *deferred expression* returns an `assign_expression` that assigns when evaluated, which
+  is what makes `for_(i = constant(0), i < 10, ++i)` work without a lambda. `i = j` between variables therefore
+  assigns by value, re-reading the right-hand side on every evaluation. The deferred form is `[[nodiscard]]` and
+  `&`-qualified, and its return type is spelled out rather than deduced.
+- **Assignment from a variable is lvalue-only**: `i = j` works, but `i = std::move(j)` and
+  `i = std::as_const(j)` are rejected. `variable_`'s deleted move constructor makes its implicit copy assignment
+  deleted, and a non-template beats the deferred `operator=` template on those exact matches. This is not fixable
+  while `variable_` stays non-copyable — dropping the deleted move constructor would make the implicit copy
+  assignment *generated*, so `i = std::as_const(j)` would silently assign eagerly while `i = j` deferred. The
+  current asymmetry is the safe end state; `test/unit/assign.cpp` pins it.
+- **Compound assignment**: `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=` are deferred free operators
+  in `operators.hpp` requiring a `Deferred` left operand. They reuse `assign_expression` with an assigning
+  operation, so the target is evaluated once and the type's own compound operator is used — they do not expand to
+  `t = t + u`. Unlike `=`, they have no eager meaning, so they follow the same rule as every other operator.
+- **`seq`**: `seq(a, b, ...)` evaluates left to right and yields the last, like the comma operator. It is how a
+  loop body, branch or `for_` clause does more than one thing without a lambda.
+- **`assign_expression` is its own node, not an `expression_`**: an `expression_` holds its subexpressions in a
+  `std::tuple`, and instantiating a `std::tuple` holding a `variable_` reference asks whether that reference is
+  assignable — the question `variable_::operator=` answers — which re-enters the expression type while it is still
+  incomplete. Holding the target and value as direct members keeps that question answerable from the declaration
+  alone. Do not "simplify" it back into an `expression_` over an assigning operator.
 - **Visitor order**: children are visited in `subexpression_types` order, which is the source order of the
-  construct, not its evaluation order — for `for_(init, c, step).do_(b)` that is init, condition, step, body.
+  construct, not its evaluation order. `for_expression` has a single child, the composition it holds, so its
+  traversal continues `seq` → init, `while_` → condition, `seq` → body, step.
 - **Switch expressions**: Existing switch expressions can be expanded with `case_(label).then_(body)`, which adds the
   case after the existing ones and before the `default_` case.
 - **Result types**: Control-flow result types are deduced with `detail::evaluated_result_t` — the type `evaluate()`

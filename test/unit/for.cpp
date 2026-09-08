@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
+#include <type_traits>
 
 #include "deferred/constant.hpp"
 #include "deferred/for.hpp"
@@ -35,8 +36,8 @@ TEST_CASE("for with lambda", "[for-lambda]")
 {
   auto i   = 0;
   auto sum = 0;
-  auto ex  = deferred::for_([&i] { i = 0; }, [&i] { return i < 5; }, [&i] { ++i; }) //
-               .do_([&] { sum += i; });
+  auto ex =
+    deferred::for_([&i] { i = 0; }, [&i] { return i < 5; }, [&i] { ++i; }).do_([&] { sum += i; });
 
   static_assert(!deferred::is_constant_expression_v<decltype(ex)>);
   ex();
@@ -119,4 +120,28 @@ TEST_CASE("for accounts for throwing condition conversion", "[for-noexcept]")
               .do_([]() noexcept { });
 
   static_assert(!noexcept(ex()));
+}
+
+TEST_CASE("a loop outlives the builder it was built from", "[for-builders]")
+{
+  auto n   = 0;
+  auto ran = 0;
+
+  auto make_loop = [&] {
+    auto const builder = deferred::for_([&n] { n = 0; }, [&n] { return n < 3; }, [&n] { ++n; });
+    // The clauses must be copied out of the builder, not referenced into it.
+    return builder.do_([&ran] { ++ran; });
+  };
+
+  auto ex = make_loop();
+  ex();
+  CHECK(ran == 3);
+}
+
+TEST_CASE("a for loop evaluates to void", "[for-result]")
+{
+  auto ex = deferred::for_(0, false, 1).do_(1);
+
+  static_assert(std::is_void_v<decltype(ex())>);
+  ex();
 }

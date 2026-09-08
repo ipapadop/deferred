@@ -1,5 +1,6 @@
 set(SOURCES
   apply.cpp
+  assign.cpp
   conditional.cpp
   constant.cpp
   do_while.cpp
@@ -9,6 +10,7 @@ set(SOURCES
   is_constant_expression.cpp
   is_deferred.cpp
   main.cpp
+  seq.cpp
   switch.cpp
   variable.cpp
   visitor.cpp

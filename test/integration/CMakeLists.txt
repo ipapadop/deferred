@@ -1,11 +1,13 @@
 set(SOURCES
   apply.cpp
+  assign.cpp
   conditional.cpp
   constant.cpp
   do_while.cpp
   for.cpp
   main.cpp
   operators.cpp
+  seq.cpp
   switch.cpp
   variable.cpp
   visitor.cpp

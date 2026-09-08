@@ -10,6 +10,7 @@
 
 #include "detail/is_nothrow_visitable.hpp"
 
+#include "assign.hpp"
 #include "evaluate.hpp"
 
 namespace deferred {
@@ -68,6 +69,33 @@ public:
   {
     m_t = std::move(t);
     return *this;
+  }
+
+  /**
+   * @brief Builds a deferred assignment of @p e to the variable.
+   *
+   * Assigning a value stores it immediately; assigning a @c deferred expression
+   * instead *builds* an expression that performs the assignment when it is evaluated,
+   * which is what lets a loop clause assign:
+   * @code
+   * n = 10;                                        // assigns now
+   * auto ex = for_(i = constant(0), i < 10, ++i);  // assigns when ex is evaluated
+   * @endcode
+   *
+   * The variable is captured by reference, so the expression must not outlive it.
+   *
+   * @tparam E Type of the assigned expression.
+   * @param e Expression whose value is assigned to the variable.
+   * @return An expression assigning to the variable when evaluated.
+   */
+  template<Deferred E>
+  [[nodiscard]] constexpr detail::assign_expression_t<detail::assign_to, variable_&, E>
+  operator=(E&& e) & noexcept(detail::assign_is_nothrow<detail::assign_to, variable_&, E>())
+  {
+    // The return type is spelled out rather than deduced. Asking whether a variable
+    // reference is assignable -- which std::tuple does for every expression holding
+    // one -- must be answerable without instantiating this body.
+    return detail::assign_expression_t<detail::assign_to, variable_&, E>(*this, std::forward<E>(e));
   }
 
   /// @brief Returns the stored value.

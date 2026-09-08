@@ -22,6 +22,22 @@ struct throwing_expression
   { }
 };
 
+/// @brief Records whether it was moved from, to catch a builder that steals its body.
+struct move_recorder
+{
+  bool* moved_from;
+
+  explicit move_recorder(bool* flag) noexcept : moved_from(flag)
+  { }
+
+  move_recorder(move_recorder const&) = default;
+
+  move_recorder(move_recorder&& other) noexcept : moved_from(other.moved_from)
+  {
+    *other.moved_from = true;
+  }
+};
+
 struct throwing_boolean
 {
   explicit operator bool() const noexcept(false)
@@ -94,12 +110,25 @@ TEST_CASE("do-while builder reused gives independent loops", "[do-while-builders
   CHECK(n() == 2);
   CHECK(a == 3);
   CHECK(b == 1);
+}
 
-  // Building the second loop must not have consumed the shared body.
-  n = 1;
+TEST_CASE("a reused builder copies its body rather than moving it", "[do-while-builders]")
+{
+  auto stolen = false;
+  auto runs   = 0;
+
+  auto const builder = deferred::do_([&runs, recorder = move_recorder{&stolen}] { ++runs; });
+  stolen             = false; // building the builder itself moved the body into place
+
+  auto first  = builder.while_(false);
+  auto second = builder.while_(false);
+
+  // A const builder must stay reusable, so `while_() const&` must not steal the body.
+  CHECK_FALSE(stolen);
+
   first();
-  CHECK(runs == 5);
-  CHECK(n() == 0);
+  second();
+  CHECK(runs == 2);
 }
 
 TEST_CASE("do-while with move-only expressions", "[do-while-move-only]")
