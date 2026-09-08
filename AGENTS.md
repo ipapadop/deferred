@@ -5,9 +5,15 @@ This project is a C++23 header-only library for creating deferred evaluation exp
 ## Project Overview
 
 - **Purpose**: Provides a mechanism to define expressions (using constants, variables, and operators) that are evaluated lazily at a later point.
-- **Control flow**: `if_`, `switch_` and `while_` are built by chaining: `if_(c).then_(a).else_if_(c2).then_(b).else_(d)`,
-  `switch_(c).case_(l).then_(b).default_(d)`, `while_(c).do_(b)`. An `if_` without `else_` and a `switch_` without
+- **Control flow**: `if_`, `switch_`, `while_`, `do_` and `for_` are built by chaining:
+  `if_(c).then_(a).else_if_(c2).then_(b).else_(d)`, `switch_(c).case_(l).then_(b).default_(d)`, `while_(c).do_(b)`,
+  `do_(b).while_(c)`, `for_(init, c, step).do_(b)`. An `if_` without `else_` and a `switch_` without
   `default_` evaluate to a `std::optional`, or to `void` when every branch produces no value.
+- **Loops**: loop constructs evaluate to `void` and may be evaluated more than once; `for_` re-runs its `init`
+  clause on every evaluation. There is no deferred assignment operator, so an `init` or `step` clause that assigns
+  must be written as a lambda (`[&i] { i = 0; }`), while `i < 10` and `++i` are deferred expressions already.
+- **Visitor order**: children are visited in `subexpression_types` order, which is the source order of the
+  construct, not its evaluation order — for `for_(init, c, step).do_(b)` that is init, condition, step, body.
 - **Switch expressions**: Existing switch expressions can be expanded with `case_(label).then_(body)`, which adds the
   case after the existing ones and before the `default_` case.
 - **Result types**: Control-flow result types are deduced with `detail::evaluated_result_t` — the type `evaluate()`

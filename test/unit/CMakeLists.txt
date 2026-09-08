@@ -2,7 +2,9 @@ set(SOURCES
   apply.cpp
   conditional.cpp
   constant.cpp
+  do_while.cpp
   evaluate.cpp
+  for.cpp
   invoke.cpp
   is_constant_expression.cpp
   is_deferred.cpp

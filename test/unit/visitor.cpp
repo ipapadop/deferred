@@ -20,6 +20,8 @@ enum class node_kind
   variable,
   expression,
   while_,
+  do_while_,
+  for_,
   switch_,
   default_,
   case_
@@ -54,6 +56,16 @@ struct node_kind_of<deferred::expression_<Operator, Expressions...>> :
 template<typename Condition, typename Body>
 struct node_kind_of<deferred::while_expression<Condition, Body>> :
   std::integral_constant<node_kind, node_kind::while_>
+{ };
+
+template<typename Body, typename Condition>
+struct node_kind_of<deferred::do_while_expression<Body, Condition>> :
+  std::integral_constant<node_kind, node_kind::do_while_>
+{ };
+
+template<typename Init, typename Condition, typename Step, typename Body>
+struct node_kind_of<deferred::for_expression<Init, Condition, Step, Body>> :
+  std::integral_constant<node_kind, node_kind::for_>
 { };
 
 template<typename Condition, typename Default, typename... Cases>
@@ -184,7 +196,8 @@ TEST_CASE("expression visitor traverses operands but not the operator", "[visito
 
 TEST_CASE("while visitor traverses condition before body", "[visitor]")
 {
-  auto expression = deferred::while_(false).do_(1);
+  // Each child is a different node kind, so the order is actually pinned.
+  auto expression = deferred::while_(false).do_([] { });
   std::vector<std::pair<node_kind, std::size_t>> visited;
 
   expression.visit([&](auto const& node, std::size_t nesting) {
@@ -195,7 +208,46 @@ TEST_CASE("while visitor traverses condition before body", "[visitor]")
   CHECK(visited
         == std::vector{entry{node_kind::while_, 0},
                        entry{node_kind::constant, 1},
+                       entry{node_kind::expression, 1}});
+}
+
+TEST_CASE("do-while visitor traverses body before condition", "[visitor]")
+{
+  // Each child is a different node kind, so the order is actually pinned.
+  auto expression = deferred::do_([] { }).while_(false);
+  std::vector<std::pair<node_kind, std::size_t>> visited;
+
+  expression.visit([&](auto const& node, std::size_t nesting) {
+    visited.emplace_back(node_kind_of_v<decltype(node)>, nesting);
+  });
+
+  using entry = std::pair<node_kind, std::size_t>;
+  CHECK(visited
+        == std::vector{entry{node_kind::do_while_, 0},
+                       entry{node_kind::expression, 1},
                        entry{node_kind::constant, 1}});
+}
+
+TEST_CASE("for visitor traverses its subexpressions in source order", "[visitor]")
+{
+  // Each child is a different node kind, so the order is actually pinned.
+  auto i          = deferred::variable(0);
+  auto expression = deferred::for_(i, false, [] { }).do_(deferred::while_(false).do_(1));
+  std::vector<std::pair<node_kind, std::size_t>> visited;
+
+  expression.visit([&](auto const& node, std::size_t nesting) {
+    visited.emplace_back(node_kind_of_v<decltype(node)>, nesting);
+  });
+
+  using entry = std::pair<node_kind, std::size_t>;
+  CHECK(visited
+        == std::vector{entry{node_kind::for_, 0},
+                       entry{node_kind::variable, 1},
+                       entry{node_kind::constant, 1},
+                       entry{node_kind::expression, 1},
+                       entry{node_kind::while_, 1},
+                       entry{node_kind::constant, 2},
+                       entry{node_kind::constant, 2}});
 }
 
 TEST_CASE("switch visitor skips the default of an unfinalized switch", "[visitor]")

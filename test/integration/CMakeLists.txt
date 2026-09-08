@@ -2,6 +2,8 @@ set(SOURCES
   apply.cpp
   conditional.cpp
   constant.cpp
+  do_while.cpp
+  for.cpp
   main.cpp
   operators.cpp
   switch.cpp

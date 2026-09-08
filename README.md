@@ -5,7 +5,8 @@ Library for creating deferred evaluation expressions in C++23.
 ``deferred`` provides:
 - functions to declare constants and variables,
 - functions to create deferred evaluation expressions from functions,
-- deferred ``if``, ``switch`` and ``while`` built from chained expressions,
+- deferred ``if``, ``switch``, ``while``, ``do``-``while`` and ``for`` built from chained
+  expressions,
 - ``deferred``-enabled commonly used operators.
 
 Requirements
@@ -100,7 +101,17 @@ auto s = deferred::switch_(var)
            .default_("unknown");
 
 auto loop = deferred::while_(n != 0).do_(--n);
+
+auto at_least_once = deferred::do_(--n).while_(n != 0);
+
+auto counted = deferred::for_([&i] { i = 0; }, i < 10, ++i).do_(body);
 ```
+
+Loops evaluate to ``void``, and a loop expression may be evaluated more than
+once: ``for_`` re-runs its initialization on every evaluation rather than once
+at construction. There is no deferred assignment operator, so an initialization
+or step clause that assigns is written as a lambda; ``i < 10`` and ``++i`` work
+directly because those operators are deferred.
 
 An ``if_`` chain without ``else_``, and a ``switch_`` without ``default_``, are
 usable expressions that return a ``std::optional`` (or nothing, when the branches
