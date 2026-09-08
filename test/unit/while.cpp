@@ -5,11 +5,22 @@
 
 #include <memory>
 
+#include "deferred/constant.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
 #include "deferred/variable.hpp"
 #include "deferred/while.hpp"
 
 namespace {
+
+struct throwing_expression
+{
+  throwing_expression() = default;
+  throwing_expression(throwing_expression const&) noexcept(false)
+  { }
+
+  throwing_expression(throwing_expression&&) noexcept(false)
+  { }
+};
 
 struct throwing_boolean
 {
@@ -107,6 +118,12 @@ TEST_CASE("while builder is copy constructible from a mutable lvalue", "[while-b
 TEST_CASE("while builders are not deferred expressions", "[while-builders]")
 {
   static_assert(!deferred::Deferred<decltype(deferred::while_(false))>);
+}
+
+TEST_CASE("building a while loop carries its exception guarantee", "[while-noexcept]")
+{
+  STATIC_CHECK(noexcept(deferred::while_(false).do_(1)));
+  STATIC_CHECK(!noexcept(deferred::while_(false).do_(deferred::constant(throwing_expression{}))));
 }
 
 TEST_CASE("while accounts for throwing condition conversion", "[while-noexcept]")

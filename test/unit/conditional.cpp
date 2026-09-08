@@ -16,6 +16,16 @@
 
 namespace {
 
+struct throwing_expression
+{
+  throwing_expression() = default;
+  throwing_expression(throwing_expression const&) noexcept(false)
+  { }
+
+  throwing_expression(throwing_expression&&) noexcept(false)
+  { }
+};
+
 struct throwing_boolean
 {
   explicit operator bool() const noexcept(false)
@@ -308,6 +318,25 @@ TEST_CASE("conditional builders are not deferred expressions", "[conditional-bui
 {
   static_assert(!deferred::Deferred<decltype(deferred::if_(true))>);
   static_assert(!deferred::Deferred<decltype(deferred::if_(true).then_(1).else_if_(false))>);
+}
+
+TEST_CASE("building a conditional chain carries its exception guarantee", "[conditional-noexcept]")
+{
+  STATIC_CHECK(noexcept(deferred::if_(true).then_(1)));
+  STATIC_CHECK(noexcept(deferred::if_(true).then_(1).else_(2)));
+  STATIC_CHECK(noexcept(deferred::if_(true).then_(1).else_if_(false)));
+  STATIC_CHECK(noexcept(deferred::if_(true).then_(1).else_if_(false).then_(2).else_(3)));
+}
+
+TEST_CASE("building a conditional chain never over-promises", "[conditional-noexcept]")
+{
+  STATIC_CHECK(!noexcept(deferred::if_(true).then_(deferred::constant(throwing_expression{}))));
+  STATIC_CHECK(
+    !noexcept(deferred::if_(true).then_(1).else_(deferred::constant(throwing_expression{}))));
+
+  // A branch that throws while being carried over to the next link counts too.
+  STATIC_CHECK(!noexcept(
+    deferred::if_(true).then_(deferred::constant(throwing_expression{})).else_if_(false).then_(1)));
 }
 
 TEST_CASE("conditional accounts for throwing condition conversion", "[conditional-noexcept]")

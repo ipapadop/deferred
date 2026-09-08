@@ -12,6 +12,16 @@
 
 namespace {
 
+struct throwing_expression
+{
+  throwing_expression() = default;
+  throwing_expression(throwing_expression const&) noexcept(false)
+  { }
+
+  throwing_expression(throwing_expression&&) noexcept(false)
+  { }
+};
+
 struct throwing_boolean
 {
   explicit operator bool() const noexcept(false)
@@ -52,6 +62,19 @@ TEST_CASE("switch with a literal case", "[switch-case-literal]")
 
   auto other = deferred::switch_(1).case_(2).then_(0).default_(100);
   CHECK(other() == 100);
+}
+
+TEST_CASE("switch with mutable lambda", "[switch-mutable-lambdas]")
+{
+  auto condition =
+    deferred::switch_([i = 0]() mutable { return i++; }).case_(0).then_(10).default_(0);
+  CHECK(condition() == 10);
+
+  auto body = deferred::switch_(1).case_(1).then_([i = 0]() mutable { return ++i; }).default_(0);
+  CHECK(body() == 1);
+
+  auto label = deferred::switch_(0).case_([i = 0]() mutable { return i++; }).then_(10).default_(0);
+  CHECK(label() == 10);
 }
 
 TEST_CASE("switch with a lambda case", "[switch-case-lambda]")
@@ -345,6 +368,29 @@ TEST_CASE("switch with void bodies can be noexcept", "[switch-noexcept]")
 
   auto throwing_body = deferred::switch_(1).case_(1).then_([&i] { ++i; });
   static_assert(!noexcept(throwing_body()));
+}
+
+TEST_CASE("building a switch chain carries its exception guarantee", "[switch-noexcept]")
+{
+  STATIC_CHECK(noexcept(deferred::switch_(1).case_(1)));
+  STATIC_CHECK(noexcept(deferred::switch_(1).case_(1).then_(2)));
+  STATIC_CHECK(noexcept(deferred::switch_(1).case_(1).then_(2).default_(0)));
+  STATIC_CHECK(noexcept(deferred::switch_(1).case_(1).then_(2).case_(2).then_(3).default_(0)));
+}
+
+TEST_CASE("building a switch chain never over-promises", "[switch-noexcept]")
+{
+  STATIC_CHECK(
+    !noexcept(deferred::switch_(1).case_(1).then_(deferred::constant(throwing_expression{}))));
+  STATIC_CHECK(!noexcept(
+    deferred::switch_(1).case_(1).then_(2).default_(deferred::constant(throwing_expression{}))));
+
+  // A case that throws while being carried over to the next link counts too.
+  STATIC_CHECK(!noexcept(deferred::switch_(1)
+                           .case_(1)
+                           .then_(deferred::constant(throwing_expression{}))
+                           .case_(2)
+                           .then_(3)));
 }
 
 TEST_CASE("switch accounts for throwing comparison conversion", "[switch-noexcept]")

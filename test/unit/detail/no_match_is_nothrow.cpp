@@ -24,8 +24,7 @@ TEST_CASE("no_match_is_nothrow_v holds for a void result", "[no-match-is-nothrow
   STATIC_CHECK(deferred::detail::no_match_is_nothrow_v<void>);
 }
 
-TEST_CASE("no_match_is_nothrow_v follows optional's nullopt constructor",
-          "[no-match-is-nothrow]")
+TEST_CASE("no_match_is_nothrow_v follows optional's nullopt constructor", "[no-match-is-nothrow]")
 {
   STATIC_CHECK(deferred::detail::no_match_is_nothrow_v<std::optional<int>>);
   STATIC_CHECK(deferred::detail::no_match_is_nothrow_v<std::optional<std::optional<int>>>);
@@ -36,8 +35,7 @@ TEST_CASE("no_match_is_nothrow_v tracks a throwing construction", "[no-match-is-
   STATIC_CHECK(!deferred::detail::no_match_is_nothrow_v<throwing_from_nullopt>);
 }
 
-TEST_CASE("no_match_is_nothrow_v agrees with a non-finalized conditional",
-          "[no-match-is-nothrow]")
+TEST_CASE("no_match_is_nothrow_v agrees with a non-finalized conditional", "[no-match-is-nothrow]")
 {
   auto ex = deferred::if_(true).then_(1);
 

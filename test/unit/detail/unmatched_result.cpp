@@ -21,7 +21,8 @@ TEST_CASE("unmatched_result_t passes a finalized result through", "[unmatched-re
 
 TEST_CASE("unmatched_result_t wraps a non-finalized result in optional", "[unmatched-result]")
 {
-  STATIC_CHECK(std::is_same_v<deferred::detail::unmatched_result_t<false, int>, std::optional<int>>);
+  STATIC_CHECK(
+    std::is_same_v<deferred::detail::unmatched_result_t<false, int>, std::optional<int>>);
   STATIC_CHECK(std::is_same_v<deferred::detail::unmatched_result_t<false, std::string>,
                               std::optional<std::string>>);
 }
@@ -38,10 +39,10 @@ TEST_CASE("unmatched_result_t agrees with the expressions that use it", "[unmatc
   auto not_finalized = deferred::if_(true).then_(1);
   auto switched      = deferred::switch_(1).case_(1).then_(2);
 
-  STATIC_CHECK(std::is_same_v<decltype(finalized()),
-                              deferred::detail::unmatched_result_t<true, int>>);
-  STATIC_CHECK(std::is_same_v<decltype(not_finalized()),
-                              deferred::detail::unmatched_result_t<false, int>>);
+  STATIC_CHECK(
+    std::is_same_v<decltype(finalized()), deferred::detail::unmatched_result_t<true, int>>);
+  STATIC_CHECK(
+    std::is_same_v<decltype(not_finalized()), deferred::detail::unmatched_result_t<false, int>>);
   STATIC_CHECK(
     std::is_same_v<decltype(switched()), deferred::detail::unmatched_result_t<false, int>>);
 }

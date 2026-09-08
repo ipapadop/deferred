@@ -4,6 +4,7 @@
 #ifndef DEFERRED_TYPE_TRAITS_IS_CONSTANT_EXPRESSION_HPP
 #define DEFERRED_TYPE_TRAITS_IS_CONSTANT_EXPRESSION_HPP
 
+#include <concepts>
 #include <tuple>
 #include <type_traits>
 
@@ -11,6 +12,20 @@ namespace deferred {
 
 template<typename T>
 struct is_constant_expression;
+
+/**
+ * @brief Concept for expressions whose own stored value can change between evaluations.
+ *
+ * An expression opts out of @ref is_constant_expression by declaring
+ * <tt>static constexpr bool mutable_state = true;</tt>. Only the node itself is opted
+ * out; its subexpressions are still examined.
+ *
+ * @tparam T The type to check against the concept.
+ */
+template<typename T>
+concept HasMutableState = requires {
+  { T::mutable_state } -> std::convertible_to<bool>;
+} && T::mutable_state;
 
 namespace detail {
 
@@ -26,10 +41,12 @@ struct is_constant_expression<std::tuple<T...>> :
 { };
 
 // If subexpression_types is defined, then it is a deferred data type that is
-// potentially a constant expression
+// potentially a constant expression: it is one when it does not hold mutable state of
+// its own and none of its subexpressions does either.
 template<typename T>
 struct is_constant_expression<T, std::void_t<typename T::subexpression_types>> :
-  public is_constant_expression<typename T::subexpression_types>
+  public std::bool_constant<!deferred::HasMutableState<T>
+                            && is_constant_expression<typename T::subexpression_types>::value>
 { };
 
 } // namespace detail

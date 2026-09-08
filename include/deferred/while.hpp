@@ -25,9 +25,7 @@ template<Deferred ConditionExpression, Deferred BodyExpression>
 class while_expression
 {
 public:
-  using condition_expression_type = ConditionExpression;
-  using body_expression_type      = BodyExpression;
-  using subexpression_types       = std::tuple<ConditionExpression, BodyExpression>;
+  using subexpression_types = std::tuple<ConditionExpression, BodyExpression>;
 
 private:
   [[no_unique_address]] ConditionExpression m_condition;
@@ -113,7 +111,11 @@ public:
    * @return A @ref while_expression capturing the condition and body.
    */
   template<typename BodyExpression>
-  [[nodiscard]] constexpr auto do_(BodyExpression&& body) &&
+  [[nodiscard]] constexpr auto do_(BodyExpression&& body) && //
+    noexcept(std::is_nothrow_constructible_v<
+             while_expression<ConditionExpression, make_deferred_t<BodyExpression>>,
+             ConditionExpression&&,
+             BodyExpression&&>)
   {
     using body_expression = make_deferred_t<BodyExpression>;
     return while_expression<ConditionExpression, body_expression>(
@@ -123,7 +125,11 @@ public:
 
   /// @copydoc do_
   template<typename BodyExpression>
-  [[nodiscard]] constexpr auto do_(BodyExpression&& body) const&
+  [[nodiscard]] constexpr auto do_(BodyExpression&& body) const& //
+    noexcept(std::is_nothrow_constructible_v<
+             while_expression<ConditionExpression, make_deferred_t<BodyExpression>>,
+             ConditionExpression const&,
+             BodyExpression&&>)
   {
     using body_expression = make_deferred_t<BodyExpression>;
     return while_expression<ConditionExpression, body_expression>(

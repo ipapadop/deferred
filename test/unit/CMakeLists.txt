@@ -4,6 +4,7 @@ set(SOURCES
   constant.cpp
   evaluate.cpp
   invoke.cpp
+  is_constant_expression.cpp
   is_deferred.cpp
   main.cpp
   switch.cpp
