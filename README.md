@@ -5,7 +5,10 @@ Library for creating deferred evaluation expressions in C++23.
 ``deferred`` provides:
 - functions to declare constants and variables,
 - functions to create deferred evaluation expressions from functions,
-- deferred ``if``, ``switch`` and ``while`` built from chained expressions,
+- deferred ``if``, ``switch``, ``while``, ``do``-``while`` and ``for`` built from chained
+  expressions,
+- deferred assignment to variables, including compound assignment,
+- ``deferred::seq`` for sequencing several expressions where one is expected,
 - ``deferred``-enabled commonly used operators.
 
 Requirements
@@ -100,7 +103,82 @@ auto s = deferred::switch_(var)
            .default_("unknown");
 
 auto loop = deferred::while_(n != 0).do_(--n);
+
+auto at_least_once = deferred::do_(--n).while_(n != 0);
+
+auto counted = deferred::for_(i = deferred::constant(0), i < 10, ++i).do_(body);
 ```
+
+Loops evaluate to ``void``, and a loop expression may be evaluated more than
+once: ``for_`` re-runs its initialization on every evaluation rather than once
+at construction.
+
+Assigning to a variable has two meanings, chosen by the right-hand side.
+Assigning a *value* stores it immediately, as it always has; assigning a
+*deferred expression* instead builds an expression that assigns when it is
+evaluated, which is what lets a loop clause assign:
+
+```C++
+n = 10;                                   // assigns now, returns variable_<int>&
+auto init = (i = deferred::constant(0));  // assigns nothing yet
+init();                                   // now i is 0
+```
+
+Because the deferred form looks like an ordinary assignment, it is
+``[[nodiscard]]`` -- writing ``i = deferred::constant(0);`` as a statement warns
+rather than silently doing nothing -- and it only binds to a named variable, so
+it cannot capture a temporary.
+
+A variable is itself a deferred expression, so ``i = j`` assigns one variable to
+another. It follows ordinary C++ assignment: the target receives a copy of the
+value the right-hand side evaluates to, and the two stay independent afterwards.
+The right-hand side is read on every evaluation, not captured when the
+expression is built. Only a plain lvalue works as the source:
+``i = std::move(j)`` and ``i = std::as_const(j)`` are rejected.
+
+The one place the two meanings bite is a loop clause. ``for_(i = 0, ...)``
+compiles, because ``i = 0`` assigns immediately and yields the variable itself,
+leaving an init clause that merely reads ``i``. The loop is then right the first
+time it is evaluated and silently runs zero iterations on every later one:
+
+```C++
+auto ex = deferred::for_(i = 0, i < 5, ++i).do_(body);   // WRONG: init does nothing
+auto ok = deferred::for_(i = deferred::constant(0), i < 5, ++i).do_(body);
+```
+
+Wrap the value -- ``deferred::constant(0)``, or any deferred expression -- so the
+assignment is part of the loop rather than part of building it. A variable holding a reference-like type, such as
+``std::reference_wrapper``, does whatever that type's own assignment does:
+
+```C++
+auto i = deferred::variable<int>();
+auto j = deferred::variable(3);
+auto ex = deferred::for_(i = j, i < 5, ++i).do_(body);  // starts at j's value
+```
+
+Compound assignment (``+=``, ``-=``, ``*=``, ``/=``, ``%=``, ``&=``, ``|=``,
+``^=``, ``<<=``, ``>>=``) is deferred whenever its left operand is, like every
+other operator in the library -- only plain ``=`` carries the eager meaning.
+Each uses the target type's own compound operator and evaluates the target once,
+rather than expanding to ``t = t + u``.
+
+Sequencing
+----------
+
+``deferred::seq`` evaluates several expressions left to right and yields the
+last, as the built-in comma operator does. It is what lets a construct that
+takes a single expression -- a loop body, a branch, a ``for_`` clause -- do more
+than one thing without a lambda:
+
+```C++
+auto ex = deferred::while_(n != 0).do_(deferred::seq(ticks += 1, n -= 1));
+```
+
+``for_`` is built from these: a ``for_expression`` holds
+``seq(init, while_(cond).do_(seq(body, step)))`` and runs it. It remains a
+construct of its own, so a visitor sees the ``for_expression`` first and the
+composition below it.
+
 
 An ``if_`` chain without ``else_``, and a ``switch_`` without ``default_``, are
 usable expressions that return a ``std::optional`` (or nothing, when the branches

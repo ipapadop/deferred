@@ -1,12 +1,16 @@
 set(SOURCES
   apply.cpp
+  assign.cpp
   conditional.cpp
   constant.cpp
+  do_while.cpp
   evaluate.cpp
+  for.cpp
   invoke.cpp
   is_constant_expression.cpp
   is_deferred.cpp
   main.cpp
+  seq.cpp
   switch.cpp
   variable.cpp
   visitor.cpp
