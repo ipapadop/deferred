@@ -1,16 +1,17 @@
 // SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
 // SPDX-License-Identifier: MIT
 
-#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <functional>
+#include <string>
 #include <type_traits>
 #include <utility>
 
 #include "deferred/assign.hpp"
 #include "deferred/constant.hpp"
+#include "deferred/invoke.hpp"
 #include "deferred/operators.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
 #include "deferred/variable.hpp"
@@ -28,6 +29,20 @@ struct throwing_value
 
 template<typename T, typename U>
 concept compound_addable = requires(T t, U u) { t += u; };
+
+/// @brief Counts how many times it is copied.
+struct counted
+{
+  static inline int copies = 0;
+  int value{};
+
+  counted() = default;
+  counted(counted const& other) : value(other.value)
+  {
+    ++copies;
+  }
+  counted& operator=(counted const&) = default;
+};
 
 } // namespace
 
@@ -215,4 +230,90 @@ TEST_CASE("only a plain lvalue variable is a deferred assignment source", "[assi
   // Every other deferred right-hand side is unaffected by this.
   static_assert(std::is_assignable_v<target&, deferred::constant_<int>>);
   static_assert(std::is_assignable_v<target&, deferred::constant_<int>&>);
+}
+
+TEST_CASE("assign reaches a target that is not a variable", "[assign]")
+{
+  struct counter
+  {
+    int value{};
+  };
+
+  counter c;
+  auto source = deferred::variable(1);
+  auto ex     = deferred::assign(deferred::invoke(&counter::value, &c), source);
+
+  ex();
+  CHECK(c.value == 1);
+
+  // The value expression is read on every evaluation, as for a variable target.
+  source = 9;
+  ex();
+  CHECK(c.value == 9);
+}
+
+namespace {
+
+template<typename Target, typename Value>
+concept assignable_target = requires(Target t, Value v) { deferred::assign(t, v); };
+
+template<typename Target>
+concept compound_target = requires(Target t) { t += 1; };
+
+} // namespace
+
+TEST_CASE("an assignment target must yield an lvalue", "[assign]")
+{
+  using lvalue_target = deferred::variable_<int>&;
+  // Evaluating this yields a prvalue: assigning would write into a temporary and hand
+  // back a reference to it.
+  using prvalue_target = decltype(deferred::invoke([] { return 0; }))&;
+
+  static_assert(assignable_target<lvalue_target, deferred::constant_<int>>);
+  static_assert(!assignable_target<prvalue_target, deferred::constant_<int>>);
+
+  static_assert(compound_target<lvalue_target>);
+  static_assert(!compound_target<prvalue_target>);
+}
+
+
+
+TEST_CASE("eager assignment returns the variable", "[assign]")
+{
+  auto a = deferred::variable<int>();
+
+  // Chaining reads the result of the eager overload, so it must stay `variable_&`.
+  static_assert(std::is_same_v<decltype(a = 3), deferred::variable_<int>&>);
+  CHECK((a = 3)() == 3);
+}
+
+TEST_CASE("chained assignment defers the outer assignment", "[assign]")
+{
+  auto a = deferred::variable<int>();
+  auto b = deferred::variable<int>();
+  a      = 1;
+
+  // `b = 7` assigns eagerly and yields `b` itself, which is a deferred expression, so
+  // the outer `=` builds a deferred assignment rather than chaining eagerly.
+  auto chained = (a = (b = 7));
+
+  CHECK(b() == 7);
+  CHECK(a() == 1);
+  chained();
+  CHECK(a() == 7);
+}
+
+TEST_CASE("a deferred assignment does not copy a referenced right-hand side", "[assign]")
+{
+  auto target = deferred::variable<counted>();
+  auto source = deferred::variable(counted{});
+  auto ex     = (target = source);
+
+  counted::copies = 0;
+  ex();
+  ex();
+
+  // The source already yields a reference, so evaluate_ref hands it straight to the
+  // assignment instead of decaying it into a temporary first.
+  CHECK(counted::copies == 0);
 }

@@ -12,6 +12,7 @@
 #include "expression.hpp"
 #include "for.hpp"
 #include "invoke.hpp"
+#include "logical.hpp"
 #include "operators.hpp"
 #include "seq.hpp"
 #include "switch.hpp"

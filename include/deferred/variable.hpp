@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "detail/is_nothrow_visitable.hpp"
+#include "detail/no_unique_address.hpp"
 
 #include "assign.hpp"
 #include "evaluate.hpp"
@@ -30,7 +31,7 @@ public:
   static constexpr bool mutable_state = true;
 
 private:
-  [[no_unique_address]] T m_t{};
+  DEFERRED_NO_UNIQUE_ADDRESS T m_t{};
 
 public:
   variable_() = default;
@@ -89,13 +90,19 @@ public:
    * @return An expression assigning to the variable when evaluated.
    */
   template<Deferred E>
-  [[nodiscard]] constexpr detail::assign_expression_t<detail::assign_to, variable_&, E>
+  [[nodiscard]] constexpr assign_expression<detail::assign_to, variable_&, make_deferred_t<E>>
   operator=(E&& e) & noexcept(detail::assign_is_nothrow<detail::assign_to, variable_&, E>())
   {
     // The return type is spelled out rather than deduced. Asking whether a variable
     // reference is assignable -- which std::tuple does for every expression holding
     // one -- must be answerable without instantiating this body.
-    return detail::assign_expression_t<detail::assign_to, variable_&, E>(*this, std::forward<E>(e));
+    //
+    // The target is named as variable_& rather than as make_deferred_t<variable_&>,
+    // which does not depend on E and so is resolved while this class is instantiated.
+    // When make_deferred_t<variable_&> is itself what triggers that instantiation, it
+    // would re-enter its own deduction.
+    return assign_expression<detail::assign_to, variable_&, make_deferred_t<E>>(*this,
+                                                                                std::forward<E>(e));
   }
 
   /// @brief Returns the stored value.
@@ -104,13 +111,13 @@ public:
     return m_t;
   }
 
-  /// @copydoc variable_::operator()() const& noexcept
+  /// @brief Returns the stored value, as a mutable reference.
   [[nodiscard]] constexpr T& operator()() & noexcept
   {
     return m_t;
   }
 
-  /// @copydoc variable_::operator()() const& noexcept
+  /// @brief Returns the stored value, moved out of the variable.
   [[nodiscard]] constexpr T operator()() && noexcept(std::is_nothrow_move_constructible_v<T>)
   {
     return std::move(m_t);
@@ -157,6 +164,27 @@ variable(T&& t) noexcept(detail::make_node_is_nothrow<variable_, T&&>())
 {
   return variable_<detail::node_result_t<T&&>>(recursive_evaluate(std::forward<T>(t)));
 }
+
+namespace detail {
+
+/**
+ * @brief Whether @p T is a @ref variable_ .
+ * @tparam T Type to check.
+ */
+template<typename T>
+struct is_variable : std::false_type
+{ };
+
+/// @copydoc is_variable
+template<typename T>
+struct is_variable<variable_<T>> : std::true_type
+{ };
+
+/// @copydoc is_variable
+template<typename T>
+inline constexpr bool is_variable_v = is_variable<std::remove_cvref_t<T>>::value;
+
+} // namespace detail
 
 } // namespace deferred
 

@@ -4,23 +4,25 @@
 #ifndef DEFERRED_FOR_HPP
 #define DEFERRED_FOR_HPP
 
+#include <cstddef>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
+#include "detail/is_nothrow_visitable.hpp"
+#include "detail/no_unique_address.hpp"
+#include "evaluate.hpp"
 #include "expression.hpp"
-#include "seq.hpp"
-#include "while.hpp"
+#include "variable.hpp"
 
 namespace deferred {
 
 /**
  * @brief Deferred for loop.
  *
- * A @c for loop is defined as its initialization followed by a @c while loop whose body
- * is the loop body followed by the step, and that is exactly how this is built: it holds
- * <tt>seq(init, while_(condition).do_(seq(body, step)))</tt> and runs it. The composition
- * is an implementation detail — a @c for loop is a construct of its own, so it gets a node
- * of its own, and a visitor sees a @ref for_expression rather than the parts.
+ * Evaluates @p InitExpression once per evaluation of the loop, then evaluates
+ * @p BodyExpression followed by @p StepExpression while @p ConditionExpression
+ * evaluates to @c true.
  *
  * @tparam InitExpression Type of the initialization expression.
  * @tparam ConditionExpression Type of the condition expression.
@@ -33,20 +35,15 @@ template<Deferred InitExpression,
          Deferred BodyExpression>
 class for_expression
 {
-  /// @brief The body of the underlying @c while loop: the loop body, then the step.
-  using iteration_type = seq_expression<BodyExpression, StepExpression>;
-
-  /// @brief The underlying @c while loop.
-  using loop_type = while_expression<ConditionExpression, iteration_type>;
-
 public:
-  /// @brief The composition this loop is defined as.
-  using composed_type = seq_expression<InitExpression, loop_type>;
-
-  using subexpression_types = std::tuple<composed_type>;
+  using subexpression_types =
+    std::tuple<InitExpression, ConditionExpression, StepExpression, BodyExpression>;
 
 private:
-  [[no_unique_address]] composed_type m_composed;
+  DEFERRED_NO_UNIQUE_ADDRESS InitExpression m_init;
+  DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS StepExpression m_step;
+  DEFERRED_NO_UNIQUE_ADDRESS BodyExpression m_body;
 
 public:
   /**
@@ -62,24 +59,36 @@ public:
    */
   template<typename Init, typename Condition, typename Step, typename Body>
   constexpr explicit for_expression(Init&& init, Condition&& condition, Step&& step, Body&& body) //
-    noexcept(std::is_nothrow_constructible_v<iteration_type, Body&&, Step&&>
-             && std::is_nothrow_constructible_v<loop_type, Condition&&, iteration_type&&>
-             && std::is_nothrow_constructible_v<composed_type, Init&&, loop_type&&>) :
-    m_composed(std::forward<Init>(init),
-               loop_type(std::forward<Condition>(condition),
-                         iteration_type(std::forward<Body>(body), std::forward<Step>(step))))
+    noexcept(std::is_nothrow_constructible_v<InitExpression, Init&&>
+             && std::is_nothrow_constructible_v<ConditionExpression, Condition&&>
+             && std::is_nothrow_constructible_v<StepExpression, Step&&>
+             && std::is_nothrow_constructible_v<BodyExpression, Body&&>) :
+    m_init(std::forward<Init>(init)), m_condition(std::forward<Condition>(condition)),
+    m_step(std::forward<Step>(step)), m_body(std::forward<Body>(body))
   { }
 
   /// @brief Evaluates the for loop.
-  constexpr void operator()() const noexcept(noexcept(m_composed()))
+  constexpr void
+  operator()() const noexcept(noexcept(evaluate_ref(m_init))
+                              && noexcept(static_cast<bool>(evaluate_ref(m_condition)))
+                              && noexcept(evaluate_ref(m_step)) && noexcept(evaluate_ref(m_body)))
   {
-    m_composed();
+    for (evaluate_ref(m_init); evaluate_ref(m_condition); evaluate_ref(m_step))
+    {
+      evaluate_ref(m_body);
+    }
   }
 
   /// @copydoc for_expression::operator()() const
-  constexpr void operator()() noexcept(noexcept(m_composed()))
+  constexpr void
+  operator()() noexcept(noexcept(evaluate_ref(m_init))
+                        && noexcept(static_cast<bool>(evaluate_ref(m_condition)))
+                        && noexcept(evaluate_ref(m_step)) && noexcept(evaluate_ref(m_body)))
   {
-    m_composed();
+    for (evaluate_ref(m_init); evaluate_ref(m_condition); evaluate_ref(m_step))
+    {
+      evaluate_ref(m_body);
+    }
   }
 
   /**
@@ -93,7 +102,10 @@ public:
     noexcept(detail::is_nothrow_visitable_v<Visitor, for_expression, subexpression_types>)
   {
     v(*this, nesting);
-    m_composed.visit(v, nesting + 1);
+    m_init.visit(v, nesting + 1);
+    m_condition.visit(v, nesting + 1);
+    m_step.visit(v, nesting + 1);
+    m_body.visit(v, nesting + 1);
   }
 };
 
@@ -109,15 +121,21 @@ class for_builder
 {
   /**
    * @brief The loop this builder completes with a body of type @p Body.
+   *
+   * Naming the loop type fixes its template arguments, so the constructor cannot deduce
+   * this builder's members as references into a builder that does not outlive the call.
+   * `test/unit/for.cpp`'s "a loop outlives the builder" catches a regression here, and
+   * only under AddressSanitizer.
+   *
    * @tparam Body Type of the body expression.
    */
   template<typename Body>
   using expression_type =
     for_expression<InitExpression, ConditionExpression, StepExpression, make_deferred_t<Body>>;
 
-  [[no_unique_address]] InitExpression m_init;
-  [[no_unique_address]] ConditionExpression m_condition;
-  [[no_unique_address]] StepExpression m_step;
+  DEFERRED_NO_UNIQUE_ADDRESS InitExpression m_init;
+  DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS StepExpression m_step;
 
 public:
   /**
@@ -204,6 +222,16 @@ for_(InitExpression&& init, ConditionExpression&& condition, StepExpression&& st
   && std::is_nothrow_constructible_v<make_deferred_t<ConditionExpression>, ConditionExpression&&>
   && std::is_nothrow_constructible_v<make_deferred_t<StepExpression>, StepExpression&&>)
 {
+  // `for_(i = 0, ...)` assigns while the loop is built and leaves a clause that only
+  // reads `i`, so the loop would run no iterations from its second evaluation onwards.
+  // A clause that is only a variable never has an effect, so it is always a mistake.
+  static_assert(!detail::is_variable_v<InitExpression>,
+                "a for_ initialization clause that is only a variable has no effect; to "
+                "assign, assign a deferred expression: for_(i = constant(0), ...)");
+  static_assert(!detail::is_variable_v<StepExpression>,
+                "a for_ step clause that is only a variable has no effect; to assign, "
+                "assign a deferred expression, or use ++i / i += n");
+
   return for_builder<make_deferred_t<InitExpression>,
                      make_deferred_t<ConditionExpression>,
                      make_deferred_t<StepExpression>>(std::forward<InitExpression>(init),

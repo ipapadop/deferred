@@ -9,7 +9,7 @@ Library for creating deferred evaluation expressions in C++23.
   expressions,
 - deferred assignment to variables, including compound assignment,
 - ``deferred::seq`` for sequencing several expressions where one is expected,
-- ``deferred``-enabled commonly used operators.
+- ``deferred``-enabled commonly used operators, with short-circuiting ``&&`` and ``||``.
 
 Requirements
 ------------
@@ -136,49 +136,34 @@ The right-hand side is read on every evaluation, not captured when the
 expression is built. Only a plain lvalue works as the source:
 ``i = std::move(j)`` and ``i = std::as_const(j)`` are rejected.
 
-The one place the two meanings bite is a loop clause. ``for_(i = 0, ...)``
-compiles, because ``i = 0`` assigns immediately and yields the variable itself,
-leaving an init clause that merely reads ``i``. The loop is then right the first
-time it is evaluated and silently runs zero iterations on every later one:
+The one place the two meanings bite is a loop clause: ``i = 0`` assigns
+immediately and yields the variable itself, so the clause would merely read
+``i``. ``for_`` rejects an initialization or step clause that is only a
+variable, so this is a compile error rather than a silent one:
 
 ```C++
-auto ex = deferred::for_(i = 0, i < 5, ++i).do_(body);   // WRONG: init does nothing
+auto ex = deferred::for_(i = 0, i < 5, ++i).do_(body);   // rejected
 auto ok = deferred::for_(i = deferred::constant(0), i < 5, ++i).do_(body);
 ```
 
-Wrap the value -- ``deferred::constant(0)``, or any deferred expression -- so the
-assignment is part of the loop rather than part of building it. A variable holding a reference-like type, such as
-``std::reference_wrapper``, does whatever that type's own assignment does:
+``deferred::assign`` is the free-function form, for targets that are not a
+variable. A target -- and the operand of ``*`` or ``deferred::subscript`` --
+must evaluate to an lvalue, since the result refers into it; an expression
+yielding a temporary is rejected rather than left dangling:
 
 ```C++
-auto i = deferred::variable<int>();
-auto j = deferred::variable(3);
-auto ex = deferred::for_(i = j, i < 5, ++i).do_(body);  // starts at j's value
+auto ex = deferred::assign(deferred::invoke(&counter::value, &c), deferred::constant(42));
 ```
+
+A variable holding a reference-like type, such as ``std::reference_wrapper``,
+does whatever that type's own assignment does -- it rebinds rather than
+assigning through.
 
 Compound assignment (``+=``, ``-=``, ``*=``, ``/=``, ``%=``, ``&=``, ``|=``,
 ``^=``, ``<<=``, ``>>=``) is deferred whenever its left operand is, like every
 other operator in the library -- only plain ``=`` carries the eager meaning.
 Each uses the target type's own compound operator and evaluates the target once,
 rather than expanding to ``t = t + u``.
-
-Sequencing
-----------
-
-``deferred::seq`` evaluates several expressions left to right and yields the
-last, as the built-in comma operator does. It is what lets a construct that
-takes a single expression -- a loop body, a branch, a ``for_`` clause -- do more
-than one thing without a lambda:
-
-```C++
-auto ex = deferred::while_(n != 0).do_(deferred::seq(ticks += 1, n -= 1));
-```
-
-``for_`` is built from these: a ``for_expression`` holds
-``seq(init, while_(cond).do_(seq(body, step)))`` and runs it. It remains a
-construct of its own, so a visitor sees the ``for_expression`` first and the
-composition below it.
-
 
 An ``if_`` chain without ``else_``, and a ``switch_`` without ``default_``, are
 usable expressions that return a ``std::optional`` (or nothing, when the branches
@@ -195,6 +180,18 @@ checked after the cases already present and before the default:
 
 ```C++
 auto expanded = s.case_(11).then_([] { return "11"; });
+```
+
+Sequencing
+----------
+
+``deferred::seq`` evaluates several expressions left to right and yields the
+last, as the built-in comma operator does. It is what lets a construct that
+takes a single expression -- a loop body, a branch, a ``for_`` clause -- do more
+than one thing without a lambda:
+
+```C++
+auto ex = deferred::while_(n != 0).do_(deferred::seq(ticks += 1, n -= 1));
 ```
 
 Visiting expressions
@@ -260,6 +257,31 @@ int result = from_tuple();  // 3
 
 Everything ``invoke`` supports carries over, including member pointers and the
 storage rules described above.
+
+Short-circuiting
+----------------
+
+``&&`` and ``||`` evaluate their right operand only when the left one does not
+already decide the result, as the built-in operators do. Operands that do not
+convert to ``bool``, such as ``std::valarray``, keep their elementwise meaning
+and are both evaluated -- which is also what C++ does for an overloaded ``&&``.
+
+```C++
+auto ex = n != 0 && (bumps += 1);   // bumps is not touched while n is 0
+```
+
+Subscripting and dereferencing
+------------------------------
+
+``*`` dereferences a deferred expression. ``operator[]`` can only be a
+non-static member function, so it cannot be supplied for every deferred
+expression the way the other operators are; ``deferred::subscript`` is its
+free-function spelling:
+
+```C++
+auto element = deferred::subscript(container, index);
+auto pointee = *pointer_expression;
+```
 
 Exception guarantees
 --------------------

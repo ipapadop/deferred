@@ -72,6 +72,85 @@ constexpr auto evaluate(T&& t) noexcept(detail::evaluation_is_nothrow<T, false>(
   }
 }
 
+namespace detail {
+
+/**
+ * @brief Checks whether evaluating a value without decaying it cannot throw.
+ * @tparam T Value or deferred expression type.
+ * @return @c true when evaluation cannot throw.
+ */
+template<typename T>
+consteval bool reference_evaluation_is_nothrow()
+{
+  if constexpr (!Deferred<T>)
+  {
+    return true;
+  }
+  else if constexpr (!std::is_nothrow_invocable_v<T>)
+  {
+    return false;
+  }
+  else if constexpr (std::is_void_v<std::invoke_result_t<T>>)
+  {
+    return true;
+  }
+  else if constexpr (Deferred<std::invoke_result_t<T>>)
+  {
+    return evaluation_is_nothrow<std::invoke_result_t<T>, false>();
+  }
+  else if constexpr (std::is_reference_v<std::invoke_result_t<T>>)
+  {
+    return true;
+  }
+  else
+  {
+    return std::is_nothrow_constructible_v<std::decay_t<std::invoke_result_t<T>>,
+                                           std::invoke_result_t<T>>;
+  }
+}
+
+} // namespace detail
+
+/**
+ * @brief Evaluates a deferred expression, keeping a reference result as a reference.
+ *
+ * @ref evaluate() returns by value, so a subexpression that already yields a reference --
+ * a @ref variable_ or a @ref constant_ -- is copied. Where the result is only read within
+ * the same full expression, such as a loop condition or the right-hand side of an
+ * assignment, that copy is pure waste and this avoids it.
+ *
+ * A result that is itself a deferred expression is a temporary, so it falls back to
+ * @ref evaluate() rather than returning a reference into it.
+ *
+ * @tparam T The type of the expression to evaluate.
+ * @param t The expression to evaluate.
+ * @return The result of evaluating the expression, as a reference where there is one.
+ */
+template<typename T>
+constexpr decltype(auto) evaluate_ref(T&& t) noexcept(detail::reference_evaluation_is_nothrow<T>())
+{
+  if constexpr (!Deferred<T>)
+  {
+    return std::forward<T>(t);
+  }
+  else
+  {
+    using result_type = decltype(std::forward<T>(t)());
+    if constexpr (std::is_void_v<result_type>)
+    {
+      std::forward<T>(t)();
+    }
+    else if constexpr (Deferred<result_type>)
+    {
+      return evaluate(std::forward<T>(t)());
+    }
+    else
+    {
+      return static_cast<result_type>(std::forward<T>(t)());
+    }
+  }
+}
+
 /**
  * @brief Recursively evaluates @p t until a non-callable is returned.
  * @copydoc evaluate(T&&)

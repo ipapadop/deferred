@@ -15,6 +15,7 @@
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/map_result.hpp"
 #include "detail/no_match_is_nothrow.hpp"
+#include "detail/no_unique_address.hpp"
 #include "detail/unmatched_result.hpp"
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
@@ -68,8 +69,8 @@ struct conditional_branch
 {
   using then_type           = Then;
   using subexpression_types = std::tuple<Condition, Then>;
-  [[no_unique_address]] Condition condition;
-  [[no_unique_address]] Then then;
+  DEFERRED_NO_UNIQUE_ADDRESS Condition condition;
+  DEFERRED_NO_UNIQUE_ADDRESS Then then;
 
   /**
    * @brief Visits the conditional branch with a visitor.
@@ -232,8 +233,8 @@ constexpr auto finalize_conditional(Branches&& branches, E&& else_branch) //
 template<typename Branches, Deferred Condition>
 class conditional_builder
 {
-  [[no_unique_address]] Branches m_branches;
-  [[no_unique_address]] Condition m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS Branches m_branches;
+  DEFERRED_NO_UNIQUE_ADDRESS Condition m_condition;
 
 public:
   /**
@@ -304,8 +305,8 @@ public:
   using result_type = detail::unmatched_result_t<finalized, base_result_type>;
 
 private:
-  [[no_unique_address]] branch_types m_branches;
-  [[no_unique_address]] Else m_else;
+  DEFERRED_NO_UNIQUE_ADDRESS branch_types m_branches;
+  DEFERRED_NO_UNIQUE_ADDRESS Else m_else;
 
   template<std::size_t I = 0, typename Self>
   static constexpr result_type

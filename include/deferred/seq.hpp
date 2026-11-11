@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "detail/is_nothrow_visitable.hpp"
+#include "detail/no_unique_address.hpp"
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
@@ -26,7 +27,7 @@ namespace detail {
 template<typename... ExpressionReferences>
 consteval bool sequence_is_nothrow()
 {
-  return (noexcept(evaluate(std::declval<ExpressionReferences>())) && ...);
+  return (noexcept(evaluate_ref(std::declval<ExpressionReferences>())) && ...);
 }
 
 } // namespace detail
@@ -49,7 +50,7 @@ public:
   using subexpression_types = std::tuple<Expressions...>;
 
 private:
-  [[no_unique_address]] subexpression_types m_expressions;
+  DEFERRED_NO_UNIQUE_ADDRESS subexpression_types m_expressions;
 
   static constexpr std::size_t last_index = sizeof...(Expressions) - 1;
 
@@ -68,7 +69,7 @@ private:
   template<typename Self, std::size_t... I>
   static constexpr decltype(auto) evaluate_impl(Self& self, std::index_sequence<I...>)
   {
-    (static_cast<void>(evaluate(std::get<I>(self.m_expressions))), ...);
+    (static_cast<void>(evaluate_ref(std::get<I>(self.m_expressions))), ...);
     return evaluate(std::get<last_index>(self.m_expressions));
   }
 

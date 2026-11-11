@@ -16,7 +16,7 @@ struct is_constant_expression;
 /**
  * @brief Concept for expressions whose own stored value can change between evaluations.
  *
- * An expression opts out of @ref is_constant_expression by declaring
+ * An expression opts out of @c is_constant_expression by declaring
  * <tt>static constexpr bool mutable_state = true;</tt>. Only the node itself is opted
  * out; its subexpressions are still examined.
  *

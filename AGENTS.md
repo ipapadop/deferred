@@ -11,37 +11,48 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `default_` evaluate to a `std::optional`, or to `void` when every branch produces no value.
 - **Loops**: loop constructs evaluate to `void` and may be evaluated more than once; `for_` re-runs its `init`
   clause on every evaluation.
-- **`for_` is its own node, built from a composition**: `for_expression` holds
-  `seq(init, while_(condition).do_(seq(body, step)))` and runs it. A `for` loop is a construct in its own right, so
-  it gets a node in its own right; the composition is an implementation detail that a visitor sees *below* the
-  `for_expression`. Naming the node in `for_builder::do_` fixes its template arguments, which is what keeps the
-  builder's members from being deduced as references into the builder — `test/unit/for.cpp`'s "a loop outlives the
-  builder" case catches that under ASan, and only under ASan.
+- **`for_` is a flat node**: `for_expression` holds its four clauses directly and runs the loop itself. It was
+  briefly a `seq`+`while_` composition; that cost extra moves per construction and leaked those nodes into every
+  visitor, for no reuse worth having. `for_builder::do_` must keep *naming* the node rather than deducing it, or
+  the builder's members get deduced as references into a builder that does not outlive the call —
+  `test/unit/for.cpp`'s "a loop outlives the builder" catches that only under ASan.
 - **Assignment**: `variable_::operator=` is overloaded on the right-hand side. A *value* is stored immediately and
   returns `variable_&`; a *deferred expression* returns an `assign_expression` that assigns when evaluated, which
   is what makes `for_(i = constant(0), i < 10, ++i)` work without a lambda. `i = j` between variables therefore
   assigns by value, re-reading the right-hand side on every evaluation. The deferred form is `[[nodiscard]]` and
   `&`-qualified, and its return type is spelled out rather than deduced.
-- **Assignment from a variable is lvalue-only**: `i = j` works, but `i = std::move(j)` and
-  `i = std::as_const(j)` are rejected. `variable_`'s deleted move constructor makes its implicit copy assignment
-  deleted, and a non-template beats the deferred `operator=` template on those exact matches. This is not fixable
-  while `variable_` stays non-copyable — dropping the deleted move constructor would make the implicit copy
-  assignment *generated*, so `i = std::as_const(j)` would silently assign eagerly while `i = j` deferred. The
-  current asymmetry is the safe end state; `test/unit/assign.cpp` pins it.
+- **Assignment from a variable is lvalue-only**: `i = j` works, `i = std::move(j)` and `i = std::as_const(j)`
+  are rejected, and that is not fixable while `variable_` stays non-copyable. `test/unit/assign.cpp` pins it and
+  explains why.
 - **Compound assignment**: `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=` are deferred free operators
   in `operators.hpp` requiring a `Deferred` left operand. They reuse `assign_expression` with an assigning
   operation, so the target is evaluated once and the type's own compound operator is used — they do not expand to
   `t = t + u`. Unlike `=`, they have no eager meaning, so they follow the same rule as every other operator.
+- **Short-circuiting**: `&&` and `||` build a `logical_expression`, not an `expression_`; they yield `bool` and
+  evaluate the right operand only when the left does not decide the result. Operands that do not convert to
+  `bool` (`std::valarray` and expression types like it) take a second, eager overload keeping the elementwise
+  meaning — which is what C++ does for an overloaded `&&` too.
+- **Nodes handing back a reference into an operand** — `assign()`, the compound assignments, unary `*` and
+  `subscript()` — are constrained on `detail::AssignableWith` / `detail::YieldsLvalue` (see `expression.hpp`).
+  Dropping the constraint reintroduces a dangling reference that only ASan catches.
+- **`evaluate_ref()` vs `evaluate()`**: `evaluate()` returns by value, so it copies a result that is already a
+  reference. Positions that only read within one full expression — loop conditions, discarded bodies and steps,
+  the right-hand side of an assignment, `&&`/`||` operands — use `evaluate_ref()`. Anything that stores or
+  returns a result keeps `evaluate()`, which must decay.
+- **`operator[]` cannot be a free function**, so `deferred::subscript(a, b)` is its spelling. Unary `*` is a normal
+  free operator. `->` and unary `&` are deliberately absent: `->` must be a member, and overloading `&` would break
+  taking the address of an expression.
+- **`for_` rejects an effectless clause**: an `init` or `step` clause that is only a `variable_` never has an
+  effect, and is almost always `for_(i = 0, ...)` — where the eager `operator=` already ran. A `static_assert` in
+  `for_` names the fix.
 - **`seq`**: `seq(a, b, ...)` evaluates left to right and yields the last, like the comma operator. It is how a
   loop body, branch or `for_` clause does more than one thing without a lambda.
-- **`assign_expression` is its own node, not an `expression_`**: an `expression_` holds its subexpressions in a
-  `std::tuple`, and instantiating a `std::tuple` holding a `variable_` reference asks whether that reference is
-  assignable — the question `variable_::operator=` answers — which re-enters the expression type while it is still
-  incomplete. Holding the target and value as direct members keeps that question answerable from the declaration
-  alone. Do not "simplify" it back into an `expression_` over an assigning operator.
+- **`assign_expression`, `logical_expression` and `seq_expression` cannot be `expression_`s**: `expression_`
+  evaluates its subexpressions as the arguments of one call, so it can express neither ordering nor conditional
+  evaluation. `assign.hpp` gives the full reason. Do not "simplify" any of them back into an `expression_` over a
+  function object — it was tried, and it does not compile on GCC or Clang.
 - **Visitor order**: children are visited in `subexpression_types` order, which is the source order of the
-  construct, not its evaluation order. `for_expression` has a single child, the composition it holds, so its
-  traversal continues `seq` → init, `while_` → condition, `seq` → body, step.
+  construct, not its evaluation order.
 - **Switch expressions**: Existing switch expressions can be expanded with `case_(label).then_(body)`, which adds the
   case after the existing ones and before the `default_` case.
 - **Result types**: Control-flow result types are deduced with `detail::evaluated_result_t` — the type `evaluate()`
@@ -137,6 +148,11 @@ Or simply copy the `include/deferred` directory to your project's include path.
 - **Source Control**: NEVER commit directly to the `main` branch. Always use feature branches and pull requests for any changes.
 - **Project Documentation**: After EVERY change, `README.md` and `AGENTS.md` MUST be reviewed and updated to reflect the current state of the project.
 - **License**: MIT License. All source files should include the standard MIT license header.
+- **`DEFERRED_NO_UNIQUE_ADDRESS`**: use it, never `[[no_unique_address]]` directly. The Microsoft ABI cannot
+  change existing layouts, so MSVC and clang-cl accept the standard attribute but ignore it and provide
+  `[[msvc::no_unique_address]]`. `detail/no_unique_address.hpp` picks by attribute detection rather than by
+  compiler macro, because clang-cl reports `__clang__` yet needs the Microsoft spelling. This is the only macro in
+  the library besides header guards.
 - **Header Guards**: Use `#ifndef DEFERRED_FILENAME_HPP` format, qualified by directory for
   subdirectories (`DEFERRED_DETAIL_MAP_VOID_HPP`, `DEFERRED_TYPE_TRAITS_IS_DEFERRED_HPP`).
 - **`detail/` Layering**: Headers in `include/deferred/detail/` MUST NOT include anything from the

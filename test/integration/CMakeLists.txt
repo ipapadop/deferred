@@ -5,6 +5,7 @@ set(SOURCES
   constant.cpp
   do_while.cpp
   for.cpp
+  logical.cpp
   main.cpp
   operators.cpp
   seq.cpp

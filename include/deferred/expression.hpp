@@ -11,6 +11,7 @@
 #include "constant.hpp"
 #include "detail/apply_evaluated.hpp"
 #include "detail/is_nothrow_visitable.hpp"
+#include "detail/no_unique_address.hpp"
 #include "detail/visit_children.hpp"
 #include "type_traits/is_deferred.hpp"
 
@@ -32,8 +33,8 @@ public:
   using subexpression_types = std::tuple<Operator, Expressions...>;
 
 private:
-  [[no_unique_address]] operator_type m_op;
-  [[no_unique_address]] expression_types m_expressions;
+  DEFERRED_NO_UNIQUE_ADDRESS operator_type m_op;
+  DEFERRED_NO_UNIQUE_ADDRESS expression_types m_expressions;
 
 public:
   /**
@@ -140,6 +141,24 @@ consteval auto deduce_deferred_type()
  */
 template<typename T>
 using make_deferred_t = typename decltype(detail::deduce_deferred_type<T>())::type;
+
+namespace detail {
+
+/**
+ * @brief Whether evaluating @p T yields an lvalue.
+ *
+ * A node that hands back a reference into its operand -- a subscript, a dereference, an
+ * assignment target -- is only safe when the operand yields an lvalue that outlives the
+ * call. An operand yielding a prvalue is materialized for the duration of one call and
+ * the reference would dangle.
+ *
+ * @tparam T Expression argument type.
+ */
+template<typename T>
+concept YieldsLvalue =
+  Deferred<T> && std::is_lvalue_reference_v<decltype(std::declval<make_deferred_t<T>&>()())>;
+
+} // namespace detail
 
 } // namespace deferred
 

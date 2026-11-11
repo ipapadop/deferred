@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "detail/is_nothrow_visitable.hpp"
+#include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
 
@@ -28,8 +29,8 @@ public:
   using subexpression_types = std::tuple<ConditionExpression, BodyExpression>;
 
 private:
-  [[no_unique_address]] ConditionExpression m_condition;
-  [[no_unique_address]] BodyExpression m_body;
+  DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS BodyExpression m_body;
 
 public:
   /**
@@ -47,22 +48,22 @@ public:
   { }
 
   /// @brief Evaluates the while loop.
-  constexpr void operator()() const
-    noexcept(noexcept(static_cast<bool>(evaluate(m_condition))) && noexcept(evaluate(m_body)))
+  constexpr void operator()() const noexcept(noexcept(static_cast<bool>(evaluate_ref(m_condition)))
+                                             && noexcept(evaluate_ref(m_body)))
   {
-    while (evaluate(m_condition))
+    while (evaluate_ref(m_condition))
     {
-      evaluate(m_body);
+      evaluate_ref(m_body);
     }
   }
 
   /// @copydoc while_expression::operator()() const
-  constexpr void operator()() noexcept(noexcept(static_cast<bool>(evaluate(m_condition)))
-                                       && noexcept(evaluate(m_body)))
+  constexpr void operator()() noexcept(noexcept(static_cast<bool>(evaluate_ref(m_condition)))
+                                       && noexcept(evaluate_ref(m_body)))
   {
-    while (evaluate(m_condition))
+    while (evaluate_ref(m_condition))
     {
-      evaluate(m_body);
+      evaluate_ref(m_body);
     }
   }
 
@@ -89,7 +90,7 @@ public:
 template<Deferred ConditionExpression>
 class while_builder
 {
-  [[no_unique_address]] ConditionExpression m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
 
 public:
   /**

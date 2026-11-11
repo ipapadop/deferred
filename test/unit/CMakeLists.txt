@@ -5,13 +5,16 @@ set(SOURCES
   constant.cpp
   do_while.cpp
   evaluate.cpp
+  expression.cpp
   for.cpp
   invoke.cpp
   is_constant_expression.cpp
   is_deferred.cpp
+  logical.cpp
   main.cpp
   seq.cpp
   switch.cpp
+  type_name.cpp
   variable.cpp
   visitor.cpp
   while.cpp
@@ -24,6 +27,7 @@ set(SOURCES
   detail/map_result.cpp
   detail/map_void.cpp
   detail/no_match_is_nothrow.cpp
+  detail/no_unique_address.cpp
   detail/unique_list.cpp
   detail/unmatched_result.cpp
   detail/visit_children.cpp)

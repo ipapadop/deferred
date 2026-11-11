@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "detail/is_nothrow_visitable.hpp"
+#include "detail/no_unique_address.hpp"
 
 #include "evaluate.hpp"
 
@@ -26,7 +27,7 @@ public:
   using subexpression_types = std::tuple<>;
 
 private:
-  [[no_unique_address]] T m_t;
+  DEFERRED_NO_UNIQUE_ADDRESS T m_t;
 
 public:
   /**

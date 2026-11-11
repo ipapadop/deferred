@@ -15,6 +15,7 @@
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/map_result.hpp"
 #include "detail/no_match_is_nothrow.hpp"
+#include "detail/no_unique_address.hpp"
 #include "detail/unmatched_result.hpp"
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
@@ -46,7 +47,7 @@ public:
   using subexpression_types = std::tuple<Expression>;
 
 private:
-  [[no_unique_address]] Expression m_expression;
+  DEFERRED_NO_UNIQUE_ADDRESS Expression m_expression;
 
 public:
   /**
@@ -98,8 +99,8 @@ public:
   using subexpression_types = std::tuple<LabelExpression, BodyExpression>;
 
 private:
-  [[no_unique_address]] LabelExpression m_label;
-  [[no_unique_address]] BodyExpression m_body;
+  DEFERRED_NO_UNIQUE_ADDRESS LabelExpression m_label;
+  DEFERRED_NO_UNIQUE_ADDRESS BodyExpression m_body;
 
 public:
   /**
@@ -276,10 +277,10 @@ class switch_case_builder
 {
   using case_types = std::tuple<Cases...>;
 
-  [[no_unique_address]] ConditionExpression m_condition;
-  [[no_unique_address]] DefaultExpression m_default;
-  [[no_unique_address]] case_types m_cases;
-  [[no_unique_address]] LabelExpression m_label;
+  DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS DefaultExpression m_default;
+  DEFERRED_NO_UNIQUE_ADDRESS case_types m_cases;
+  DEFERRED_NO_UNIQUE_ADDRESS LabelExpression m_label;
 
 public:
   /**
@@ -399,9 +400,9 @@ public:
   using result_type = detail::unmatched_result_t<finalized, base_result_type>;
 
 private:
-  [[no_unique_address]] ConditionExpression m_condition;
-  [[no_unique_address]] DefaultExpression m_default;
-  [[no_unique_address]] case_types m_cases;
+  DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS DefaultExpression m_default;
+  DEFERRED_NO_UNIQUE_ADDRESS case_types m_cases;
 
 public:
   /**
