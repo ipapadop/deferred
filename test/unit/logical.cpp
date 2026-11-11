@@ -97,3 +97,11 @@ TEST_CASE("operands that do not convert to bool keep the elementwise meaning", "
   CHECK(result[1] == false);
   CHECK(result[2] == false);
 }
+
+TEST_CASE("a logical expression exposes its result type", "[logical]")
+{
+  auto ex = deferred::constant(true) && deferred::constant(false);
+
+  static_assert(std::is_same_v<decltype(ex)::result_type, bool>);
+  static_assert(std::is_same_v<decltype(ex()), decltype(ex)::result_type>);
+}

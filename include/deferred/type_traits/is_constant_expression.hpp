@@ -40,12 +40,26 @@ struct is_constant_expression<std::tuple<T...>> :
   public std::conjunction<deferred::is_constant_expression<T>...>
 { };
 
+// Checks if the operator of T, when it has one, is a constant expression.
+template<typename T>
+consteval bool operator_is_constant()
+{
+  if constexpr (requires { typename T::operator_type; })
+  {
+    return deferred::is_constant_expression<typename T::operator_type>::value;
+  }
+  else
+  {
+    return true;
+  }
+}
+
 // If subexpression_types is defined, then it is a deferred data type that is
 // potentially a constant expression: it is one when it does not hold mutable state of
-// its own and none of its subexpressions does either.
+// its own, its operator does not either, and none of its subexpressions does.
 template<typename T>
 struct is_constant_expression<T, std::void_t<typename T::subexpression_types>> :
-  public std::bool_constant<!deferred::HasMutableState<T>
+  public std::bool_constant<!deferred::HasMutableState<T> && operator_is_constant<T>()
                             && is_constant_expression<typename T::subexpression_types>::value>
 { };
 

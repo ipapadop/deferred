@@ -39,6 +39,9 @@ public:
   using subexpression_types =
     std::tuple<InitExpression, ConditionExpression, StepExpression, BodyExpression>;
 
+  /// @brief Result type of the loop.
+  using result_type = void;
+
 private:
   DEFERRED_NO_UNIQUE_ADDRESS InitExpression m_init;
   DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
@@ -89,6 +92,15 @@ public:
     {
       evaluate_ref(m_body);
     }
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return std::forward_as_tuple(m_init, m_condition, m_step, m_body);
   }
 
   /**

@@ -145,3 +145,11 @@ TEST_CASE("a for loop evaluates to void", "[for-result]")
   static_assert(std::is_void_v<decltype(ex())>);
   ex();
 }
+
+TEST_CASE("for exposes its result type", "[for]")
+{
+  auto ex = deferred::for_(0, false, 0).do_(1);
+
+  static_assert(std::is_void_v<decltype(ex)::result_type>);
+  static_assert(std::is_same_v<decltype(ex()), decltype(ex)::result_type>);
+}

@@ -411,14 +411,19 @@ TEST_CASE("increment and decrement operators return by value", "[operators-retur
   CHECK((+source)().value == 1);
 }
 
-TEST_CASE("increment through a variable still updates the original", "[operators-return-by-value]")
+TEST_CASE("increment through a variable yields the variable", "[operators-return-lvalue]")
 {
   auto v  = deferred::variable<int>(1);
   auto ex = ++v;
 
-  CHECK(ex() == 2);
+  // The operand yields an lvalue, so the result is one too, as the built-in ++v is and
+  // as the deferred v += 1 is.
+  STATIC_CHECK(std::is_same_v<decltype(ex()), int&>);
+  STATIC_CHECK(std::is_same_v<decltype((--v)()), int&>);
+  STATIC_CHECK(std::is_same_v<decltype(ex()), decltype((v += 1)())>);
+
+  CHECK(&ex() == &v());
   CHECK(v() == 2);
-  STATIC_CHECK(!std::is_reference_v<decltype(ex())>);
 }
 
 TEST_CASE("deferred dereference", "[operators-dereference]")

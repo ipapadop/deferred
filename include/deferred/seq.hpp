@@ -11,6 +11,7 @@
 
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
+#include "detail/tuple_references.hpp"
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
@@ -85,6 +86,8 @@ public:
    * @param ex Expressions to evaluate in order.
    */
   template<typename... Ex>
+    requires(!(sizeof...(Ex) == 1
+               && (std::is_same_v<std::remove_cvref_t<Ex>, seq_expression> && ...)))
   constexpr explicit seq_expression(Ex&&... ex) noexcept(
     std::is_nothrow_constructible_v<subexpression_types, Ex&&...>) :
     m_expressions(std::forward<Ex>(ex)...)
@@ -104,6 +107,15 @@ public:
   constexpr decltype(auto) operator()() noexcept(detail::sequence_is_nothrow<Expressions&...>())
   {
     return evaluate_impl(*this, std::make_index_sequence<last_index>{});
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return detail::tuple_references(m_expressions);
   }
 
   /**

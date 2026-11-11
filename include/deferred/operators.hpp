@@ -27,12 +27,33 @@ struct unary_plus
   }
 };
 
+/**
+ * @brief Result type of an operation whose result may refer into its operand.
+ *
+ * Prefix increment, dereference and subscripting hand back a reference into, or reached
+ * through, their operand. That reference outlives the evaluation when the operand is an
+ * lvalue, or a raw pointer, which never owns what it points to. Any other operand is a
+ * temporary of the evaluation, so the result is returned by value instead.
+ *
+ * @tparam Operand Type of the operand, as deduced for a forwarding reference.
+ * @tparam Result Type the operation yields.
+ */
+template<typename Operand, typename Result>
+using operand_result_t = std::conditional_t<std::is_lvalue_reference_v<Operand>
+                                              || std::is_pointer_v<std::remove_cvref_t<Operand>>,
+                                            Result,
+                                            std::decay_t<Result>>;
+
 /** @brief Implements deferred prefix increment. */
 struct pre_increment
 {
   /// @brief Prefix-increments @p value.
   template<typename T>
-  constexpr auto operator()(T&& value) const noexcept(noexcept(++std::forward<T>(value)))
+  constexpr auto operator()(T&& value) const noexcept(
+    noexcept(++std::forward<T>(value))
+    && std::is_nothrow_constructible_v<operand_result_t<T, decltype(++std::forward<T>(value))>,
+                                       decltype(++std::forward<T>(value))>)
+    -> operand_result_t<T, decltype(++std::forward<T>(value))>
   {
     return ++std::forward<T>(value);
   }
@@ -54,7 +75,11 @@ struct pre_decrement
 {
   /// @brief Prefix-decrements @p value.
   template<typename T>
-  constexpr auto operator()(T&& value) const noexcept(noexcept(--std::forward<T>(value)))
+  constexpr auto operator()(T&& value) const noexcept(
+    noexcept(--std::forward<T>(value))
+    && std::is_nothrow_constructible_v<operand_result_t<T, decltype(--std::forward<T>(value))>,
+                                       decltype(--std::forward<T>(value))>)
+    -> operand_result_t<T, decltype(--std::forward<T>(value))>
   {
     return --std::forward<T>(value);
   }
@@ -76,7 +101,11 @@ struct dereference
 {
   /// @brief Dereferences @p value.
   template<typename T>
-  constexpr decltype(auto) operator()(T&& value) const noexcept(noexcept(*std::forward<T>(value)))
+  constexpr auto operator()(T&& value) const noexcept(
+    noexcept(*std::forward<T>(value))
+    && std::is_nothrow_constructible_v<operand_result_t<T, decltype(*std::forward<T>(value))>,
+                                       decltype(*std::forward<T>(value))>)
+    -> operand_result_t<T, decltype(*std::forward<T>(value))>
   {
     return *std::forward<T>(value);
   }
@@ -87,8 +116,12 @@ struct subscript_at
 {
   /// @brief Subscripts @p value with @p index.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& value, U&& index) const
-    noexcept(noexcept(std::forward<T>(value)[std::forward<U>(index)]))
+  constexpr auto operator()(T&& value, U&& index) const
+    noexcept(noexcept(std::forward<T>(value)[std::forward<U>(index)])
+             && std::is_nothrow_constructible_v<
+               operand_result_t<T, decltype(std::forward<T>(value)[std::forward<U>(index)])>,
+               decltype(std::forward<T>(value)[std::forward<U>(index)])>)
+      -> operand_result_t<T, decltype(std::forward<T>(value)[std::forward<U>(index)])>
   {
     return std::forward<T>(value)[std::forward<U>(index)];
   }
@@ -870,8 +903,7 @@ operator>>=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::shift_right
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<typename T>
-  requires detail::YieldsLvalue<T>
+template<Deferred T>
 [[nodiscard]] constexpr auto
 operator*(T&& t) noexcept(detail::invoke_is_nothrow<detail::dereference, T>())
 {
@@ -891,8 +923,7 @@ operator*(T&& t) noexcept(detail::invoke_is_nothrow<detail::dereference, T>())
  * @param u Index.
  * @return A deferred expression representing the subscripting.
  */
-template<typename T, typename U>
-  requires detail::YieldsLvalue<T>
+template<Deferred T, typename U>
 [[nodiscard]] constexpr auto
 subscript(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::subscript_at, T, U>())
 {

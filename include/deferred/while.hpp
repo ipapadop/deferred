@@ -28,6 +28,9 @@ class while_expression
 public:
   using subexpression_types = std::tuple<ConditionExpression, BodyExpression>;
 
+  /// @brief Result type of the loop.
+  using result_type = void;
+
 private:
   DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
   DEFERRED_NO_UNIQUE_ADDRESS BodyExpression m_body;
@@ -65,6 +68,15 @@ public:
     {
       evaluate_ref(m_body);
     }
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return std::forward_as_tuple(m_condition, m_body);
   }
 
   /**

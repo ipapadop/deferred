@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
+#include <type_traits>
 
 #include "deferred/constant.hpp"
 #include "deferred/do_while.hpp"
@@ -170,4 +171,12 @@ TEST_CASE("do-while accounts for throwing condition conversion", "[do-while-noex
   auto ex = deferred::do_([]() noexcept { }).while_([]() noexcept { return throwing_boolean{}; });
 
   static_assert(!noexcept(ex()));
+}
+
+TEST_CASE("do-while exposes its result type", "[do-while]")
+{
+  auto ex = deferred::do_(1).while_(false);
+
+  static_assert(std::is_void_v<decltype(ex)::result_type>);
+  static_assert(std::is_same_v<decltype(ex()), decltype(ex)::result_type>);
 }

@@ -67,6 +67,9 @@ class logical_expression
 public:
   using subexpression_types = std::tuple<LeftExpression, RightExpression>;
 
+  /// @brief Result type of the logical expression.
+  using result_type = bool;
+
 private:
   DEFERRED_NO_UNIQUE_ADDRESS LeftExpression m_left;
   DEFERRED_NO_UNIQUE_ADDRESS RightExpression m_right;
@@ -100,19 +103,26 @@ public:
    * @brief Evaluates the operands, stopping as soon as the result is decided.
    * @return The result of the operation.
    */
-  [[nodiscard]] constexpr bool
-  operator()() const noexcept(noexcept(static_cast<bool>(evaluate_ref(m_left)))
-                              && noexcept(static_cast<bool>(evaluate_ref(m_right))))
+  constexpr bool operator()() const noexcept(noexcept(static_cast<bool>(evaluate_ref(m_left)))
+                                             && noexcept(static_cast<bool>(evaluate_ref(m_right))))
   {
     return evaluate_impl(*this);
   }
 
   /// @copydoc logical_expression::operator()() const
-  [[nodiscard]] constexpr bool
-  operator()() noexcept(noexcept(static_cast<bool>(evaluate_ref(m_left)))
-                        && noexcept(static_cast<bool>(evaluate_ref(m_right))))
+  constexpr bool operator()() noexcept(noexcept(static_cast<bool>(evaluate_ref(m_left)))
+                                       && noexcept(static_cast<bool>(evaluate_ref(m_right))))
   {
     return evaluate_impl(*this);
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return std::forward_as_tuple(m_left, m_right);
   }
 
   /**

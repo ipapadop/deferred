@@ -16,6 +16,7 @@
 #include "detail/map_result.hpp"
 #include "detail/no_match_is_nothrow.hpp"
 #include "detail/no_unique_address.hpp"
+#include "detail/tuple_references.hpp"
 #include "detail/unmatched_result.hpp"
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
@@ -56,20 +57,29 @@ public:
    * @param t Arguments to forward to the underlying expression.
    */
   template<typename T>
+    requires(!std::is_same_v<std::remove_cvref_t<T>, default_expression>)
   constexpr explicit default_expression(T&& t) noexcept(
     std::is_nothrow_constructible_v<Expression, T&&>) : m_expression(std::forward<T>(t))
   { }
 
-  [[nodiscard]] constexpr decltype(auto)
-  operator()() const noexcept(noexcept(evaluate(m_expression)))
+  constexpr decltype(auto) operator()() const noexcept(noexcept(evaluate(m_expression)))
   {
     return evaluate(m_expression);
   }
 
   /// @copydoc default_expression::operator()() const
-  [[nodiscard]] constexpr decltype(auto) operator()() noexcept(noexcept(evaluate(m_expression)))
+  constexpr decltype(auto) operator()() noexcept(noexcept(evaluate(m_expression)))
   {
     return evaluate(m_expression);
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return std::forward_as_tuple(m_expression);
   }
 
   /**
@@ -134,15 +144,24 @@ public:
   }
 
   /// @brief Returns the result of the body expression.
-  [[nodiscard]] constexpr decltype(auto) operator()() const noexcept(noexcept(evaluate(m_body)))
+  constexpr decltype(auto) operator()() const noexcept(noexcept(evaluate(m_body)))
   {
     return evaluate(m_body);
   }
 
   /// @copydoc case_expression::operator()() const
-  [[nodiscard]] constexpr decltype(auto) operator()() noexcept(noexcept(evaluate(m_body)))
+  constexpr decltype(auto) operator()() noexcept(noexcept(evaluate(m_body)))
   {
     return evaluate(m_body);
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return std::forward_as_tuple(m_label, m_body);
   }
 
   /**
@@ -583,17 +602,33 @@ public:
    * @brief Evaluates the switch expression.
    * @return Result of the switch expression.
    */
-  [[nodiscard]] constexpr result_type
+  constexpr result_type
   operator()() const noexcept(detail::is_nothrow_evaluable_v<switch_expression const&>)
   {
     return choose_case<0>(*this, evaluate(m_condition));
   }
 
   /// @copydoc switch_expression::operator()() const
-  [[nodiscard]] constexpr result_type
-  operator()() noexcept(detail::is_nothrow_evaluable_v<switch_expression&>)
+  constexpr result_type operator()() noexcept(detail::is_nothrow_evaluable_v<switch_expression&>)
   {
     return choose_case<0>(*this, evaluate(m_condition));
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    if constexpr (finalized)
+    {
+      return std::tuple_cat(std::forward_as_tuple(m_condition, m_default),
+                            detail::tuple_references(m_cases));
+    }
+    else
+    {
+      return std::tuple_cat(std::forward_as_tuple(m_condition), detail::tuple_references(m_cases));
+    }
   }
 
   /**
@@ -617,6 +652,110 @@ public:
 };
 
 /**
+ * @brief Switch chain waiting for its first @c case or its @c default case.
+ * @tparam ConditionExpression Type of the condition expression.
+ */
+template<Deferred ConditionExpression>
+class switch_builder
+{
+  DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
+
+  template<typename LabelEx>
+  using case_builder =
+    switch_case_builder<ConditionExpression, detail::no_default, make_deferred_t<LabelEx>>;
+
+  template<typename DefaultEx>
+  using default_type = default_expression<make_deferred_t<DefaultEx>>;
+
+  template<typename DefaultEx>
+  using finalized_type = switch_expression<ConditionExpression, default_type<DefaultEx>>;
+
+  /** @brief Whether finalizing the switch with @p DefaultEx cannot throw. */
+  template<typename Condition, typename DefaultEx>
+  static consteval bool default_is_nothrow()
+  {
+    return std::is_nothrow_constructible_v<default_type<DefaultEx>, DefaultEx&&>
+           && std::is_nothrow_constructible_v<finalized_type<DefaultEx>,
+                                              Condition,
+                                              default_type<DefaultEx>&&,
+                                              std::tuple<>&&>;
+  }
+
+public:
+  /**
+   * @brief Constructs a switch_builder.
+   * @tparam Condition Type of the condition expression.
+   * @param condition Condition expression awaiting a case.
+   */
+  template<typename Condition>
+    requires(!std::is_same_v<std::remove_cvref_t<Condition>, switch_builder>)
+  constexpr explicit switch_builder(Condition&& condition) noexcept(
+    std::is_nothrow_constructible_v<ConditionExpression, Condition&&>) :
+    m_condition(std::forward<Condition>(condition))
+  { }
+
+  /**
+   * @brief Starts the first case of the switch expression.
+   * @tparam LabelEx Type of the label expression.
+   * @param label Label expression to compare the condition against.
+   * @return A @ref switch_case_builder awaiting the body expression.
+   */
+  template<typename LabelEx>
+  [[nodiscard]] constexpr auto case_(LabelEx&& label) && //
+    noexcept(std::is_nothrow_constructible_v<case_builder<LabelEx>,
+                                             ConditionExpression&&,
+                                             detail::no_default&&,
+                                             std::tuple<>&&,
+                                             LabelEx&&>)
+  {
+    return case_builder<LabelEx>(std::forward<ConditionExpression>(m_condition),
+                                 detail::no_default{},
+                                 std::tuple<>{},
+                                 std::forward<LabelEx>(label));
+  }
+
+  /// @copydoc case_
+  template<typename LabelEx>
+  [[nodiscard]] constexpr auto case_(LabelEx&& label) const& //
+    noexcept(std::is_nothrow_constructible_v<case_builder<LabelEx>,
+                                             ConditionExpression const&,
+                                             detail::no_default&&,
+                                             std::tuple<>&&,
+                                             LabelEx&&>)
+  {
+    return case_builder<LabelEx>(m_condition,
+                                 detail::no_default{},
+                                 std::tuple<>{},
+                                 std::forward<LabelEx>(label));
+  }
+
+  /**
+   * @brief Finalizes a switch expression that has only a @c default case.
+   * @tparam DefaultEx Type of the default expression.
+   * @param df Default expression.
+   * @return A finalized @ref switch_expression.
+   */
+  template<typename DefaultEx>
+  [[nodiscard]] constexpr auto default_(DefaultEx&& df) && //
+    noexcept(default_is_nothrow<ConditionExpression&&, DefaultEx>())
+  {
+    return finalized_type<DefaultEx>(std::forward<ConditionExpression>(m_condition),
+                                     default_type<DefaultEx>(std::forward<DefaultEx>(df)),
+                                     std::tuple<>{});
+  }
+
+  /// @copydoc default_
+  template<typename DefaultEx>
+  [[nodiscard]] constexpr auto default_(DefaultEx&& df) const& //
+    noexcept(default_is_nothrow<ConditionExpression const&, DefaultEx>())
+  {
+    return finalized_type<DefaultEx>(m_condition,
+                                     default_type<DefaultEx>(std::forward<DefaultEx>(df)),
+                                     std::tuple<>{});
+  }
+};
+
+/**
  * @brief Starts a deferred switch expression on @p condition.
  *
  * Each case is checked in order; if none matches, the result is that of the
@@ -634,16 +773,14 @@ public:
  *
  * @tparam ConditionExpression Type of the condition expression.
  * @param condition Condition expression.
- * @return A @ref switch_expression with no cases.
+ * @return A @ref switch_builder awaiting a case.
  */
 template<typename ConditionExpression>
 [[nodiscard]] constexpr auto switch_(ConditionExpression&& condition) noexcept(
   std::is_nothrow_constructible_v<make_deferred_t<ConditionExpression>, ConditionExpression&&>)
 {
-  return switch_expression<make_deferred_t<ConditionExpression>, detail::no_default>(
-    std::forward<ConditionExpression>(condition),
-    detail::no_default{},
-    std::tuple<>{});
+  return switch_builder<make_deferred_t<ConditionExpression>>(
+    std::forward<ConditionExpression>(condition));
 }
 
 } // namespace deferred

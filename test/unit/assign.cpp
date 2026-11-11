@@ -346,3 +346,24 @@ TEST_CASE("a const target is rejected by the constraint", "[assign]")
   static_assert(!assignable_target<const_target, deferred::constant_<int>>);
   static_assert(!compound_addable<const_target, int>);
 }
+
+TEST_CASE("assigning from a variable copies when the type cannot be moved", "[assign]")
+{
+  struct copy_only
+  {
+    int value = 0;
+
+    copy_only()                            = default;
+    copy_only(copy_only const&)            = default;
+    copy_only& operator=(copy_only const&) = default;
+    copy_only& operator=(copy_only&&)      = delete;
+  };
+
+  auto i    = deferred::variable<copy_only>();
+  auto j    = deferred::variable<copy_only>();
+  j().value = 4;
+
+  auto ex = (i = j);
+  ex();
+  CHECK(i().value == 4);
+}

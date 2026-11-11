@@ -36,16 +36,34 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   evaluate the right operand only when the left does not decide the result. Operands that do not convert to
   `bool` (`std::valarray` and expression types like it) take a second, eager overload keeping the elementwise
   meaning — which is what C++ does for an overloaded `&&` too.
-- **Nodes handing back a reference into an operand** — `assign()`, the compound assignments, unary `*` and
-  `subscript()` — are constrained on `detail::AssignableWith` / `detail::YieldsLvalue` (see `expression.hpp`).
-  Dropping the constraint reintroduces a dangling reference that only ASan catches.
+- **Assignment targets must yield an lvalue**: `assign()` and the compound assignments are constrained on
+  `detail::AssignableWith` / `detail::YieldsLvalue` (see `expression.hpp`). Dropping the constraint reintroduces
+  a dangling reference that only ASan catches.
+- **Operations whose result may refer into their operand** — prefix `++`/`--`, unary `*` and `subscript()` —
+  return `detail::operand_result_t` (see `operators.hpp`): a reference when the operand is an lvalue or a raw
+  pointer, and a decayed value otherwise. So `++i` yields `int&` like `i += 1`, `*(p + 1)` yields a reference,
+  and `*invoke(make_unique)` yields a copy. Returning `decltype(auto)` from these function objects reintroduces
+  a dangling reference that only ASan catches.
+- **`[[nodiscard]]` on evaluation**: only `constant_` and `variable_` have it on `operator()`. Every other node
+  may be evaluated for effect, so neither its `operator()` nor `evaluate()`, `evaluate_ref()` and
+  `recursive_evaluate()` are `[[nodiscard]]`. Factories and builder methods all are.
+  `test/unit/discarded_evaluation.cpp` turns a discarded result into an error to pin this.
+- **Node interface**: every node has `subexpression_types` and `subexpressions()`, which returns a tuple of
+  references in the same order. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
+  `operator_type` / `operator_()`, and `is_constant_expression` checks it through `operator_type`. Nodes whose
+  result does not depend on constness name it `result_type`.
+- **Every entry point returns a builder**: `if_`, `switch_`, `while_`, `do_` and `for_` return a type with no
+  `operator()` that is not `Deferred`. `switch_builder` accepts `case_` and `default_` only.
+- **Both chains are extendable**: `case_` may follow `default_`, and `else_if_` may follow `else_`; the new
+  branch is checked after the existing ones and before the default or else. `conditional_builder` carries the
+  else through its third template parameter. `else_` and `default_` are accepted once.
 - **`evaluate_ref()` vs `evaluate()`**: `evaluate()` returns by value, so it copies a result that is already a
   reference. Positions that only read within one full expression — loop and `if_` conditions, `switch_` case
   labels, discarded bodies and steps, the right-hand side of an assignment, `&&`/`||` operands — use
   `evaluate_ref()`. Anything that stores or
   returns a result keeps `evaluate()`, which must decay.
 - **`operator[]` cannot be a free function**, so `deferred::subscript(a, b)` is its spelling. Unary `*` is a normal
-  free operator. `->` and unary `&` are deliberately absent: `->` must be a member, and overloading `&` would break
+  free operator; both require only a `Deferred` operand. `->` and unary `&` are deliberately absent: `->` must be a member, and overloading `&` would break
   taking the address of an expression.
 - **`for_` rejects an effectless clause**: an `init` or `step` clause that is only a `variable_` never has an
   effect, and is almost always `for_(i = 0, ...)` — where the eager `operator=` already ran. A `static_assert` in

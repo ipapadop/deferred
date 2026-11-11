@@ -12,6 +12,7 @@
 
 #include "deferred/conditional.hpp"
 #include "deferred/constant.hpp"
+#include "deferred/operators.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
 #include "deferred/variable.hpp"
 
@@ -368,4 +369,48 @@ TEST_CASE("conditional accounts for throwing condition conversion", "[conditiona
   auto ex = deferred::if_([]() noexcept { return throwing_boolean{}; }).then_(1).else_(2);
 
   static_assert(!noexcept(ex()));
+}
+
+TEST_CASE("else_if_ extends a conditional that already has an else", "[conditional-else-if]")
+{
+  auto n = deferred::variable(0);
+
+  auto const ex       = deferred::if_(n == 1).then_(10).else_(-1);
+  auto const expanded = ex.else_if_(n == 2).then_(20);
+
+  // The result is still a value, not an optional: the else is carried over.
+  static_assert(std::is_same_v<decltype(expanded()), int>);
+  static_assert(!deferred::Deferred<decltype(ex.else_if_(n == 2))>);
+
+  // The new branch is checked after the existing ones and before the else.
+  n = 1;
+  CHECK(expanded() == 10);
+  n = 2;
+  CHECK(expanded() == 20);
+  CHECK(ex() == -1);
+  n = 3;
+  CHECK(expanded() == -1);
+
+  // An rvalue chain can be extended as well, and more than once.
+  n = 4;
+  auto twice = deferred::if_(n == 1).then_(10).else_(-1).else_if_(n == 2).then_(20);
+  CHECK(std::move(twice).else_if_(n == 4).then_(40)() == 40);
+}
+
+namespace {
+
+template<typename T>
+concept accepts_else = requires(T t) { t.else_(3); };
+
+} // namespace
+
+TEST_CASE("a conditional has a single else", "[conditional-else-if]")
+{
+  auto const open     = deferred::if_(true).then_(1);
+  auto const closed   = open.else_(2);
+  auto const expanded = closed.else_if_(false).then_(4);
+
+  static_assert(accepts_else<decltype(open)>);
+  static_assert(!accepts_else<decltype(closed)>);
+  static_assert(!accepts_else<decltype(expanded)>);
 }

@@ -59,6 +59,15 @@ public:
   }
 
   /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return std::tuple<>{};
+  }
+
+  /**
    * @brief Visits the constant with a visitor.
    * @tparam Visitor Type of the visitor.
    * @param v Visitor.

@@ -3,6 +3,7 @@ set(SOURCES
   assign.cpp
   conditional.cpp
   constant.cpp
+  discarded_evaluation.cpp
   do_while.cpp
   evaluate.cpp
   expression.cpp
@@ -29,6 +30,7 @@ set(SOURCES
   detail/map_void.cpp
   detail/no_match_is_nothrow.cpp
   detail/no_unique_address.cpp
+  detail/tuple_references.cpp
   detail/unique_list.cpp
   detail/unmatched_result.cpp
   detail/visit_children.cpp)

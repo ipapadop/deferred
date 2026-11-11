@@ -95,3 +95,18 @@ TEST_CASE("seq accounts for copying its last result", "[seq]")
 
   CHECK(ex() == "x");
 }
+
+TEST_CASE("a seq can be copied from a non-const lvalue", "[seq]")
+{
+  auto one = deferred::seq(deferred::constant(1));
+  auto two = deferred::seq(deferred::constant(1), deferred::constant(2));
+
+  // Direct-initialization considers the explicit forwarding constructor, which must
+  // not be chosen over the copy constructor.
+  auto one_copy(one);
+  auto two_copy(two);
+
+  static_assert(std::is_same_v<decltype(one_copy), decltype(one)>);
+  CHECK(one_copy() == 1);
+  CHECK(two_copy() == 2);
+}

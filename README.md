@@ -147,9 +147,8 @@ auto ok = deferred::for_(i = deferred::constant(0), i < 5, ++i).do_(body);
 ```
 
 ``deferred::assign`` is the free-function form, for targets that are not a
-variable. A target -- and the operand of ``*`` or ``deferred::subscript`` --
-must evaluate to an lvalue, since the result refers into it; an expression
-yielding a temporary is rejected rather than left dangling:
+variable. A target must evaluate to an lvalue, since the result refers into it;
+an expression yielding a temporary is rejected rather than left dangling:
 
 ```C++
 auto ex = deferred::assign(deferred::invoke(&counter::value, &c), deferred::constant(42));
@@ -181,6 +180,20 @@ checked after the cases already present and before the default:
 ```C++
 auto expanded = s.case_(11).then_([] { return "11"; });
 ```
+
+An ``if_`` chain is extended the same way: an ``else_if_`` added to a chain that
+already has an ``else_`` is checked after the branches already present and
+before the else. A chain has a single ``else_``.
+
+```C++
+auto base     = deferred::if_(n == 1).then_(10).else_(-1);
+auto expanded = base.else_if_(n == 2).then_(20);
+```
+
+``if_(c)``, ``switch_(c)``, ``while_(c)``, ``do_(b)`` and ``for_(i, c, s)`` only
+start a chain. None of them is an expression until its next piece is supplied:
+``then_``, a ``case_`` with its ``then_`` or a ``default_``, ``do_`` or
+``while_``.
 
 Sequencing
 ----------
@@ -282,6 +295,62 @@ free-function spelling:
 auto element = deferred::subscript(container, index);
 auto pointee = *pointer_expression;
 ```
+
+Both yield a reference when it cannot dangle: when the operand evaluates to an
+lvalue, or to a raw pointer, which does not own what it points to. Any other
+operand is a temporary of the evaluation, so the result is returned by value.
+Prefix ``++`` and ``--`` follow the same rule, so ``++i`` on a variable yields
+the variable, as ``i += 1`` does:
+
+```C++
+int& first  = deferred::subscript(vector_variable, 0)();  // refers into the variable
+int& second = (*(pointer_variable + 1))();                // a raw pointer owns nothing
+int  third  = deferred::subscript(deferred::invoke(make_vector), 2)();  // a copy
+```
+
+Evaluating expressions
+----------------------
+
+Calling an expression evaluates it. An expression may be evaluated only for its
+effect, so discarding the result does not warn, except for a constant or a
+variable, whose evaluation has no effect:
+
+```C++
+(++i)();                      // fine, like (i += 1)();
+deferred::seq(++i, ++j)();    // fine
+```
+
+Three functions evaluate an argument that may or may not be a deferred
+expression; a plain value is returned unchanged.
+
+- ``deferred::evaluate(x)`` evaluates ``x`` and returns the result by value. If
+  the result is itself a deferred expression, it is evaluated once more.
+- ``deferred::evaluate_ref(x)`` does the same but keeps a reference result as a
+  reference, which avoids a copy when the result is only read.
+- ``deferred::recursive_evaluate(x)`` keeps evaluating until the result is not
+  callable.
+
+Inspecting expressions
+----------------------
+
+Every node names the types of its subexpressions as ``subexpression_types``, a
+``std::tuple``, and returns references to them with ``subexpressions()``, in the
+same order. A constant or a variable has none. An ``expression_`` additionally
+exposes its operator as ``operator_type`` and ``operator_()``; the operator is
+not a subexpression.
+
+A node whose result type does not depend on how it is evaluated names it as
+``result_type``: ``void`` for the loops, ``bool`` for ``&&`` and ``||``, and the
+common or variant type for ``if_`` and ``switch_``. A constant or a variable
+names the type it stores as ``value_type``.
+
+```C++
+auto sum = i + deferred::constant(2);
+auto const& [left, right] = sum.subexpressions();   // left is i itself
+```
+
+``deferred::type_name<T>()`` returns a readable name for a type, which helps
+when printing an expression tree.
 
 Exception guarantees
 --------------------
