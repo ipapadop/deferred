@@ -3,6 +3,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstddef>
+#include <vector>
+
 #include "deferred/deferred.hpp"
 
 TEST_CASE("deferred assignment composes with operators", "[assign-operators]")
@@ -67,4 +70,34 @@ TEST_CASE("compound assignment composes with operators", "[assign-compound]")
   n = 2;
   ex();
   CHECK(v() == 12);
+}
+
+TEST_CASE("assign() targets an lvalue that is not a variable", "[assign-function]")
+{
+  struct counter
+  {
+    int value = 0;
+  };
+
+  auto c = counter{};
+  auto n = deferred::variable(3);
+
+  auto ex = deferred::for_(n = deferred::constant(3), n != 0, --n)
+              .do_(deferred::assign(deferred::invoke(&counter::value, &c),
+                                    deferred::invoke(&counter::value, &c) + n));
+  ex();
+  CHECK(c.value == 6);
+  ex();
+  CHECK(c.value == 12);
+}
+
+TEST_CASE("assign() into a subscripted element", "[assign-function]")
+{
+  auto values = deferred::variable(std::vector<int>(3));
+  auto i      = deferred::variable<std::size_t>();
+
+  auto ex = deferred::for_(i = deferred::constant(std::size_t{0}), i < 3, ++i)
+              .do_(deferred::assign(deferred::subscript(values, i), i * 10));
+  ex();
+  CHECK(values() == std::vector<int>{0, 10, 20});
 }

@@ -180,3 +180,60 @@ TEST_CASE("evaluated_result_t follows a nested deferred expression", "[evaluate-
 
   STATIC_CHECK(std::is_same_v<deferred::detail::evaluated_result_t<nested>, int>);
 }
+
+TEST_CASE("evaluate_ref keeps a reference result as a reference", "[evaluate-ref]")
+{
+  auto v       = deferred::variable(1);
+  auto const c = deferred::constant(2);
+
+  static_assert(std::is_same_v<decltype(deferred::evaluate_ref(v)), int&>);
+  static_assert(std::is_same_v<decltype(deferred::evaluate_ref(c)), int const&>);
+  static_assert(std::is_same_v<decltype(deferred::evaluate(v)), int>);
+
+  CHECK(&deferred::evaluate_ref(v) == &v());
+}
+
+TEST_CASE("evaluate_ref keeps a prvalue result as a value", "[evaluate-ref]")
+{
+  static_assert(std::is_same_v<decltype(deferred::evaluate_ref(throwing_node{})), int>);
+  static_assert(std::is_void_v<decltype(deferred::evaluate_ref(void_node{}))>);
+}
+
+TEST_CASE("evaluate_ref does not return a reference to a non-deferred temporary", "[evaluate-ref]")
+{
+  int i = 1;
+
+  static_assert(std::is_same_v<decltype(deferred::evaluate_ref(i)), int&>);
+  static_assert(std::is_same_v<decltype(deferred::evaluate_ref(std::as_const(i))), int const&>);
+  static_assert(std::is_same_v<decltype(deferred::evaluate_ref(42)), int>);
+
+  CHECK(deferred::evaluate_ref(42) == 42);
+}
+
+TEST_CASE("evaluate_ref evaluates a nested deferred expression by value", "[evaluate-ref]")
+{
+  struct nested_node
+  {
+    using subexpression_types = std::tuple<>;
+
+    constexpr deferred::constant_<int> operator()() const noexcept
+    {
+      return deferred::constant_<int>(7);
+    }
+  };
+
+  static_assert(std::is_same_v<decltype(deferred::evaluate_ref(nested_node{})), int>);
+  CHECK(deferred::evaluate_ref(nested_node{}) == 7);
+}
+
+TEST_CASE("evaluate_ref is noexcept unless the evaluation can throw", "[evaluate-ref]")
+{
+  auto v = deferred::variable<throwing_move>();
+
+  // Nothing is copied or moved, so a throwing move does not matter.
+  static_assert(noexcept(deferred::evaluate_ref(v)));
+  static_assert(noexcept(deferred::evaluate_ref(void_node{})));
+  static_assert(!noexcept(deferred::evaluate_ref(throwing_node{})));
+  // A non-deferred rvalue is moved into the result.
+  static_assert(!noexcept(deferred::evaluate_ref(throwing_move{})));
+}

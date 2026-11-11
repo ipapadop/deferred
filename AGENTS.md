@@ -21,6 +21,10 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   is what makes `for_(i = constant(0), i < 10, ++i)` work without a lambda. `i = j` between variables therefore
   assigns by value, re-reading the right-hand side on every evaluation. The deferred form is `[[nodiscard]]` and
   `&`-qualified, and its return type is spelled out rather than deduced.
+- **Assignment reads a scalar right-hand side first**: `detail::assigned_value()` copies a scalar before the
+  target is evaluated, as a built-in assignment does, so `(i = constant(5)) += i` adds the old `i`. Any other
+  type keeps the reference `evaluate_ref()` yields, as an overloaded operator's reference parameter would, and a
+  prvalue is moved into the target.
 - **Assignment from a variable is lvalue-only**: `i = j` works, `i = std::move(j)` and `i = std::as_const(j)`
   are rejected, and that is not fixable while `variable_` stays non-copyable. `test/unit/assign.cpp` pins it and
   explains why.
@@ -36,8 +40,9 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `subscript()` — are constrained on `detail::AssignableWith` / `detail::YieldsLvalue` (see `expression.hpp`).
   Dropping the constraint reintroduces a dangling reference that only ASan catches.
 - **`evaluate_ref()` vs `evaluate()`**: `evaluate()` returns by value, so it copies a result that is already a
-  reference. Positions that only read within one full expression — loop conditions, discarded bodies and steps,
-  the right-hand side of an assignment, `&&`/`||` operands — use `evaluate_ref()`. Anything that stores or
+  reference. Positions that only read within one full expression — loop and `if_` conditions, `switch_` case
+  labels, discarded bodies and steps, the right-hand side of an assignment, `&&`/`||` operands — use
+  `evaluate_ref()`. Anything that stores or
   returns a result keeps `evaluate()`, which must decay.
 - **`operator[]` cannot be a free function**, so `deferred::subscript(a, b)` is its spelling. Unary `*` is a normal
   free operator. `->` and unary `&` are deliberately absent: `->` must be a member, and overloading `&` would break

@@ -123,8 +123,9 @@ struct plus_assign
 {
   /// @brief Applies <tt>+=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) += std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) += std::forward<U>(value))
   {
     return std::forward<T>(target) += std::forward<U>(value);
   }
@@ -135,8 +136,9 @@ struct minus_assign
 {
   /// @brief Applies <tt>-=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) -= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) -= std::forward<U>(value))
   {
     return std::forward<T>(target) -= std::forward<U>(value);
   }
@@ -147,8 +149,9 @@ struct multiplies_assign
 {
   /// @brief Applies <tt>*=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) *= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) *= std::forward<U>(value))
   {
     return std::forward<T>(target) *= std::forward<U>(value);
   }
@@ -159,8 +162,9 @@ struct divides_assign
 {
   /// @brief Applies <tt>/=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) /= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) /= std::forward<U>(value))
   {
     return std::forward<T>(target) /= std::forward<U>(value);
   }
@@ -171,8 +175,9 @@ struct modulus_assign
 {
   /// @brief Applies <tt>%=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) %= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) %= std::forward<U>(value))
   {
     return std::forward<T>(target) %= std::forward<U>(value);
   }
@@ -183,8 +188,9 @@ struct bit_and_assign
 {
   /// @brief Applies <tt>&=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) &= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) &= std::forward<U>(value))
   {
     return std::forward<T>(target) &= std::forward<U>(value);
   }
@@ -195,8 +201,9 @@ struct bit_or_assign
 {
   /// @brief Applies <tt>|=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) |= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) |= std::forward<U>(value))
   {
     return std::forward<T>(target) |= std::forward<U>(value);
   }
@@ -207,8 +214,9 @@ struct bit_xor_assign
 {
   /// @brief Applies <tt>^=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) ^= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) ^= std::forward<U>(value))
   {
     return std::forward<T>(target) ^= std::forward<U>(value);
   }
@@ -219,8 +227,9 @@ struct shift_left_assign
 {
   /// @brief Applies <tt><<=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) <<= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) <<= std::forward<U>(value))
   {
     return std::forward<T>(target) <<= std::forward<U>(value);
   }
@@ -231,8 +240,9 @@ struct shift_right_assign
 {
   /// @brief Applies <tt>>>=</tt> to @p target with @p value.
   template<typename T, typename U>
-  constexpr decltype(auto) operator()(T&& target, U&& value) const
+  constexpr auto operator()(T&& target, U&& value) const
     noexcept(noexcept(std::forward<T>(target) >>= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) >>= std::forward<U>(value))
   {
     return std::forward<T>(target) >>= std::forward<U>(value);
   }

@@ -97,7 +97,7 @@ consteval bool conditional_branch_is_nothrow()
   using branch_reference    = expression_reference_t<Self, Branch>;
   using condition_reference = decltype((std::declval<branch_reference>().condition));
   using then_reference      = decltype((std::declval<branch_reference>().then));
-  return noexcept(static_cast<bool>(evaluate(std::declval<condition_reference>())))
+  return noexcept(static_cast<bool>(evaluate_ref(std::declval<condition_reference>())))
          && (std::is_void_v<Result> ? noexcept(evaluate(std::declval<then_reference>()))
                                     : evaluation_result_is_nothrow<Result, then_reference>());
 }
@@ -315,7 +315,7 @@ private:
     if constexpr (I < sizeof...(Branches))
     {
       auto&& branch = std::get<I>(self.m_branches);
-      if (evaluate(branch.condition))
+      if (evaluate_ref(branch.condition))
       {
         if constexpr (std::is_void_v<result_type>)
         {

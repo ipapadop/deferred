@@ -90,19 +90,13 @@ public:
    * @return An expression assigning to the variable when evaluated.
    */
   template<Deferred E>
-  [[nodiscard]] constexpr assign_expression<detail::assign_to, variable_&, make_deferred_t<E>>
+  [[nodiscard]] constexpr detail::assign_expression_t<detail::assign_to, variable_&, E>
   operator=(E&& e) & noexcept(detail::assign_is_nothrow<detail::assign_to, variable_&, E>())
   {
     // The return type is spelled out rather than deduced. Asking whether a variable
     // reference is assignable -- which std::tuple does for every expression holding
     // one -- must be answerable without instantiating this body.
-    //
-    // The target is named as variable_& rather than as make_deferred_t<variable_&>,
-    // which does not depend on E and so is resolved while this class is instantiated.
-    // When make_deferred_t<variable_&> is itself what triggers that instantiation, it
-    // would re-enter its own deduction.
-    return assign_expression<detail::assign_to, variable_&, make_deferred_t<E>>(*this,
-                                                                                std::forward<E>(e));
+    return detail::assign_expression_t<detail::assign_to, variable_&, E>(*this, std::forward<E>(e));
   }
 
   /// @brief Returns the stored value.

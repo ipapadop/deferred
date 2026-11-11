@@ -4,12 +4,14 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
+#include <string>
 #include <type_traits>
 #include <vector>
 
 #include "deferred/constant.hpp"
 #include "deferred/seq.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
+#include "deferred/variable.hpp"
 
 TEST_CASE("seq evaluates its expressions left to right", "[seq]")
 {
@@ -77,4 +79,19 @@ TEST_CASE("seq requires at least one expression", "[seq]")
 {
   static_assert(sequenceable<int>);
   static_assert(!sequenceable<>);
+}
+
+TEST_CASE("seq accounts for copying its last result", "[seq]")
+{
+  auto s  = deferred::variable(std::string("x"));
+  auto n  = deferred::variable(1);
+  auto ex = deferred::seq(deferred::constant(0), s);
+
+  // The last result is returned by value, and copying a std::string can throw.
+  static_assert(std::is_same_v<decltype(ex()), std::string>);
+  static_assert(!noexcept(ex()));
+  // An element evaluated only for effect is not copied.
+  static_assert(noexcept(deferred::seq(s, n)()));
+
+  CHECK(ex() == "x");
 }

@@ -12,6 +12,7 @@ set(SOURCES
   is_deferred.cpp
   logical.cpp
   main.cpp
+  operators.cpp
   seq.cpp
   switch.cpp
   type_name.cpp

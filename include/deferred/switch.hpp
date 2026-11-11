@@ -120,17 +120,17 @@ public:
   /// @brief Compares @p T with the label expression.
   template<typename T>
   [[nodiscard]] constexpr decltype(auto)
-  compare(T const& t) const noexcept(noexcept(t == evaluate(m_label)))
+  compare(T const& t) const noexcept(noexcept(t == evaluate_ref(m_label)))
   {
-    return t == evaluate(m_label);
+    return t == evaluate_ref(m_label);
   }
 
   /// @copydoc case_expression::compare
   template<typename T>
   [[nodiscard]] constexpr decltype(auto)
-  compare(T const& t) noexcept(noexcept(t == evaluate(m_label)))
+  compare(T const& t) noexcept(noexcept(t == evaluate_ref(m_label)))
   {
-    return t == evaluate(m_label);
+    return t == evaluate_ref(m_label);
   }
 
   /// @brief Returns the result of the body expression.

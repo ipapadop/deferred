@@ -84,28 +84,20 @@ consteval bool reference_evaluation_is_nothrow()
 {
   if constexpr (!Deferred<T>)
   {
-    return true;
+    return std::is_nothrow_constructible_v<T, T&&>;
   }
   else if constexpr (!std::is_nothrow_invocable_v<T>)
   {
     return false;
   }
-  else if constexpr (std::is_void_v<std::invoke_result_t<T>>)
-  {
-    return true;
-  }
   else if constexpr (Deferred<std::invoke_result_t<T>>)
   {
     return evaluation_is_nothrow<std::invoke_result_t<T>, false>();
   }
-  else if constexpr (std::is_reference_v<std::invoke_result_t<T>>)
-  {
-    return true;
-  }
   else
   {
-    return std::is_nothrow_constructible_v<std::decay_t<std::invoke_result_t<T>>,
-                                           std::invoke_result_t<T>>;
+    // The result is returned as is: nothing is constructed, not even for a prvalue.
+    return true;
   }
 }
 
@@ -131,23 +123,17 @@ constexpr decltype(auto) evaluate_ref(T&& t) noexcept(detail::reference_evaluati
 {
   if constexpr (!Deferred<T>)
   {
-    return std::forward<T>(t);
+    // An lvalue stays a reference; an rvalue is returned by value, because a reference
+    // to it would dangle once the caller's full expression ends.
+    return static_cast<T>(std::forward<T>(t));
+  }
+  else if constexpr (Deferred<decltype(std::forward<T>(t)())>)
+  {
+    return evaluate(std::forward<T>(t)());
   }
   else
   {
-    using result_type = decltype(std::forward<T>(t)());
-    if constexpr (std::is_void_v<result_type>)
-    {
-      std::forward<T>(t)();
-    }
-    else if constexpr (Deferred<result_type>)
-    {
-      return evaluate(std::forward<T>(t)());
-    }
-    else
-    {
-      return static_cast<result_type>(std::forward<T>(t)());
-    }
+    return std::forward<T>(t)();
   }
 }
 

@@ -27,7 +27,12 @@ namespace detail {
 template<typename... ExpressionReferences>
 consteval bool sequence_is_nothrow()
 {
-  return (noexcept(evaluate_ref(std::declval<ExpressionReferences>())) && ...);
+  // Every expression is evaluated for effect except the last, whose result is returned
+  // by value and so may also be copied.
+  using last_reference =
+    std::tuple_element_t<sizeof...(ExpressionReferences) - 1, std::tuple<ExpressionReferences...>>;
+  return (noexcept(evaluate_ref(std::declval<ExpressionReferences>())) && ...)
+         && noexcept(evaluate(std::declval<last_reference>()));
 }
 
 } // namespace detail

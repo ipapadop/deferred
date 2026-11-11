@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -257,9 +258,6 @@ namespace {
 template<typename Target, typename Value>
 concept assignable_target = requires(Target t, Value v) { deferred::assign(t, v); };
 
-template<typename Target>
-concept compound_target = requires(Target t) { t += 1; };
-
 } // namespace
 
 TEST_CASE("an assignment target must yield an lvalue", "[assign]")
@@ -272,8 +270,8 @@ TEST_CASE("an assignment target must yield an lvalue", "[assign]")
   static_assert(assignable_target<lvalue_target, deferred::constant_<int>>);
   static_assert(!assignable_target<prvalue_target, deferred::constant_<int>>);
 
-  static_assert(compound_target<lvalue_target>);
-  static_assert(!compound_target<prvalue_target>);
+  static_assert(compound_addable<lvalue_target, int>);
+  static_assert(!compound_addable<prvalue_target, int>);
 }
 
 
@@ -316,4 +314,35 @@ TEST_CASE("a deferred assignment does not copy a referenced right-hand side", "[
   // The source already yields a reference, so evaluate_ref hands it straight to the
   // assignment instead of decaying it into a temporary first.
   CHECK(counted::copies == 0);
+}
+
+TEST_CASE("a prvalue right-hand side is moved into the target", "[assign]")
+{
+  auto p  = deferred::variable<std::unique_ptr<int>>();
+  auto ex = deferred::assign(p, deferred::invoke([] { return std::make_unique<int>(3); }));
+
+  ex();
+  REQUIRE(p() != nullptr);
+  CHECK(*p() == 3);
+}
+
+TEST_CASE("a scalar right-hand side is read before the target is evaluated", "[assign]")
+{
+  auto i = deferred::variable(1);
+
+  // As the built-in (i = 5) += i does: the right operand is the i from before the
+  // inner assignment.
+  auto inner = (i = deferred::constant(5));
+  auto ex    = (inner += i);
+  ex();
+  CHECK(i() == 6);
+}
+
+TEST_CASE("a const target is rejected by the constraint", "[assign]")
+{
+  using const_target = deferred::constant_<int>&;
+
+  // These must be answerable as false rather than fail inside the operation.
+  static_assert(!assignable_target<const_target, deferred::constant_<int>>);
+  static_assert(!compound_addable<const_target, int>);
 }
