@@ -552,7 +552,7 @@ operator<=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::less_equal<>, T
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U> && detail::BooleanTestable<T> && detail::BooleanTestable<U>
+  requires AnyDeferred<T, U> && detail::ShortCircuits<detail::conjunction, T, U>
 [[nodiscard]] constexpr auto
 operator&&(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::conjunction, T, U>())
 {
@@ -573,7 +573,7 @@ operator&&(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::conjunction
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U> && (!detail::BooleanTestable<T> || !detail::BooleanTestable<U>)
+  requires AnyDeferred<T, U> && (!detail::ShortCircuits<detail::conjunction, T, U>)
 [[nodiscard]] constexpr auto
 operator&&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_and<>, T, U>())
 {
@@ -593,7 +593,7 @@ operator&&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_and<>, 
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U> && detail::BooleanTestable<T> && detail::BooleanTestable<U>
+  requires AnyDeferred<T, U> && detail::ShortCircuits<detail::disjunction, T, U>
 [[nodiscard]] constexpr auto
 operator||(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::disjunction, T, U>())
 {
@@ -614,7 +614,7 @@ operator||(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::disjunction
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U> && (!detail::BooleanTestable<T> || !detail::BooleanTestable<U>)
+  requires AnyDeferred<T, U> && (!detail::ShortCircuits<detail::disjunction, T, U>)
 [[nodiscard]] constexpr auto
 operator||(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_or<>, T, U>())
 {

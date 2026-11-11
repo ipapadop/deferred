@@ -34,8 +34,9 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `t = t + u`. Unlike `=`, they have no eager meaning, so they follow the same rule as every other operator.
 - **Short-circuiting**: `&&` and `||` build a `logical_expression`, not an `expression_`; they yield `bool` and
   evaluate the right operand only when the left does not decide the result. Operands that do not convert to
-  `bool` (`std::valarray` and expression types like it) take a second, eager overload keeping the elementwise
-  meaning — which is what C++ does for an overloaded `&&` too.
+  `bool` (`std::valarray` and expression types like it), or whose types overload the operator themselves (a
+  three-valued boolean), take a second, eager overload that calls the type's own operator — which is what C++
+  does for an overloaded `&&` too. `detail::ShortCircuits` decides between the two.
 - **Assignment targets must yield an lvalue**: `assign()` and the compound assignments are constrained on
   `detail::AssignableWith` / `detail::YieldsLvalue` (see `expression.hpp`). Dropping the constraint reintroduces
   a dangling reference that only ASan catches.

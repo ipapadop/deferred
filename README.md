@@ -276,8 +276,10 @@ Short-circuiting
 
 ``&&`` and ``||`` evaluate their right operand only when the left one does not
 already decide the result, as the built-in operators do. Operands that do not
-convert to ``bool``, such as ``std::valarray``, keep their elementwise meaning
-and are both evaluated -- which is also what C++ does for an overloaded ``&&``.
+convert to ``bool``, such as ``std::valarray``, or whose types overload the
+operator themselves, such as a three-valued boolean, keep that operator's
+meaning and result type and are both evaluated -- which is also what C++ does
+for an overloaded ``&&``.
 
 ```C++
 auto ex = n != 0 && (bumps += 1);   // bumps is not touched while n is 0

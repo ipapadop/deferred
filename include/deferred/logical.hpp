@@ -23,6 +23,12 @@ struct conjunction
 {
   /// @brief The left operand decides the result when it converts to this.
   static constexpr bool short_circuits_on = false;
+
+  /// @brief Whether @p Left and @p Right have an overloaded @c && of their own.
+  template<typename Left, typename Right>
+  static constexpr bool overloaded = requires(Left left, Right right) {
+    operator&&(left, right);
+  } || requires(Left left, Right right) { left.operator&&(right); };
 };
 
 /** @brief Tag selecting a short-circuiting @c || . */
@@ -30,6 +36,12 @@ struct disjunction
 {
   /// @copydoc conjunction::short_circuits_on
   static constexpr bool short_circuits_on = true;
+
+  /// @brief Whether @p Left and @p Right have an overloaded @c || of their own.
+  template<typename Left, typename Right>
+  static constexpr bool overloaded = requires(Left left, Right right) {
+    operator||(left, right);
+  } || requires(Left left, Right right) { left.operator||(right); };
 };
 
 /**
@@ -45,6 +57,23 @@ struct disjunction
 template<typename T>
 concept BooleanTestable =
   requires(evaluated_result_t<make_deferred_t<T>&> value) { static_cast<bool>(value); };
+
+/**
+ * @brief Whether @p Operation on @p T and @p U short-circuits.
+ *
+ * It does when both results can be tested as conditions and their types do not overload
+ * the operator. A type that converts to @c bool and also has its own @c && or @c || --
+ * a three-valued boolean, for example -- keeps its operator, which C++ evaluates
+ * eagerly, and the result type that operator yields.
+ *
+ * @tparam Operation @ref conjunction or @ref disjunction.
+ * @tparam T Left expression argument type.
+ * @tparam U Right expression argument type.
+ */
+template<typename Operation, typename T, typename U>
+concept ShortCircuits = BooleanTestable<T> && BooleanTestable<U>
+                        && !Operation::template overloaded<evaluated_result_t<make_deferred_t<T>&>,
+                                                           evaluated_result_t<make_deferred_t<U>&>>;
 
 } // namespace detail
 

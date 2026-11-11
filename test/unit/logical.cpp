@@ -105,3 +105,66 @@ TEST_CASE("a logical expression exposes its result type", "[logical]")
   static_assert(std::is_same_v<decltype(ex)::result_type, bool>);
   static_assert(std::is_same_v<decltype(ex()), decltype(ex)::result_type>);
 }
+
+namespace {
+
+/// @brief A three-valued boolean: it converts to bool and also overloads && and ||.
+struct tribool
+{
+  int state;
+
+  constexpr explicit operator bool() const noexcept
+  {
+    return state == 1;
+  }
+};
+
+struct tribool_result
+{
+  int state;
+};
+
+constexpr tribool_result operator&&(tribool left, tribool right) noexcept
+{
+  return {left.state < right.state ? left.state : right.state};
+}
+
+constexpr tribool_result operator||(tribool left, tribool right) noexcept
+{
+  return {left.state > right.state ? left.state : right.state};
+}
+
+/// @brief Overloads && as a member.
+struct member_and
+{
+  constexpr explicit operator bool() const noexcept
+  {
+    return true;
+  }
+
+  constexpr int operator&&(member_and) const noexcept
+  {
+    return 7;
+  }
+};
+
+} // namespace
+
+TEST_CASE("a type with its own logical operators keeps them", "[logical]")
+{
+  auto unknown = deferred::constant(tribool{2});
+  auto yes     = deferred::constant(tribool{1});
+
+  // Converting to bool is not enough to short-circuit: the type's operator decides the
+  // result, and its type.
+  static_assert(std::is_same_v<decltype((unknown && yes)()), tribool_result>);
+  static_assert(std::is_same_v<decltype((unknown || yes)()), tribool_result>);
+  CHECK((unknown && yes)().state == 1);
+  CHECK((unknown || yes)().state == 2);
+
+  auto m = deferred::constant(member_and{});
+  static_assert(std::is_same_v<decltype((m && m)()), int>);
+  CHECK((m && m)() == 7);
+  // Only && is overloaded for this type, so || still short-circuits to bool.
+  static_assert(std::is_same_v<decltype((m || m)()), bool>);
+}
