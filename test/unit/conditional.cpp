@@ -392,7 +392,7 @@ TEST_CASE("else_if_ extends a conditional that already has an else", "[condition
   CHECK(expanded() == -1);
 
   // An rvalue chain can be extended as well, and more than once.
-  n = 4;
+  n          = 4;
   auto twice = deferred::if_(n == 1).then_(10).else_(-1).else_if_(n == 2).then_(20);
   CHECK(std::move(twice).else_if_(n == 4).then_(40)() == 40);
 }
