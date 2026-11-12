@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/immediate_assignment.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "type_traits/expression_visitor.hpp"
@@ -59,18 +60,30 @@ public:
   variable_& operator=(variable_ const&) = delete;
   variable_& operator=(variable_&&)      = delete;
 
-  /// @brief Assigns a value to the variable.
-  constexpr variable_& operator=(T const& t) noexcept(std::is_nothrow_copy_assignable_v<T>)
+  /**
+   * @brief Assigns a value to the variable, at once.
+   *
+   * The result is not a @c deferred expression, so an assignment that has already
+   * happened cannot be mistaken for one that happens later: <tt>if_(c).then_(v = 0)</tt>
+   * does not compile. To assign when an expression is evaluated, assign a @c deferred
+   * expression: <tt>v = constant(0)</tt>.
+   *
+   * @param t Value to store.
+   * @return A tag that no expression accepts.
+   */
+  constexpr detail::immediate_assignment
+  operator=(T const& t) noexcept(std::is_nothrow_copy_assignable_v<T>)
   {
     m_t = t;
-    return *this;
+    return {};
   }
 
   /// @copydoc variable_::operator=(T const&)
-  constexpr variable_& operator=(T&& t) noexcept(std::is_nothrow_move_assignable_v<T>)
+  constexpr detail::immediate_assignment
+  operator=(T&& t) noexcept(std::is_nothrow_move_assignable_v<T>)
   {
     m_t = std::move(t);
-    return *this;
+    return {};
   }
 
   /**
@@ -78,7 +91,7 @@ public:
    *
    * Assigning a value stores it immediately; assigning a @c deferred expression
    * instead *builds* an expression that performs the assignment when it is evaluated,
-   * which is what lets a loop clause assign:
+   * which is what lets a loop clause, a body or a branch assign:
    * @code
    * n = 10;                                        // assigns now
    * auto ex = for_(i = constant(0), i < 10, ++i);  // assigns when ex is evaluated
@@ -197,27 +210,6 @@ variable(T&& t) noexcept(detail::make_node_is_nothrow<variable_, T&&>())
 {
   return variable_<detail::node_result_t<T&&>>(recursive_evaluate(std::forward<T>(t)));
 }
-
-namespace detail {
-
-/**
- * @brief Whether @p T is a @ref variable_ .
- * @tparam T Type to check.
- */
-template<typename T>
-struct is_variable : std::false_type
-{ };
-
-/// @copydoc is_variable
-template<typename T>
-struct is_variable<variable_<T>> : std::true_type
-{ };
-
-/// @copydoc is_variable
-template<typename T>
-inline constexpr bool is_variable_v = is_variable<std::remove_cvref_t<T>>::value;
-
-} // namespace detail
 
 } // namespace deferred
 

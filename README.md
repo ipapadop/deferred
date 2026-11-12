@@ -114,12 +114,12 @@ once: ``for_`` re-runs its initialization on every evaluation rather than once
 at construction.
 
 Assigning to a variable has two meanings, chosen by the right-hand side.
-Assigning a *value* stores it immediately, as it always has; assigning a
-*deferred expression* instead builds an expression that assigns when it is
-evaluated, which is what lets a loop clause assign:
+Assigning a *value* stores it immediately; assigning a *deferred expression*
+instead builds an expression that assigns when it is evaluated, which is what
+lets a loop clause, a body or a branch assign:
 
 ```C++
-n = 10;                                   // assigns now, returns variable_<int>&
+n = 10;                                   // assigns now
 auto init = (i = deferred::constant(0));  // assigns nothing yet
 init();                                   // now i is 0
 ```
@@ -136,14 +136,28 @@ The right-hand side is read on every evaluation, not captured when the
 expression is built. Only a plain lvalue works as the source:
 ``i = std::move(j)`` and ``i = std::as_const(j)`` are rejected.
 
-The one place the two meanings bite is a loop clause: ``i = 0`` assigns
-immediately and yields the variable itself, so the clause would merely read
-``i``. ``for_`` rejects an initialization or step clause that is only a
-variable, so this is a compile error rather than a silent one:
+An immediate assignment is not an expression. Its result is a tag that nothing
+accepts, so an assignment that has already happened cannot be passed where one
+that happens later was meant. Each of these is a compile error whose message
+says to write ``deferred::constant(value)``:
 
 ```C++
-auto ex = deferred::for_(i = 0, i < 5, ++i).do_(body);   // rejected
+auto a = deferred::if_(i > 10).then_(i = 0);                         // rejected
+auto b = deferred::while_(n != 0).do_(deferred::seq(seen = true, n -= 1));  // rejected
+auto c = deferred::for_(i = 0, i < 5, ++i).do_(body);                // rejected
+
 auto ok = deferred::for_(i = deferred::constant(0), i < 5, ++i).do_(body);
+```
+
+For the same reason an immediate assignment yields no value: ``(i = 5)()`` and
+``a = b = 5`` do not compile. Write ``a = 5; b = 5;``, or
+``a = (b = deferred::constant(5))`` for the deferred form.
+
+A ``for_`` clause may be a bare variable, which has no effect, so a loop can
+resume from the current value:
+
+```C++
+auto resume = deferred::for_(i, i < 5, ++i).do_(body);   // i starts wherever it is
 ```
 
 ``deferred::assign`` is the free-function form, for targets that are not a

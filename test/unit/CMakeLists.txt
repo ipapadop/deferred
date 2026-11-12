@@ -27,6 +27,7 @@ set(SOURCES
   detail/callable_storage.cpp
   detail/expression_reference.cpp
   detail/homogenized_type.cpp
+  detail/immediate_assignment.cpp
   detail/is_nothrow_evaluable.cpp
   detail/is_nothrow_visitable.cpp
   detail/map_result.cpp

@@ -16,11 +16,19 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   visitor, for no reuse worth having. `for_builder::do_` must keep *naming* the node rather than deducing it, or
   the builder's members get deduced as references into a builder that does not outlive the call —
   `test/unit/for.cpp`'s "a loop outlives the builder" catches that only under ASan.
-- **Assignment**: `variable_::operator=` is overloaded on the right-hand side. A *value* is stored immediately and
-  returns `variable_&`; a *deferred expression* returns an `assign_expression` that assigns when evaluated, which
-  is what makes `for_(i = constant(0), i < 10, ++i)` work without a lambda. `i = j` between variables therefore
-  assigns by value, re-reading the right-hand side on every evaluation. The deferred form is `[[nodiscard]]` and
+- **Assignment**: `variable_::operator=` is overloaded on the right-hand side. A *value* is stored immediately; a
+  *deferred expression* returns an `assign_expression` that assigns when evaluated, which is what makes
+  `for_(i = constant(0), i < 10, ++i)` work without a lambda. `i = j` between variables therefore assigns by
+  value, re-reading the right-hand side on every evaluation. The deferred form is `[[nodiscard]]` and
   `&`-qualified, and its return type is spelled out rather than deduced.
+- **An immediate assignment is not an expression**: `v = value` returns `detail::immediate_assignment`, an empty
+  tag, not `variable_&`. Returning the variable let `if_(c).then_(i = 0)`, `seq(flag = true, ...)` and
+  `for_(i = 0, ...)` compile as expressions that only read the variable, after the assignment had already
+  happened (#61). `detail::deduce_deferred_type` — behind `make_deferred_t`, which every construct uses —
+  has a `static_assert` that rejects the tag and names the fix, `v = constant(value)`. It is a hard error, not
+  a failed constraint, so it cannot be pinned by a unit test; check it by hand when touching it. Consequently
+  `(i = 5)()` and `a = b = 5` do not compile. Making `=` always deferred was tried and rejected: `v = 10;` as a
+  statement then does nothing.
 - **Assignment reads a scalar right-hand side first**: `detail::assigned_value()` copies a scalar before the
   target is evaluated, as a built-in assignment does, so `(i = constant(5)) += i` adds the old `i`. Any other
   type keeps the reference `evaluate_ref()` yields, as an overloaded operator's reference parameter would, and a
@@ -75,9 +83,9 @@ This project is a C++23 header-only library for creating deferred evaluation exp
 - **`operator[]` cannot be a free function**, so `deferred::subscript(a, b)` is its spelling. Unary `*` is a normal
   free operator; both require only a `deferred_expression` operand. `->` and unary `&` are deliberately absent: `->` must be a member, and overloading `&` would break
   taking the address of an expression.
-- **`for_` rejects an effectless clause**: an `init` or `step` clause that is only a `variable_` never has an
-  effect, and is almost always `for_(i = 0, ...)` — where the eager `operator=` already ran. A `static_assert` in
-  `for_` names the fix.
+- **`for_` accepts a bare variable as a clause**: it has no effect, so `for_(i, i < n, ++i)` resumes from the
+  current `i`. `for_` once rejected it with its own `static_assert`, to catch `for_(i = 0, ...)`; the
+  `immediate_assignment` tag now catches that everywhere, and `detail::is_variable` is gone.
 - **`seq`**: `seq(a, b, ...)` evaluates left to right and yields the last, like the comma operator. It is how a
   loop body, branch or `for_` clause does more than one thing without a lambda.
 - **`assign_expression`, `logical_expression` and `seq_expression` cannot be `expression_`s**: `expression_`

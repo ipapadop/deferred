@@ -237,10 +237,10 @@ public:
  * auto ex = for_(init, condition, step).do_(body);
  * @endcode
  *
- * @warning A clause that assigns must assign a @c deferred expression:
- * <tt>for_(i = constant(0), ...)</tt>, not <tt>for_(i = 0, ...)</tt>. The latter
- * assigns while the loop is being built and leaves a clause that only reads @c i,
- * so the loop runs no iterations from its second evaluation onwards.
+ * A clause that assigns must assign a @c deferred expression:
+ * <tt>for_(i = constant(0), ...)</tt>. <tt>for_(i = 0, ...)</tt> would assign while the
+ * loop is being built, and does not compile. A clause may be a bare variable, which has
+ * no effect: <tt>for_(i, i < n, ++i)</tt> starts from the current value of @c i.
  *
  * @tparam InitExpression Type of the initialization expression.
  * @tparam ConditionExpression Type of the condition expression.
@@ -257,16 +257,6 @@ for_(InitExpression&& init, ConditionExpression&& condition, StepExpression&& st
   && std::is_nothrow_constructible_v<make_deferred_t<ConditionExpression>, ConditionExpression&&>
   && std::is_nothrow_constructible_v<make_deferred_t<StepExpression>, StepExpression&&>)
 {
-  // `for_(i = 0, ...)` assigns while the loop is built and leaves a clause that only
-  // reads `i`, so the loop would run no iterations from its second evaluation onwards.
-  // A clause that is only a variable never has an effect, so it is always a mistake.
-  static_assert(!detail::is_variable_v<InitExpression>,
-                "a for_ initialization clause that is only a variable has no effect; to "
-                "assign, assign a deferred expression: for_(i = constant(0), ...)");
-  static_assert(!detail::is_variable_v<StepExpression>,
-                "a for_ step clause that is only a variable has no effect; to assign, "
-                "assign a deferred expression, or use ++i / i += n");
-
   return for_builder<make_deferred_t<InitExpression>,
                      make_deferred_t<ConditionExpression>,
                      make_deferred_t<StepExpression>>(std::forward<InitExpression>(init),

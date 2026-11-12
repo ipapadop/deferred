@@ -10,6 +10,7 @@
 
 #include "constant.hpp"
 #include "detail/apply_evaluated.hpp"
+#include "detail/immediate_assignment.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "detail/tuple_references.hpp"
@@ -143,6 +144,9 @@ template<typename T>
 consteval auto deduce_deferred_type()
 {
   using U = std::decay_t<T>;
+  static_assert(!std::is_same_v<U, immediate_assignment>,
+                "`v = value` assigns immediately and is not an expression; to assign when "
+                "the expression is evaluated, write `v = deferred::constant(value)`");
   if constexpr (deferred_expression<T>)
   {
     return std::type_identity<T>{};

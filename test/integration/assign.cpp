@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
+#include <string>
 #include <vector>
 
 #include "deferred/deferred.hpp"
@@ -100,4 +101,60 @@ TEST_CASE("assign() into a subscripted element", "[assign-function]")
               .do_(deferred::assign(deferred::subscript(values, i), i * 10));
   ex();
   CHECK(values() == std::vector<int>{0, 10, 20});
+}
+
+TEST_CASE("a constant assigned in a loop body is assigned by the loop", "[assign-deferred-value]")
+{
+  auto n    = deferred::variable(3);
+  auto seen = deferred::variable(false);
+  auto loop = deferred::while_(n != 0).do_(deferred::seq(seen = deferred::constant(true), n -= 1));
+
+  // Building the loop does not set the flag.
+  CHECK(seen() == false);
+
+  loop();
+  CHECK(seen() == true);
+  CHECK(n() == 0);
+
+  // With no iterations, the flag is left alone.
+  seen = false;
+  loop();
+  CHECK(seen() == false);
+}
+
+TEST_CASE("a constant assigned in a branch is assigned when the branch is taken",
+          "[assign-deferred-value]")
+{
+  auto i     = deferred::variable(12);
+  auto reset = deferred::if_(i > 10).then_(i = deferred::constant(0)).else_(i = i + 1);
+
+  CHECK(i() == 12);
+
+  reset();
+  CHECK(i() == 0);
+
+  reset();
+  CHECK(i() == 1);
+}
+
+TEST_CASE("immediate and deferred assignment combine", "[assign-deferred-value]")
+{
+  auto key  = deferred::variable(2);
+  auto name = deferred::variable(std::string{});
+  auto pick = deferred::switch_(key)
+                .case_(1)
+                .then_(name = deferred::constant(std::string("one")))
+                .case_(2)
+                .then_(name = deferred::constant(std::string("two")))
+                .default_(name = deferred::constant(std::string("many")));
+
+  CHECK(name().empty());
+
+  pick();
+  CHECK(name() == "two");
+
+  // The inputs of an expression are set with an immediate assignment.
+  key = 9;
+  pick();
+  CHECK(name() == "many");
 }
