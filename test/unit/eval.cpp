@@ -94,7 +94,7 @@ TEST_CASE("a logical expression has eval", "[eval]")
     ++evaluated;
     return true;
   });
-  auto ex = deferred::constant(false) && right;
+  auto ex        = deferred::constant(false) && right;
 
   static_assert(eval_matches_call<decltype(ex)>);
   static_assert(std::is_same_v<decltype(ex.eval()), bool>);
@@ -118,7 +118,8 @@ TEST_CASE("conditionals and switches have eval", "[eval]")
 {
   auto i = deferred::variable(1);
 
-  auto conditional = deferred::if_(i > 0).then_(deferred::constant(10)).else_(deferred::constant(20));
+  auto conditional =
+    deferred::if_(i > 0).then_(deferred::constant(10)).else_(deferred::constant(20));
   static_assert(eval_matches_call<decltype(conditional)>);
   CHECK(conditional.eval() == 10);
 
@@ -126,10 +127,8 @@ TEST_CASE("conditionals and switches have eval", "[eval]")
   static_assert(eval_matches_call<decltype(partial)>);
   CHECK(!partial.eval().has_value());
 
-  auto selection = deferred::switch_(i)
-                     .case_(1)
-                     .then_(deferred::constant(100))
-                     .default_(deferred::constant(200));
+  auto selection =
+    deferred::switch_(i).case_(1).then_(deferred::constant(100)).default_(deferred::constant(200));
   static_assert(eval_matches_call<decltype(selection)>);
   CHECK(selection.eval() == 100);
 
