@@ -5,6 +5,7 @@
 
 #include <type_traits>
 #include <valarray>
+#include <vector>
 
 #include "deferred/constant.hpp"
 #include "deferred/invoke.hpp"
@@ -53,6 +54,88 @@ TEST_CASE("or does not evaluate its right operand when the left decides", "[logi
 
   CHECK((deferred::constant(false) || right)() == false);
   CHECK(evaluated == 1);
+}
+
+TEST_CASE("logical operators evaluate each operand once, left to right", "[logical]")
+{
+  std::vector<char> order;
+  auto operand = [&order](char name, bool value) {
+    return deferred::invoke([&order, name, value] {
+      order.push_back(name);
+      return value;
+    });
+  };
+
+  auto conjunction = operand('a', true) && operand('b', true);
+  auto disjunction = operand('c', false) || operand('d', false);
+
+  // Building the expressions evaluates nothing.
+  CHECK(order.empty());
+
+  CHECK(conjunction() == true);
+  CHECK(order == std::vector{'a', 'b'});
+
+  order.clear();
+  CHECK(disjunction() == false);
+  CHECK(order == std::vector{'c', 'd'});
+}
+
+TEST_CASE("the left operand is evaluated once when it decides the result", "[logical]")
+{
+  auto evaluated = 0;
+  auto left      = [&evaluated](bool value) {
+    return deferred::invoke([&evaluated, value] {
+      ++evaluated;
+      return value;
+    });
+  };
+
+  CHECK((left(false) && deferred::constant(true))() == false);
+  CHECK(evaluated == 1);
+
+  CHECK((left(true) || deferred::constant(false))() == true);
+  CHECK(evaluated == 2);
+}
+
+TEST_CASE("const and mutable logical expressions agree", "[logical]")
+{
+  auto evaluated = 0;
+  auto right     = deferred::invoke([&evaluated] {
+    ++evaluated;
+    return true;
+  });
+
+  auto left = deferred::variable(false);
+
+  auto ex              = left || right;
+  auto const& const_ex = ex;
+
+  static_assert(std::is_same_v<decltype(const_ex()), bool>);
+  CHECK(ex() == true);
+  CHECK(const_ex() == true);
+  CHECK(evaluated == 2);
+
+  auto skipping              = left && right;
+  auto const& const_skipping = skipping;
+
+  CHECK(skipping() == false);
+  CHECK(const_skipping() == false);
+  CHECK(evaluated == 2);
+}
+
+TEST_CASE("logical operators evaluate at compile time", "[logical]")
+{
+  static_assert((deferred::constant(true) && deferred::constant(true))() == true);
+  static_assert((deferred::constant(true) && deferred::constant(false))() == false);
+  static_assert((deferred::constant(false) || deferred::constant(true))() == true);
+  static_assert((deferred::constant(false) || deferred::constant(false))() == false);
+
+  // Evaluating the right operand would not be a constant expression, so these compile
+  // only because it is skipped.
+  static_assert((deferred::constant(false) && deferred::invoke([]() -> bool { throw 0; }))()
+                == false);
+  static_assert((deferred::constant(true) || deferred::invoke([]() -> bool { throw 0; }))()
+                == true);
 }
 
 TEST_CASE("logical operators yield bool", "[logical]")
