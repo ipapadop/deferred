@@ -172,6 +172,7 @@ TEST_CASE("constants, variables and builders have no eval", "[eval]")
 {
   static_assert(!HasEval<deferred::constant<int>>);
   static_assert(!HasEval<deferred::variable<int>>);
+  static_assert(!HasEval<deferred::variable_ref<int>>);
 
   auto i = deferred::variable(0);
   static_assert(!HasEval<decltype(deferred::if_(i > 0))>);

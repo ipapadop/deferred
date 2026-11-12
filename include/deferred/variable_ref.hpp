@@ -69,6 +69,12 @@ public:
     return (*m_variable)();
   }
 
+  /// @brief Returns the value of the variable; a named spelling of <tt>operator()</tt>.
+  [[nodiscard]] constexpr T& get() const noexcept
+  {
+    return (*this)();
+  }
+
   /**
    * @brief Returns references to the subexpressions.
    * @return An empty @c std::tuple.

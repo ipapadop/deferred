@@ -51,11 +51,12 @@ int main()
   std::copy(std::begin(res), std::end(res), std::ostream_iterator<float>(std::cout, " "));
   std::cout << '\n';
 
-  auto da    = constant(a);
-  auto dx    = constant(x);
-  auto dy    = constant(y);
-  auto dmult = invoke(multiply_scalar_vector<float>, da, dx);
-  auto dres  = invoke(add_vectors<float>, dmult, dy);
+  auto da = constant(a);
+  // Variables are referred to by the expressions below; constants would be copied.
+  auto const dx = variable(x);
+  auto const dy = variable(y);
+  auto dmult    = invoke(multiply_scalar_vector<float>, da, dx);
+  auto dres     = invoke(add_vectors<float>, dmult, dy);
 
   auto eval_res = dres();
   std::cout << "deferred result: ";

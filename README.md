@@ -193,6 +193,9 @@ Three consequences:
   and expressions refer to it without copying.
 - An operand that cannot be copied, such as a
   ``constant<std::unique_ptr<int>>``, must be moved in with ``std::move``.
+- A ``const`` expression evaluates its operands as ``const``. An expression
+  that names a callable with its own mutable state, such as
+  ``invoke([n = 0]() mutable { return n++; })``, cannot itself be ``const``.
 
 Control flow
 ------------
@@ -398,12 +401,12 @@ Lazily evaluated operand types
 
 Some types evaluate their own operators lazily: arithmetic on ``std::valarray``
 may return a proxy that refers to its operands. Store such operands in a
-``constant`` or a ``variable``, and expressions over them nest freely. A
-``variable`` avoids copying the array into each expression that names it:
+``variable``, and expressions over them nest freely. An expression refers to a
+variable, so the array is not copied and the proxy stays valid:
 
 ```C++
 auto a = deferred::constant(2.0f);
-auto x = deferred::constant(std::valarray<float>(0.5f, 100));
+auto x = deferred::variable(std::valarray<float>(0.5f, 100));
 auto y = deferred::variable(std::valarray<float>(1.0f, 100));
 
 auto saxpy = a * x + y;

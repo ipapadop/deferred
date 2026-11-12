@@ -54,8 +54,9 @@ int main()
   std::cout << "\n\n";
 
   auto da = constant(a);
-  auto dx = constant(x);
-  auto dy = constant(y);
+  // Variables are referred to by the expressions below; constants would be copied.
+  auto const dx = variable(x);
+  auto const dy = variable(y);
 
   // Part of the expression can be evaluated on its own.
   auto partial_dres = da * dx;

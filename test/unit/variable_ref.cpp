@@ -108,6 +108,12 @@ TEST_CASE("a variable_ref reads and writes the variable it refers to", "[variabl
 
   r() = 3;
   CHECK(v() == 3);
+
+  // get() is a named spelling of the call, as it is for a variable.
+  static_assert(std::is_same_v<decltype(r.get()), decltype(r())>);
+  static_assert(noexcept(r.get()));
+  r.get() = 4;
+  CHECK(v.get() == 4);
 }
 
 TEST_CASE("a variable_ref to a const variable is read-only", "[variable-ref]")

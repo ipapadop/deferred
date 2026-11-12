@@ -53,7 +53,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   pointer, and a decayed value otherwise. So `++i` yields `int&` like `i += 1`, `*(p + 1)` yields a reference,
   and `*invoke(make_unique)` yields a copy. Returning `decltype(auto)` from these function objects reintroduces
   a dangling reference that only ASan catches.
-- **`[[nodiscard]]` on evaluation**: only `constant` and `variable` have it on `operator()`. Every other node
+- **`[[nodiscard]]` on evaluation**: only `constant`, `variable` and `variable_ref` have it on `operator()`. Every other node
   may be evaluated for effect, so neither its `operator()` nor `evaluate()`, `evaluate_ref()` and
   `recursive_evaluate()` are `[[nodiscard]]`. Constructing a `constant` or a `variable`, the free factories such
   as `invoke()` and `seq()`, and builder methods all are.
@@ -119,10 +119,13 @@ This project is a C++23 header-only library for creating deferred evaluation exp
 - **Lazy operand types and temporaries**: an operator on `std::valarray` may return a proxy that refers to its
   operands. A node evaluates its operands inside its own call, so a proxy over a *temporary* operand —
   `invoke([] { return std::valarray<float>(...); }) * constant(2.0f)` — dangles once the node returns, where
-  the plain C++ statement would be fine. Operands stored in a `constant` or `variable` are safe (a
-  `variable` is not copied into the node), and nested expressions over them are too: libstdc++ has held nested proxies by value since GCC 9, which is what fixed
-  #2. `test/integration/operators.cpp` pins the safe case; the temporary case is not fixed (#68).
-- **Named access**: `constant` and `variable` have `get()`, a named spelling of `operator()` with the same
+  the plain C++ statement would be fine (#68). An operand held in a `variable` is safe, because the node
+  refers to it. An operand held in a named `constant` is copied into the node and is safe for as long as the
+  node lives; a *temporary* node over such constants, such as the one a body returns in
+  `if_(c).then_([&] { return dx + dy; })`, yields a proxy into copies that die with it. libstdc++ has held
+  nested proxies by value since GCC 9, which is what fixed #2. `test/integration/operators.cpp` pins the safe
+  case.
+- **Named access**: `constant`, `variable` and `variable_ref` have `get()`, a named spelling of `operator()` with the same
   cv/ref-qualified overloads, return types and `noexcept`. It delegates to `operator()`, so the two cannot
   drift apart. No other node has it: `get()` reads a stored value, and the call evaluates an expression.
 - **Named evaluation**: every other node — `expression_`, `assign_expression`, `logical_expression`,
@@ -130,7 +133,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `default_expression`, and the three loops — has `eval()`, a named spelling of `operator()`. Each class defines
   a const and a non-const overload that return `(*this)()`, so result type and `noexcept` are the operator's. A
   new node must define both. `eval()` is not `[[nodiscard]]`, for the same reason the operator is not.
-  `constant`, `variable` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
+  `constant`, `variable`, `variable_ref` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
 - **Node interface**: every node has `subexpression_types` and `subexpressions()`, which returns a tuple of
   references in the same order; a named variable appears there as its `variable_ref`. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
   `operator_type` / `operator_()`, and `is_constant_expression` checks it through `operator_type`. Nodes whose
