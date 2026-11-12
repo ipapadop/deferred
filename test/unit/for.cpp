@@ -8,7 +8,9 @@
 
 #include "deferred/constant.hpp"
 #include "deferred/for.hpp"
+#include "deferred/operators.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
+#include "deferred/variable.hpp"
 
 namespace {
 
@@ -152,4 +154,29 @@ TEST_CASE("for exposes its result type", "[for]")
 
   static_assert(std::is_void_v<decltype(ex)::result_type>);
   static_assert(std::is_same_v<decltype(ex()), decltype(ex)::result_type>);
+}
+
+TEST_CASE("a for loop whose clauses are bare variables resumes from the current value",
+          "[for-clauses]")
+{
+  auto i     = deferred::variable(2);
+  auto count = deferred::variable(0);
+  auto loop  = deferred::for_(i, i < 5, ++i).do_(count += 1);
+
+  loop();
+  CHECK(count() == 3);
+  CHECK(i() == 5);
+
+  // Nothing resets the counter, so the loop does not run again.
+  loop();
+  CHECK(count() == 3);
+
+  // Setting the counter between evaluations is an immediate assignment.
+  i = 4;
+  loop();
+  CHECK(count() == 4);
+
+  auto stepless = deferred::for_(i = deferred::constant(0), i < 3, i).do_(++i);
+  stepless();
+  CHECK(i() == 3);
 }

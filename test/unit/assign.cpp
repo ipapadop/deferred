@@ -52,9 +52,20 @@ TEST_CASE("assigning a value stores it immediately", "[assign]")
   auto v = deferred::variable<int>();
 
   // The deferred overload must not capture a plain value assignment.
-  static_assert(std::is_same_v<decltype(v = 1), deferred::variable_<int>&>);
+  static_assert(std::is_same_v<decltype(v = 1), deferred::detail::immediate_assignment>);
   v = 1;
   CHECK(v() == 1);
+}
+
+TEST_CASE("the result of assigning a value is not an expression", "[assign]")
+{
+  auto v = deferred::variable<int>();
+
+  // Returning the variable would let `v = 1` pass as an expression that reads `v`, in
+  // a branch, a body or a loop clause, after the assignment has already happened.
+  static_assert(!deferred::deferred_expression<decltype(v = 1)>);
+  static_assert(!std::is_invocable_v<decltype(v = 1)>);
+  static_assert(deferred::deferred_expression<decltype(v = deferred::constant(1))>);
 }
 
 TEST_CASE("assigning a deferred expression builds an expression", "[assign]")
@@ -276,28 +287,23 @@ TEST_CASE("an assignment target must yield an lvalue", "[assign]")
 
 
 
-TEST_CASE("eager assignment returns the variable", "[assign]")
+TEST_CASE("an immediate assignment cannot be chained", "[assign]")
 {
-  auto a = deferred::variable<int>();
-
-  // Chaining reads the result of the eager overload, so it must stay `variable_&`.
-  static_assert(std::is_same_v<decltype(a = 3), deferred::variable_<int>&>);
-  CHECK((a = 3)() == 3);
-}
-
-TEST_CASE("chained assignment defers the outer assignment", "[assign]")
-{
+  // `b = 7` has already assigned and yields no value, so `a = (b = 7)` does not
+  // compile; the deferred spelling chains. The rejection is not asserted here: compilers
+  // that substitute the return type of `operator=` before checking its constraint (Clang
+  // before 20, MSVC) report it through the static_assert behind make_deferred_t, which
+  // is a hard error rather than a failed requirement.
   auto a = deferred::variable<int>();
   auto b = deferred::variable<int>();
   a      = 1;
 
-  // `b = 7` assigns eagerly and yields `b` itself, which is a deferred expression, so
-  // the outer `=` builds a deferred assignment rather than chaining eagerly.
-  auto chained = (a = (b = 7));
+  auto chained = (a = (b = deferred::constant(7)));
 
-  CHECK(b() == 7);
+  CHECK(b() == 0);
   CHECK(a() == 1);
   chained();
+  CHECK(b() == 7);
   CHECK(a() == 7);
 }
 
