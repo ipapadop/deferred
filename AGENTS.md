@@ -100,7 +100,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `invoke([=] { return v(); })` hold a silent snapshot of `v`. Do not reintroduce either.
   One gap remains, the price of `variable w{v}`: a by-copy capture direct-initializes, so a bare
   `[=] { return v(); }` over a non-const `v` compiles and snapshots it. The closure cannot be copied or moved,
-  so it cannot be passed to `invoke()` or stored in a node.
+  so it cannot be passed to `invoke()` or stored in a node (#73).
 - **A node stores every operand by value** (#26). `make_deferred_t` never yields a reference: a named
   constant or expression is copied into the node, a temporary is moved in, and a named variable becomes a
   `variable_ref<T>` — a `variable_cref<T>` for a const variable — which is a pointer to it. So an
@@ -111,7 +111,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
     `deduce_deferred_type` asks first. They are two types, not `variable_ref<T const>`, because
     `variable<T const>` is a distinct, valid variable and needs `variable_ref<T const>` for itself.
   - A visitor is called with the *variable*, not the `variable_ref`; `detail::visits_tree` is specialized
-    to match. `subexpressions()` does hand back the `variable_ref`.
+    to match. `subexpressions()` does hand back the `variable_ref` (#72).
   - **A temporary `expression_` evaluates its operands as temporaries** (`operator()() &&`, and `eval()`
     likewise). An owned `constant` then yields its value, not a reference, and `operand_result_t` returns
     a copy; a `variable_ref` still yields a reference. Without this,
@@ -122,7 +122,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
     moved in or passed with `std::ref`. Each has its own `static_assert` in `deduce_deferred_type` that
     names the fix; they used to fail inside `std::tuple`'s constructor. They are hard errors, so no test
     pins them; check the messages by hand.
-  - A variable local to a function still cannot be used by an expression the function returns.
+  - A variable local to a function still cannot be used by an expression the function returns (#71).
   - Rejected, with measurements (GCC 15 and Clang 22, `-O2`, minimum of 9 runs): making `variable` a
     handle to shared state, so that it too is owned. Linked handles with no heap, and a heap count, both
     passed ASan, but cost up to 6x on a counter-and-sum `for_` loop and 11x on a saxpy loop over
@@ -139,7 +139,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
     (`detail::refers_to_state`: `variable_ref`, `variable_cref`, `assign_expression`), for an `expression_`
     whose callable cannot be called as const, and for any node that stores one of those. The callable is
     asked last, because asking evaluates the subexpressions as const.
-  - Like the `immediate_assignment` check it is a hard error, so no test pins it; check it by hand. Only an
+  - Like the `immediate_assignment` check it is a hard error, so no test pins it; check it by hand (#74). Only an
     *lvalue* operand is checked. `conditional_builder::then_() const&` therefore copies its stored condition
     explicitly rather than passing the member, which would present it as a named operand.
   - `std::ref` / `std::cref` need no node of their own: a `std::reference_wrapper` is a callable, so it is
