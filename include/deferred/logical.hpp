@@ -20,34 +20,15 @@ namespace deferred {
 
 namespace detail {
 
-/**
- * @brief Whether an operator can be overloaded for @p Left and @p Right at all.
- *
- * An overloaded operator needs an operand of class or enumeration type. Checking this
- * first keeps the overload lookups below from being attempted on fundamental types,
- * where naming <tt>operator&&</tt> considers the deferred operators themselves and
- * Clang 18 rejects that as an error rather than a failed requirement.
- *
- * @tparam Left Type of the left operand.
- * @tparam Right Type of the right operand.
- */
-template<typename Left, typename Right>
-concept overloadable =
-  std::is_class_v<Left> || std::is_enum_v<Left> || std::is_class_v<Right> || std::is_enum_v<Right>;
-
 /** @brief Whether @p Left and @p Right have an overloaded @c && of their own. */
 template<typename Left, typename Right>
-concept overloads_conjunction =
-  overloadable<Left, Right>
-  && (requires(Left left, Right right) { operator&&(left, right); }
-      || requires(Left left, Right right) { left.operator&&(right); });
+concept overloads_conjunction = requires(Left left, Right right) { operator&&(left, right); }
+                                || requires(Left left, Right right) { left.operator&&(right); };
 
 /** @brief Whether @p Left and @p Right have an overloaded @c || of their own. */
 template<typename Left, typename Right>
-concept overloads_disjunction =
-  overloadable<Left, Right>
-  && (requires(Left left, Right right) { operator||(left, right); }
-      || requires(Left left, Right right) { left.operator||(right); });
+concept overloads_disjunction = requires(Left left, Right right) { operator||(left, right); }
+                                || requires(Left left, Right right) { left.operator||(right); };
 
 /** @brief Tag selecting a short-circuiting @c && . */
 struct conjunction

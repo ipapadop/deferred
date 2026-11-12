@@ -118,7 +118,9 @@ This project is a C++23 header-only library for creating deferred evaluation exp
 ## Building and Running
 
 ### Prerequisites
-- C++23 capable compiler (Clang 16.0.0+, GCC 13.3.0+, MSVC 19.44+).
+- C++23 capable compiler. Supported means tested in CI: Clang 22, Apple Clang 21, GCC 13.3, MSVC 19.51. The
+  project tracks current compilers and does not keep workarounds for older ones. GCC 13.3 is supported, so C++23
+  features it lacks, such as deducing `this`, stay out.
 - CMake 3.28.1 or higher.
 
 ### Build Instructions
@@ -229,4 +231,4 @@ Or simply copy the `include/deferred` directory to your project's include path.
 - **`detail/` Tests**: Every header in `detail/` has a matching test file at
   `test/unit/detail/<name>.cpp`, giving a 1:1 pairing with no orphans in either direction.
 - **CI**: GitHub Actions workflow (`.github/workflows/c-cpp.yml`) builds the project on Ubuntu, Windows (MSVC), and macOS.
-  `.github/workflows/asan.yml` additionally builds with Clang and AddressSanitizer and runs the test suite under it.
+  `.github/workflows/asan.yml` additionally builds with Clang 22, installed from apt.llvm.org, and AddressSanitizer and runs the test suite under it.

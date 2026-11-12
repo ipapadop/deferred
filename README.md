@@ -17,10 +17,11 @@ Requirements
 - C++23 capable compiler.
 - CMake 3.28.1 and higher.
 
-Compilers tested:
-- Clang 16.0.0 (macOS)
-- GCC 13.3.0 (Ubuntu)
-- MSVC 19.44 (Windows)
+Compilers tested, which are the ones supported:
+- Clang 22 (Ubuntu, under AddressSanitizer)
+- Apple Clang 21 (macOS)
+- GCC 13.3 (Ubuntu)
+- MSVC 19.51 (Windows)
 
 Building
 ------------
