@@ -34,6 +34,23 @@ TEST_CASE("an expression can be evaluated for its effect", "[discarded-evaluatio
   CHECK(j() == 5);
 }
 
+TEST_CASE("eval can be called for its effect", "[discarded-evaluation]")
+{
+  auto i = deferred::variable(0);
+  auto j = deferred::variable(0);
+
+  (++i).eval();
+  (i += 1).eval();
+  (i = i + 1).eval();
+  deferred::seq(++i, ++j).eval();
+  (i > 0 && ++j > 0).eval();
+  deferred::if_(i > 0).then_(++j).else_(--j).eval();
+  deferred::switch_(i).case_(4).then_(++j).default_(--j).eval();
+  deferred::invoke([](int& value) { return ++value; }, j).eval();
+  CHECK(i() == 4);
+  CHECK(j() == 5);
+}
+
 TEST_CASE("the evaluation functions can be called for their effect", "[discarded-evaluation]")
 {
   auto i = deferred::variable(0);

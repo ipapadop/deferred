@@ -77,6 +77,24 @@ public:
     return detail::apply_evaluated(m_op, m_expressions);
   }
 
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc expression_::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
   /// @brief Returns the operator.
   [[nodiscard]] constexpr operator_type const& operator_() const noexcept
   {

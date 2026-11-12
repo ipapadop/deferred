@@ -486,6 +486,24 @@ public:
   }
 
   /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc conditional_expression::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /**
    * @brief Returns references to the subexpressions.
    * @return A @c std::tuple of references, in @c subexpression_types order.
    */

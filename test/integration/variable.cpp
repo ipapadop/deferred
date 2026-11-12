@@ -48,3 +48,13 @@ TEST_CASE("variable from constant expression", "[variable-from-constant-expressi
   static_assert(!deferred::is_constant_expression_v<decltype(v)>);
   CHECK(v() == 30);
 }
+
+TEST_CASE("variable written by name is read by an expression", "[variable-get]")
+{
+  auto v  = deferred::variable(1);
+  auto ex = v * deferred::constant(2);
+
+  v.get() = 21;
+  CHECK(ex() == 42);
+  CHECK(v.get() == 21);
+}

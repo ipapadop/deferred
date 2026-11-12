@@ -5,6 +5,7 @@ set(SOURCES
   constant.cpp
   discarded_evaluation.cpp
   do_while.cpp
+  eval.cpp
   evaluate.cpp
   expression.cpp
   for.cpp
