@@ -44,11 +44,11 @@ struct node_kind_of<deferred::conditional_branch<Condition, Then>> :
 { };
 
 template<typename T>
-struct node_kind_of<deferred::constant_<T>> : std::integral_constant<node_kind, node_kind::constant>
+struct node_kind_of<deferred::constant<T>> : std::integral_constant<node_kind, node_kind::constant>
 { };
 
 template<typename T>
-struct node_kind_of<deferred::variable_<T>> : std::integral_constant<node_kind, node_kind::variable>
+struct node_kind_of<deferred::variable<T>> : std::integral_constant<node_kind, node_kind::variable>
 { };
 
 template<typename Operator, typename... Expressions>

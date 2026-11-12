@@ -16,13 +16,13 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   visitor, for no reuse worth having. `for_builder::do_` must keep *naming* the node rather than deducing it, or
   the builder's members get deduced as references into a builder that does not outlive the call —
   `test/unit/for.cpp`'s "a loop outlives the builder" catches that only under ASan.
-- **Assignment**: `variable_::operator=` is overloaded on the right-hand side. A *value* is stored immediately; a
+- **Assignment**: `variable::operator=` is overloaded on the right-hand side. A *value* is stored immediately; a
   *deferred expression* returns an `assign_expression` that assigns when evaluated, which is what makes
   `for_(i = constant(0), i < 10, ++i)` work without a lambda. `i = j` between variables therefore assigns by
   value, re-reading the right-hand side on every evaluation. The deferred form is `[[nodiscard]]` and
   `&`-qualified, and its return type is spelled out rather than deduced.
 - **An immediate assignment is not an expression**: `v = value` returns `detail::immediate_assignment`, an empty
-  tag, not `variable_&`. Returning the variable let `if_(c).then_(i = 0)`, `seq(flag = true, ...)` and
+  tag, not `variable&`. Returning the variable let `if_(c).then_(i = 0)`, `seq(flag = true, ...)` and
   `for_(i = 0, ...)` compile as expressions that only read the variable, after the assignment had already
   happened (#61). `detail::deduce_deferred_type` — behind `make_deferred_t`, which every construct uses —
   has a `static_assert` that rejects the tag and names the fix, `v = constant(value)`. It is a hard error, not
@@ -34,7 +34,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   type keeps the reference `evaluate_ref()` yields, as an overloaded operator's reference parameter would, and a
   prvalue is moved into the target.
 - **Assignment from a variable is lvalue-only**: `i = j` works, `i = std::move(j)` and `i = std::as_const(j)`
-  are rejected, and that is not fixable while `variable_` stays non-copyable. `test/unit/assign.cpp` pins it and
+  are rejected, and that is not fixable while `variable` stays non-copyable. `test/unit/assign.cpp` pins it and
   explains why.
 - **Compound assignment**: `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=` are deferred free operators
   in `operators.hpp` requiring a `deferred_expression` left operand. They reuse `assign_expression` with an assigning
@@ -53,11 +53,30 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   pointer, and a decayed value otherwise. So `++i` yields `int&` like `i += 1`, `*(p + 1)` yields a reference,
   and `*invoke(make_unique)` yields a copy. Returning `decltype(auto)` from these function objects reintroduces
   a dangling reference that only ASan catches.
-- **`[[nodiscard]]` on evaluation**: only `constant_` and `variable_` have it on `operator()`. Every other node
+- **`[[nodiscard]]` on evaluation**: only `constant` and `variable` have it on `operator()`. Every other node
   may be evaluated for effect, so neither its `operator()` nor `evaluate()`, `evaluate_ref()` and
-  `recursive_evaluate()` are `[[nodiscard]]`. Factories and builder methods all are.
+  `recursive_evaluate()` are `[[nodiscard]]`. Constructing a `constant` or a `variable`, the free factories such
+  as `invoke()` and `seq()`, and builder methods all are.
   `test/unit/discarded_evaluation.cpp` turns a discarded result into an error to pin this.
-- **Named access**: `constant_` and `variable_` have `get()`, a named spelling of `operator()` with the same
+- **`constant` and `variable` are class templates with deduction guides**, not factory functions over
+  `constant_`/`variable_` (#53). `constant(42)`, `constant{42}`, `variable(42)` and `variable<int>()` all
+  construct the class, so call sites written for the old factories compile unchanged; only the spelled type
+  names lost their underscore. A namespace cannot hold a class template and a function template of the same
+  name, so the factories are gone and must not be reintroduced.
+- **Their constructor does what the factories did**: it stores `recursive_evaluate(u)`, so a nullary callable
+  or a deferred expression is evaluated until the result is not callable, and neither type can hold a nullary
+  callable. The guide `constant(T&&) -> constant<detail::node_result_t<T&&>>` (and the same for `variable`)
+  deduces the decayed evaluated type, so no guide retains a reference. A user-declared guide is preferred over
+  the implicit ones, which is why a const lvalue callable is evaluated rather than stored; do not add a
+  `T const&` constructor, whose implicit guide is more specialized and would win for that case.
+- **`variable w{v}` makes an independent variable**, as the old factory `variable(v)` did: `v` is an expression
+  and the constructor template evaluates it. This works for a non-const lvalue only. A const or temporary
+  source selects the deleted copy or move constructor, which a template never beats; `variable w{v()}` covers
+  those. Keep the move constructor deleted: it is what stops a temporary variable from being stored by value in
+  an expression. The cost of accepting the lvalue is that `std::is_constructible_v<variable<T>, variable<T>&>`
+  is true, so code that stores a variable by value from an lvalue copies it instead of failing to compile;
+  nodes must keep storing lvalue variables by reference, as `make_deferred_t` does.
+- **Named access**: `constant` and `variable` have `get()`, a named spelling of `operator()` with the same
   cv/ref-qualified overloads, return types and `noexcept`. It delegates to `operator()`, so the two cannot
   drift apart. No other node has it: `get()` reads a stored value, and the call evaluates an expression.
 - **Named evaluation**: every other node — `expression_`, `assign_expression`, `logical_expression`,
@@ -65,7 +84,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `default_expression`, and the three loops — has `eval()`, a named spelling of `operator()`. Each class defines
   a const and a non-const overload that return `(*this)()`, so result type and `noexcept` are the operator's. A
   new node must define both. `eval()` is not `[[nodiscard]]`, for the same reason the operator is not.
-  `constant_`, `variable_` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
+  `constant`, `variable` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
 - **Node interface**: every node has `subexpression_types` and `subexpressions()`, which returns a tuple of
   references in the same order. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
   `operator_type` / `operator_()`, and `is_constant_expression` checks it through `operator_type`. Nodes whose

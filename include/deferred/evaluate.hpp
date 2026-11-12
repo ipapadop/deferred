@@ -107,7 +107,7 @@ consteval bool reference_evaluation_is_nothrow()
  * @brief Evaluates a deferred expression, keeping a reference result as a reference.
  *
  * @ref evaluate() returns by value, so a subexpression that already yields a reference --
- * a @ref variable_ or a @ref constant_ -- is copied. Where the result is only read within
+ * a @ref variable or a @ref constant -- is copied. Where the result is only read within
  * the same full expression, such as a loop condition or the right-hand side of an
  * assignment, that copy is pure waste and this avoids it.
  *
@@ -195,20 +195,6 @@ consteval bool evaluation_result_is_nothrow()
  */
 template<typename T>
 using node_result_t = std::decay_t<decltype(recursive_evaluate(std::declval<T>()))>;
-
-/**
- * @brief Checks whether creating a leaf node from an argument cannot throw.
- * @tparam Node Leaf node template, such as @ref constant_ or @ref variable_.
- * @tparam T Node argument type.
- * @return @c true when the value can be stored without throwing.
- */
-template<template<typename> class Node, typename T>
-consteval bool make_node_is_nothrow()
-{
-  using evaluated_type = decltype(recursive_evaluate(std::declval<T>()));
-  return noexcept(recursive_evaluate(std::declval<T>()))
-         && std::is_nothrow_constructible_v<Node<node_result_t<T>>, evaluated_type>;
-}
 
 } // namespace detail
 

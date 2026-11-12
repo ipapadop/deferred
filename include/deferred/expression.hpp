@@ -135,7 +135,7 @@ namespace detail {
  *
  * - If @p T is already a @c deferred type, it does not change.
  * - If @p T is a callable type, it is transformed to an @ref expression_.
- * - If @p T is not a callable type, it is transformed to an @ref constant_.
+ * - If @p T is not a callable type, it is transformed to an @ref constant.
  *
  * @tparam T Type to transform.
  * @return A @c std::type_identity containing the deduced deferred type.
@@ -157,7 +157,7 @@ consteval auto deduce_deferred_type()
   }
   else
   {
-    return std::type_identity<constant_<U>>{};
+    return std::type_identity<constant<U>>{};
   }
 }
 
@@ -168,7 +168,7 @@ consteval auto deduce_deferred_type()
  *
  * - If @p T is already a @c deferred type, it does not change.
  * - If @p T is a callable type, it is transformed to an @ref expression_.
- * - If @p T is not a callable type, it is transformed to an @ref constant_.
+ * - If @p T is not a callable type, it is transformed to an @ref constant.
  *
  * @tparam T Type to transform.
  */

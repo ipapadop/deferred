@@ -74,7 +74,7 @@ TEST_CASE("the concepts constrain user templates", "[concepts-integration]")
   CHECK(count_nodes(doubled) == 5);
 
   static_assert(can_be_doubled<decltype(i)&>);
-  static_assert(!can_be_doubled<deferred::constant_<std::string>>);
+  static_assert(!can_be_doubled<deferred::constant<std::string>>);
   static_assert(!can_be_doubled<int>);
 
   static_assert(deferred::constant_expression<decltype(twice(deferred::constant(1)))>);

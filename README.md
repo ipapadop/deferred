@@ -87,6 +87,56 @@ int main()
 
 Examples can be found in the ``examples/`` directory. They are compiled by default.
 
+Constants and variables
+-----------------------
+
+``deferred::constant`` and ``deferred::variable`` are class templates whose type
+is deduced from the value they are built with. Both spellings below are the
+same thing:
+
+```C++
+deferred::constant c{42};            // constant<int>
+auto d = deferred::constant(42);     // constant<int>
+
+deferred::variable v{42};            // variable<int>
+deferred::variable<int> w;           // no initial value, so the type is named
+```
+
+A constant or a variable owns its value. The deduced type is the decayed type
+of the argument, so a reference is never retained and an array is held as a
+pointer:
+
+```C++
+int i = 1;
+deferred::constant c{i};        // constant<int>, a copy of i
+deferred::constant s{"text"};   // constant<char const*>
+```
+
+An argument that can be called with no arguments is called, and the result is
+stored. This repeats until the result is not callable, and applies to a
+deferred expression too:
+
+```C++
+deferred::constant c{[] { return 1; }};   // constant<int> holding 1
+deferred::variable v{c + c};              // variable<int> holding 2
+```
+
+So neither can hold a nullary callable such as a ``std::function<int()>``.
+
+A constant can be copied. A variable cannot be copied or moved, but it is an
+expression like any other, so a new variable can start from its value:
+
+```C++
+deferred::variable w{v};     // a new, independent variable with the current value of v
+deferred::variable x{v()};   // the same; required when v is const or a temporary
+```
+
+Earlier releases named the class templates ``constant_`` and ``variable_`` and
+provided ``constant()`` and ``variable()`` as factory functions. Calls such as
+``deferred::constant(42)`` and ``deferred::variable<int>()`` compile unchanged,
+because they now construct the class. Code that named the types must drop the
+trailing underscore: ``constant_<int>`` is now ``constant<int>``.
+
 Control flow
 ------------
 
@@ -366,7 +416,7 @@ auto moved = std::move(v).get();  // moves the value out
 
 ``get()`` has the reference and ``noexcept`` qualification of the matching
 call: a reference into the object for an lvalue, and a value for an rvalue. Only
-``constant_`` and ``variable_`` have it.
+``constant`` and ``variable`` have it.
 
 Every other expression has ``eval()`` instead, a named spelling of the call. It
 does whatever the call does, side effects included, and has the same result

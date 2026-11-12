@@ -140,16 +140,16 @@ TEST_CASE("assigning a variable holding a reference follows that type's assignme
 
 TEST_CASE("deferred assignment carries its exception guarantee", "[assign]")
 {
-  STATIC_CHECK(noexcept(std::declval<deferred::variable_<int>&>() = deferred::constant_<int>(0)));
-  STATIC_CHECK(!noexcept(std::declval<deferred::variable_<throwing_value>&>() =
-                           std::declval<deferred::constant_<throwing_value>>()));
+  STATIC_CHECK(noexcept(std::declval<deferred::variable<int>&>() = deferred::constant<int>(0)));
+  STATIC_CHECK(!noexcept(std::declval<deferred::variable<throwing_value>&>() =
+                           std::declval<deferred::constant<throwing_value>>()));
 }
 
 TEST_CASE("a deferred assignment cannot bind to a temporary variable", "[assign]")
 {
   // The operator is &-qualified, so it cannot capture a reference to a temporary.
-  static_assert(std::is_assignable_v<deferred::variable_<int>&, deferred::constant_<int>>);
-  static_assert(!std::is_assignable_v<deferred::variable_<int>, deferred::constant_<int>>);
+  static_assert(std::is_assignable_v<deferred::variable<int>&, deferred::constant<int>>);
+  static_assert(!std::is_assignable_v<deferred::variable<int>, deferred::constant<int>>);
 }
 
 TEST_CASE("compound assignment builds an expression", "[assign-compound]")
@@ -220,18 +220,18 @@ TEST_CASE("compound assignment re-reads its right-hand side", "[assign-compound]
 
 TEST_CASE("compound assignment requires a deferred target", "[assign-compound]")
 {
-  static_assert(compound_addable<deferred::variable_<int>&, int>);
-  static_assert(!compound_addable<int, deferred::variable_<int>&>);
+  static_assert(compound_addable<deferred::variable<int>&, int>);
+  static_assert(!compound_addable<int, deferred::variable<int>&>);
 }
 
 TEST_CASE("only a plain lvalue variable is a deferred assignment source", "[assign]")
 {
-  using target = deferred::variable_<int>;
+  using target = deferred::variable<int>;
 
   // `i = j` builds a deferred assignment.
   static_assert(std::is_assignable_v<target&, target&>);
 
-  // The other value categories are rejected. variable_ is deliberately non-copyable,
+  // The other value categories are rejected. variable is deliberately non-copyable,
   // and its user-declared move constructor makes the implicit copy assignment deleted;
   // being a non-template, that wins overload resolution against this operator. The
   // rejection is the right outcome anyway: a deferred assignment reads its right-hand
@@ -240,8 +240,8 @@ TEST_CASE("only a plain lvalue variable is a deferred assignment source", "[assi
   static_assert(!std::is_assignable_v<target&, target&&>);
 
   // Every other deferred right-hand side is unaffected by this.
-  static_assert(std::is_assignable_v<target&, deferred::constant_<int>>);
-  static_assert(std::is_assignable_v<target&, deferred::constant_<int>&>);
+  static_assert(std::is_assignable_v<target&, deferred::constant<int>>);
+  static_assert(std::is_assignable_v<target&, deferred::constant<int>&>);
 }
 
 TEST_CASE("assign reaches a target that is not a variable", "[assign]")
@@ -273,13 +273,13 @@ concept assignable_target = requires(Target t, Value v) { deferred::assign(t, v)
 
 TEST_CASE("an assignment target must yield an lvalue", "[assign]")
 {
-  using lvalue_target = deferred::variable_<int>&;
+  using lvalue_target = deferred::variable<int>&;
   // Evaluating this yields a prvalue: assigning would write into a temporary and hand
   // back a reference to it.
   using prvalue_target = decltype(deferred::invoke([] { return 0; }))&;
 
-  static_assert(assignable_target<lvalue_target, deferred::constant_<int>>);
-  static_assert(!assignable_target<prvalue_target, deferred::constant_<int>>);
+  static_assert(assignable_target<lvalue_target, deferred::constant<int>>);
+  static_assert(!assignable_target<prvalue_target, deferred::constant<int>>);
 
   static_assert(compound_addable<lvalue_target, int>);
   static_assert(!compound_addable<prvalue_target, int>);
@@ -290,9 +290,9 @@ TEST_CASE("an assignment target must yield an lvalue", "[assign]")
 TEST_CASE("an immediate assignment cannot be chained", "[assign]")
 {
   // `b = 7` has already assigned and yields no value, so `a = (b = 7)` does not
-  // compile; the deferred spelling chains. The rejection is not asserted here: compilers
-  // that substitute the return type of `operator=` before checking its constraint (Clang
-  // before 20, MSVC) report it through the static_assert behind make_deferred_t, which
+  // compile; the deferred spelling chains. The rejection is not asserted here: MSVC
+  // substitutes the return type of `operator=` before checking its constraint, and so
+  // reports it through the static_assert behind make_deferred_t, which
   // is a hard error rather than a failed requirement.
   auto a = deferred::variable<int>();
   auto b = deferred::variable<int>();
@@ -346,10 +346,10 @@ TEST_CASE("a scalar right-hand side is read before the target is evaluated", "[a
 
 TEST_CASE("a const target is rejected by the constraint", "[assign]")
 {
-  using const_target = deferred::constant_<int>&;
+  using const_target = deferred::constant<int>&;
 
   // These must be answerable as false rather than fail inside the operation.
-  static_assert(!assignable_target<const_target, deferred::constant_<int>>);
+  static_assert(!assignable_target<const_target, deferred::constant<int>>);
   static_assert(!compound_addable<const_target, int>);
 }
 

@@ -92,7 +92,7 @@ struct assign_to
  * for two independent reasons. An @ref expression_ evaluates its subexpressions as the
  * arguments of one call, which are only indeterminately sequenced, so it cannot give the
  * right-before-left ordering a built-in assignment guarantees. And it holds them in a
- * @c std::tuple, so instantiating one that holds a @ref variable_ reference asks whether
+ * @c std::tuple, so instantiating one that holds a @ref variable reference asks whether
  * that reference is assignable -- the question this operator answers -- re-entering the
  * type while it is still incomplete. Both were reproduced on GCC and Clang.
  *
@@ -206,7 +206,7 @@ namespace detail {
  * @tparam Operation Type of the assigning operation.
  *
  * @p Target is always a deferred expression, so it is used as is. Passing it through
- * @ref make_deferred_t would also re-enter that deduction when @ref variable_ names this
+ * @ref make_deferred_t would also re-enter that deduction when @ref variable names this
  * type in its own @c operator= .
  *
  * @tparam Target Assignment target argument type.
@@ -234,7 +234,7 @@ consteval bool assign_is_nothrow()
 /**
  * @brief Creates a deferred assignment of @p value to @p target.
  *
- * The spelling for targets that are not a @ref variable_ -- anything whose evaluation
+ * The spelling for targets that are not a @ref variable -- anything whose evaluation
  * yields an lvalue, such as a member accessed through @ref invoke():
  * @code
  * auto ex = assign(invoke(&counter::value, &c), constant(42));

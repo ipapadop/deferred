@@ -411,7 +411,7 @@ TEST_CASE("switch accounts for throwing comparison conversion", "[switch-noexcep
 
 TEST_CASE("a default_expression can be copied from a non-const lvalue", "[switch]")
 {
-  auto df = deferred::default_expression<deferred::constant_<int>>(deferred::constant(1));
+  auto df = deferred::default_expression<deferred::constant<int>>(deferred::constant(1));
 
   // Direct-initialization considers the explicit forwarding constructor, which must
   // not be chosen over the copy constructor.

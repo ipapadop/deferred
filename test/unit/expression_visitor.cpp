@@ -27,7 +27,7 @@ struct mutable_visitor
 struct constant_only_visitor
 {
   template<typename T>
-  constexpr void operator()(deferred::constant_<T> const&, std::size_t) const noexcept
+  constexpr void operator()(deferred::constant<T> const&, std::size_t) const noexcept
   { }
 };
 
@@ -68,7 +68,7 @@ TEST_CASE("expression_visitor checks the nodes below the one visited", "[express
 {
   using deferred::expression_visitor;
 
-  using C = deferred::constant_<int>;
+  using C = deferred::constant<int>;
   static_assert(expression_visitor<constant_only_visitor, C>);
 
   // The root is not a constant.
@@ -103,5 +103,5 @@ TEST_CASE("visit rejects a visitor that cannot take every node", "[expression-vi
   static_assert(!can_visit<wrong_arity_visitor, decltype(pick)>);
   static_assert(!can_visit<constant_only_visitor, decltype(loop)>);
   static_assert(!can_visit<constant_only_visitor, decltype(i)>);
-  static_assert(can_visit<constant_only_visitor, deferred::constant_<int>>);
+  static_assert(can_visit<constant_only_visitor, deferred::constant<int>>);
 }
