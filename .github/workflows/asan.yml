@@ -12,14 +12,23 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CC: clang
-      CXX: clang++
+      # Newer than the Clang 18 that ubuntu-latest ships, and the same LLVM release as
+      # the clang-format workflow.
+      CC: clang-22
+      CXX: clang++-22
       # Deferred expressions hand references out of temporaries they materialize,
       # so use-after-return is the failure mode worth watching for.
       ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=1
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install Clang 22
+      run: |
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+        sudo add-apt-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-22 main"
+        sudo apt-get update
+        sudo apt-get install -y clang-22 libclang-rt-22-dev
 
     - name: Configure
       run: >
