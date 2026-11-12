@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
@@ -103,7 +104,8 @@ struct assign_to
  * @tparam ValueExpression Type of the assigned value expression.
  */
 template<typename Operation, Deferred TargetExpression, Deferred ValueExpression>
-class assign_expression
+class assign_expression :
+  public detail::eval_mixin<assign_expression<Operation, TargetExpression, ValueExpression>>
 {
 public:
   /// @brief Assigning mutates its target, so an assignment is never constant.

@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "detail/tuple_references.hpp"
@@ -50,7 +51,7 @@ consteval bool sequence_is_nothrow()
  */
 template<Deferred... Expressions>
   requires(sizeof...(Expressions) > 0)
-class seq_expression
+class seq_expression : public detail::eval_mixin<seq_expression<Expressions...>>
 {
 public:
   using subexpression_types = std::tuple<Expressions...>;

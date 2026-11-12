@@ -10,6 +10,7 @@
 
 #include "constant.hpp"
 #include "detail/apply_evaluated.hpp"
+#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "detail/tuple_references.hpp"
@@ -26,7 +27,7 @@ namespace deferred {
  * @tparam Expressions Types of the subexpressions.
  */
 template<typename Operator, Deferred... Expressions>
-class expression_
+class expression_ : public detail::eval_mixin<expression_<Operator, Expressions...>>
 {
 public:
   using operator_type       = Operator;

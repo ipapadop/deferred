@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
@@ -116,7 +117,8 @@ concept ShortCircuits = BooleanTestable<T> && BooleanTestable<U>
  * @tparam RightExpression Type of the right operand.
  */
 template<typename Operation, Deferred LeftExpression, Deferred RightExpression>
-class logical_expression
+class logical_expression :
+  public detail::eval_mixin<logical_expression<Operation, LeftExpression, RightExpression>>
 {
 public:
   using subexpression_types = std::tuple<LeftExpression, RightExpression>;

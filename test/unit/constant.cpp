@@ -23,6 +23,7 @@ struct throwing_move
 } // namespace
 
 static_assert(!noexcept(std::declval<deferred::constant_<throwing_move>&&>()()));
+static_assert(!noexcept(std::declval<deferred::constant_<throwing_move>&&>().get()));
 
 TEST_CASE("constant from array decays without throwing", "[constant-array-decay]")
 {
@@ -190,4 +191,28 @@ TEST_CASE("constant from constexpr function", "[constant-from-constexpr-function
   static_assert(std::is_same_v<decltype(c()), int const&>);
   static_assert(c() == 10, "constexpr failed");
   CHECK(c() == 10);
+}
+
+TEST_CASE("constant named access", "[constant-get]")
+{
+  constexpr auto c = deferred::constant(42);
+
+  static_assert(std::is_same_v<decltype(c.get()), decltype(c())>);
+  static_assert(std::is_same_v<decltype(c.get()), int const&>);
+  static_assert(std::is_same_v<decltype(std::move(c).get()), int const&>);
+  static_assert(noexcept(c.get()));
+  static_assert(c.get() == 42);
+  CHECK(&c.get() == &c());
+
+  SECTION("move access")
+  {
+    auto s = deferred::constant(std::string("a string long enough to be allocated"));
+
+    static_assert(std::is_same_v<decltype(std::move(s).get()), std::string>);
+    static_assert(std::is_same_v<decltype(std::move(s).get()), decltype(std::move(s)())>);
+    static_assert(noexcept(std::move(s).get()));
+
+    auto moved = std::move(s).get();
+    CHECK(moved == "a string long enough to be allocated");
+  }
 }

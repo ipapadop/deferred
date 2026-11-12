@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
@@ -33,7 +34,9 @@ template<Deferred InitExpression,
          Deferred ConditionExpression,
          Deferred StepExpression,
          Deferred BodyExpression>
-class for_expression
+class for_expression :
+  public detail::eval_mixin<
+    for_expression<InitExpression, ConditionExpression, StepExpression, BodyExpression>>
 {
 public:
   using subexpression_types =

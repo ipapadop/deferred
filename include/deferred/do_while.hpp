@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
@@ -23,7 +24,8 @@ namespace deferred {
  * @tparam ConditionExpression Type of the condition expression.
  */
 template<Deferred BodyExpression, Deferred ConditionExpression>
-class do_while_expression
+class do_while_expression :
+  public detail::eval_mixin<do_while_expression<BodyExpression, ConditionExpression>>
 {
 public:
   using subexpression_types = std::tuple<BodyExpression, ConditionExpression>;

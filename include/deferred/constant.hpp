@@ -59,6 +59,23 @@ public:
   }
 
   /**
+   * @brief Returns the stored value.
+   *
+   * A named spelling of <tt>operator()</tt>, for code that reads the value of the
+   * constant rather than evaluating it as an expression.
+   */
+  [[nodiscard]] constexpr T const& get() const& noexcept
+  {
+    return (*this)();
+  }
+
+  /// @brief Returns the stored value, moved out of the constant.
+  [[nodiscard]] constexpr T get() && noexcept(std::is_nothrow_move_constructible_v<T>)
+  {
+    return std::move(*this)();
+  }
+
+  /**
    * @brief Returns references to the subexpressions.
    * @return A @c std::tuple of references, in @c subexpression_types order.
    */

@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/eval_mixin.hpp"
 #include "detail/expression_reference.hpp"
 #include "detail/homogenized_type.hpp"
 #include "detail/is_nothrow_evaluable.hpp"
@@ -42,7 +43,7 @@ struct no_default
  * @tparam Expression Type of the underlying expression.
  */
 template<Deferred Expression>
-class default_expression
+class default_expression : public detail::eval_mixin<default_expression<Expression>>
 {
 public:
   using subexpression_types = std::tuple<Expression>;
@@ -103,7 +104,7 @@ public:
  * @tparam BodyExpression Type of the body expression.
  */
 template<Deferred LabelExpression, Deferred BodyExpression>
-class case_expression
+class case_expression : public detail::eval_mixin<case_expression<LabelExpression, BodyExpression>>
 {
 public:
   using subexpression_types = std::tuple<LabelExpression, BodyExpression>;
@@ -397,7 +398,9 @@ public:
  * @tparam CaseExpression Types of the case expressions.
  */
 template<Deferred ConditionExpression, typename DefaultExpression, Deferred... CaseExpression>
-class switch_expression
+class switch_expression :
+  public detail::eval_mixin<
+    switch_expression<ConditionExpression, DefaultExpression, CaseExpression...>>
 {
   constexpr static inline bool finalized = !std::is_same_v<DefaultExpression, detail::no_default>;
 

@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "detail/eval_mixin.hpp"
 #include "detail/expression_reference.hpp"
 #include "detail/homogenized_type.hpp"
 #include "detail/is_nothrow_evaluable.hpp"
@@ -313,7 +314,7 @@ public:
  * @tparam Branches Types of the @c if and @c else_if branches.
  */
 template<typename Else, Deferred... Branches>
-class conditional_expression
+class conditional_expression : public detail::eval_mixin<conditional_expression<Else, Branches...>>
 {
   constexpr static inline bool finalized = !std::is_same_v<Else, detail::no_else>;
 

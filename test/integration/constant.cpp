@@ -46,3 +46,12 @@ TEST_CASE("constant from expression with variable", "[constant-from-variable]")
   auto c  = deferred::constant(ex);
   CHECK(c() == 8);
 }
+
+TEST_CASE("constant from expression read by name", "[constant-get]")
+{
+  auto v = deferred::variable(2);
+  auto c = deferred::constant(deferred::constant(4) * v);
+
+  v = 3;
+  CHECK(c.get() == 8);
+}

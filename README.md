@@ -332,6 +332,43 @@ expression; a plain value is returned unchanged.
 - ``deferred::recursive_evaluate(x)`` keeps evaluating until the result is not
   callable.
 
+Reading a constant or a variable
+--------------------------------
+
+Calling a constant or a variable evaluates it, as for any other expression. Each
+also has ``get()``, which returns the same thing under a name. Use ``get()`` when
+the code reads or writes the stored value, and the call when the object is
+evaluated as an expression:
+
+```C++
+auto v = deferred::variable(1);
+auto c = deferred::constant(2);
+
+v.get() = 10;                     // writes the variable, like v = 10
+int  now   = v.get() + c.get();   // 12
+auto moved = std::move(v).get();  // moves the value out
+```
+
+``get()`` has the reference and ``noexcept`` qualification of the matching
+call: a reference into the object for an lvalue, and a value for an rvalue. Only
+``constant_`` and ``variable_`` have it.
+
+Every other expression has ``eval()`` instead, a named spelling of the call. It
+does whatever the call does, side effects included, and has the same result
+type and ``noexcept``:
+
+```C++
+auto sum = v + c;
+int  a   = sum();       // evaluates
+int  b   = sum.eval();  // the same
+(v += 1).eval();        // evaluated for its effect; discarding the result does not warn
+```
+
+The two names are deliberately different: ``get()`` reads a stored value and has
+no effect, and ``eval()`` runs an expression. A constant or a variable has no
+``eval()``, and the builders that ``if_``, ``switch_``, ``while_``, ``do_`` and
+``for_`` return have neither.
+
 Inspecting expressions
 ----------------------
 

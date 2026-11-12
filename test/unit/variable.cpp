@@ -3,6 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
 #include <type_traits>
 #include <utility>
 
@@ -27,6 +28,7 @@ static_assert(!noexcept(deferred::variable_<throwing_value>(std::declval<throwin
 static_assert(!noexcept(
   std::declval<deferred::variable_<throwing_value>&>() = std::declval<throwing_value&&>()));
 static_assert(!noexcept(std::declval<deferred::variable_<throwing_value>&&>()()));
+static_assert(!noexcept(std::declval<deferred::variable_<throwing_value>&&>().get()));
 
 TEST_CASE("empty variable", "[variable-empty]")
 {
@@ -125,3 +127,43 @@ TEST_CASE("duplicate variable", "[variable-duplicate]")
   FAIL("Should not be able to duplicate variable");
 }
 #endif
+
+TEST_CASE("variable named access", "[variable-get]")
+{
+  auto v = deferred::variable(42);
+
+  static_assert(std::is_same_v<decltype(v.get()), int&>);
+  static_assert(std::is_same_v<decltype(std::as_const(v).get()), int const&>);
+  static_assert(std::is_same_v<decltype(std::move(v).get()), int>);
+  static_assert(std::is_same_v<decltype(v.get()), decltype(v())>);
+  static_assert(std::is_same_v<decltype(std::as_const(v).get()), decltype(std::as_const(v)())>);
+  static_assert(std::is_same_v<decltype(std::move(v).get()), decltype(std::move(v)())>);
+  static_assert(noexcept(v.get()));
+  static_assert(noexcept(std::as_const(v).get()));
+  static_assert(noexcept(std::move(v).get()));
+
+  CHECK(v.get() == 42);
+  CHECK(&v.get() == &v());
+  CHECK(&std::as_const(v).get() == &v());
+
+  SECTION("mutation")
+  {
+    v.get() = 7;
+    CHECK(v() == 7);
+    CHECK(std::as_const(v).get() == 7);
+  }
+
+  SECTION("move access")
+  {
+    auto s = deferred::variable(std::string("a string long enough to be allocated"));
+
+    auto moved = std::move(s).get();
+    CHECK(moved == "a string long enough to be allocated");
+  }
+
+  SECTION("constexpr")
+  {
+    constexpr auto c = deferred::variable(42);
+    static_assert(c.get() == 42);
+  }
+}

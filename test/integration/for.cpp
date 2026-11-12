@@ -77,3 +77,21 @@ TEST_CASE("for init assigns one variable to another by value", "[for-init]")
   CHECK(i() == 5);
   CHECK(start() == 2);
 }
+
+TEST_CASE("eval and the call operator are interchangeable", "[for-eval]")
+{
+  auto n     = deferred::variable(5);
+  auto i     = deferred::variable(0);
+  auto total = deferred::variable(0);
+
+  auto sum = deferred::seq(total = deferred::constant(0),
+                           deferred::for_(i = deferred::constant(1), i <= n, ++i).do_(total += i),
+                           total);
+
+  CHECK(sum.eval() == 15);
+  CHECK(sum() == 15);
+
+  n = 3;
+  CHECK(sum.eval() == 6);
+  CHECK((total * deferred::constant(2)).eval() == 12);
+}
