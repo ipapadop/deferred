@@ -23,7 +23,7 @@ struct is_constant_expression;
  * @tparam T The type to check against the concept.
  */
 template<typename T>
-concept HasMutableState = requires {
+concept has_mutable_state = requires {
   { T::mutable_state } -> std::convertible_to<bool>;
 } && T::mutable_state;
 
@@ -59,7 +59,7 @@ consteval bool operator_is_constant()
 // its own, its operator does not either, and none of its subexpressions does.
 template<typename T>
 struct is_constant_expression<T, std::void_t<typename T::subexpression_types>> :
-  public std::bool_constant<!deferred::HasMutableState<T> && operator_is_constant<T>()
+  public std::bool_constant<!deferred::has_mutable_state<T> && operator_is_constant<T>()
                             && is_constant_expression<typename T::subexpression_types>::value>
 { };
 

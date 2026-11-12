@@ -238,13 +238,13 @@ TEST_CASE("switch with no cases and no default is not an expression", "[switch-e
   // Like if_(c) and while_(c), switch_(c) only starts a chain.
   auto builder = deferred::switch_(1);
 
-  static_assert(!deferred::Deferred<decltype(builder)>);
+  static_assert(!deferred::deferred_expression<decltype(builder)>);
   static_assert(!std::is_invocable_v<decltype(builder)>);
   static_assert(!std::is_invocable_v<decltype(builder) const&>);
 
   // It becomes one with a case, or with only a default.
-  static_assert(deferred::Deferred<decltype(builder.case_(1).then_(2))>);
-  static_assert(deferred::Deferred<decltype(builder.default_(3))>);
+  static_assert(deferred::deferred_expression<decltype(builder.case_(1).then_(2))>);
+  static_assert(deferred::deferred_expression<decltype(builder.default_(3))>);
   CHECK(builder.case_(1).then_(2)().value() == 2);
   CHECK(builder.default_(3)() == 3);
   CHECK(deferred::switch_(1).default_(4)() == 4);
@@ -358,7 +358,7 @@ TEST_CASE("switch builder is copy constructible from a mutable lvalue", "[switch
 
 TEST_CASE("switch builders are not deferred expressions", "[switch-builders]")
 {
-  static_assert(!deferred::Deferred<decltype(deferred::switch_(1).case_(1))>);
+  static_assert(!deferred::deferred_expression<decltype(deferred::switch_(1).case_(1))>);
 }
 
 TEST_CASE("switch with void bodies can be noexcept", "[switch-noexcept]")

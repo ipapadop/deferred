@@ -30,7 +30,7 @@ using invoke_expression_t = expression_<std::decay_t<F>, make_deferred_t<Args>..
 template<typename F, typename... Args>
 consteval bool invoke_is_nothrow()
 {
-  if constexpr (Deferred<F>)
+  if constexpr (deferred_expression<F>)
   {
     return std::is_nothrow_constructible_v<std::decay_t<F>, F&&>;
   }
@@ -58,7 +58,7 @@ template<typename F, typename... Args>
 [[nodiscard]] constexpr auto
 invoke(F&& f, Args&&... args) noexcept(detail::invoke_is_nothrow<F, Args...>())
 {
-  if constexpr (Deferred<F>)
+  if constexpr (deferred_expression<F>)
   {
     static_assert(sizeof...(Args) == 0);
     return std::forward<F>(f);

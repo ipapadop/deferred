@@ -100,7 +100,7 @@ TEST_CASE("for with move-only expressions", "[for-move-only]")
 
 TEST_CASE("for builders are not deferred expressions", "[for-builders]")
 {
-  static_assert(!deferred::Deferred<decltype(deferred::for_(0, false, 0))>);
+  static_assert(!deferred::deferred_expression<decltype(deferred::for_(0, false, 0))>);
 }
 
 TEST_CASE("building a for loop carries its exception guarantee", "[for-noexcept]")

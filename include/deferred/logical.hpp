@@ -30,20 +30,20 @@ namespace detail {
  * @tparam Right Type of the right operand.
  */
 template<typename Left, typename Right>
-concept Overloadable =
+concept overloadable =
   std::is_class_v<Left> || std::is_enum_v<Left> || std::is_class_v<Right> || std::is_enum_v<Right>;
 
 /** @brief Whether @p Left and @p Right have an overloaded @c && of their own. */
 template<typename Left, typename Right>
-concept OverloadsConjunction =
-  Overloadable<Left, Right>
+concept overloads_conjunction =
+  overloadable<Left, Right>
   && (requires(Left left, Right right) { operator&&(left, right); }
       || requires(Left left, Right right) { left.operator&&(right); });
 
 /** @brief Whether @p Left and @p Right have an overloaded @c || of their own. */
 template<typename Left, typename Right>
-concept OverloadsDisjunction =
-  Overloadable<Left, Right>
+concept overloads_disjunction =
+  overloadable<Left, Right>
   && (requires(Left left, Right right) { operator||(left, right); }
       || requires(Left left, Right right) { left.operator||(right); });
 
@@ -55,7 +55,7 @@ struct conjunction
 
   /// @brief Whether @p Left and @p Right have an overloaded @c && of their own.
   template<typename Left, typename Right>
-  static constexpr bool overloaded = OverloadsConjunction<Left, Right>;
+  static constexpr bool overloaded = overloads_conjunction<Left, Right>;
 };
 
 /** @brief Tag selecting a short-circuiting @c || . */
@@ -66,7 +66,7 @@ struct disjunction
 
   /// @brief Whether @p Left and @p Right have an overloaded @c || of their own.
   template<typename Left, typename Right>
-  static constexpr bool overloaded = OverloadsDisjunction<Left, Right>;
+  static constexpr bool overloaded = overloads_disjunction<Left, Right>;
 };
 
 /**
@@ -80,7 +80,7 @@ struct disjunction
  * @tparam T Expression argument type.
  */
 template<typename T>
-concept BooleanTestable =
+concept boolean_testable =
   requires(evaluated_result_t<make_deferred_t<T>&> value) { static_cast<bool>(value); };
 
 /**
@@ -96,9 +96,10 @@ concept BooleanTestable =
  * @tparam U Right expression argument type.
  */
 template<typename Operation, typename T, typename U>
-concept ShortCircuits = BooleanTestable<T> && BooleanTestable<U>
-                        && !Operation::template overloaded<evaluated_result_t<make_deferred_t<T>&>,
-                                                           evaluated_result_t<make_deferred_t<U>&>>;
+concept short_circuits =
+  boolean_testable<T> && boolean_testable<U>
+  && !Operation::template overloaded<evaluated_result_t<make_deferred_t<T>&>,
+                                     evaluated_result_t<make_deferred_t<U>&>>;
 
 } // namespace detail
 
@@ -115,7 +116,7 @@ concept ShortCircuits = BooleanTestable<T> && BooleanTestable<U>
  * @tparam LeftExpression Type of the left operand.
  * @tparam RightExpression Type of the right operand.
  */
-template<typename Operation, Deferred LeftExpression, Deferred RightExpression>
+template<typename Operation, deferred_expression LeftExpression, deferred_expression RightExpression>
 class logical_expression
 {
 public:

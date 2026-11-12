@@ -24,7 +24,7 @@
 
 namespace deferred {
 
-template<typename Else, Deferred... Branches>
+template<typename Else, deferred_expression... Branches>
 class conditional_expression;
 
 namespace detail {
@@ -65,7 +65,7 @@ using conditional_base_result_t = typename conditional_base_result<Else, Branche
  * @tparam Condition Type of the condition expression.
  * @tparam Then Type of the then expression.
  */
-template<Deferred Condition, Deferred Then>
+template<deferred_expression Condition, deferred_expression Then>
 struct conditional_branch
 {
   using then_type           = Then;
@@ -248,7 +248,7 @@ constexpr auto finalize_conditional(Branches&& branches, E&& else_branch) //
  * @tparam Condition Type of the pending condition expression.
  * @tparam Else Type of the @c else branch carried over, or @ref detail::no_else.
  */
-template<typename Branches, Deferred Condition, typename Else = detail::no_else>
+template<typename Branches, deferred_expression Condition, typename Else = detail::no_else>
 class conditional_builder
 {
   DEFERRED_NO_UNIQUE_ADDRESS Branches m_branches;
@@ -312,7 +312,7 @@ public:
  * @tparam Else Type of the @c else branch.
  * @tparam Branches Types of the @c if and @c else_if branches.
  */
-template<typename Else, Deferred... Branches>
+template<typename Else, deferred_expression... Branches>
 class conditional_expression
 {
   constexpr static inline bool finalized = !std::is_same_v<Else, detail::no_else>;

@@ -24,7 +24,9 @@
 
 namespace deferred {
 
-template<Deferred ConditionExpression, typename DefaultExpression, Deferred... CaseExpression>
+template<deferred_expression ConditionExpression,
+         typename DefaultExpression,
+         deferred_expression... CaseExpression>
 class switch_expression;
 
 namespace detail {
@@ -41,7 +43,7 @@ struct no_default
  * @brief Switch default expression.
  * @tparam Expression Type of the underlying expression.
  */
-template<Deferred Expression>
+template<deferred_expression Expression>
 class default_expression
 {
 public:
@@ -120,7 +122,7 @@ public:
  * @tparam LabelExpression Type of the label expression.
  * @tparam BodyExpression Type of the body expression.
  */
-template<Deferred LabelExpression, Deferred BodyExpression>
+template<deferred_expression LabelExpression, deferred_expression BodyExpression>
 class case_expression
 {
 public:
@@ -324,10 +326,10 @@ struct is_nothrow_evaluable<
  * @tparam Cases Tuple of the cases accumulated so far.
  * @tparam LabelExpression Type of the pending case label expression.
  */
-template<Deferred ConditionExpression,
+template<deferred_expression ConditionExpression,
          typename DefaultExpression,
-         Deferred LabelExpression,
-         Deferred... Cases>
+         deferred_expression LabelExpression,
+         deferred_expression... Cases>
 class switch_case_builder
 {
   using case_types = std::tuple<Cases...>;
@@ -432,7 +434,9 @@ public:
  * @tparam DefaultExpression Type of the @c default case, or @ref detail::no_default.
  * @tparam CaseExpression Types of the case expressions.
  */
-template<Deferred ConditionExpression, typename DefaultExpression, Deferred... CaseExpression>
+template<deferred_expression ConditionExpression,
+         typename DefaultExpression,
+         deferred_expression... CaseExpression>
 class switch_expression
 {
   constexpr static inline bool finalized = !std::is_same_v<DefaultExpression, detail::no_default>;
@@ -709,7 +713,7 @@ public:
  * @brief Switch chain waiting for its first @c case or its @c default case.
  * @tparam ConditionExpression Type of the condition expression.
  */
-template<Deferred ConditionExpression>
+template<deferred_expression ConditionExpression>
 class switch_builder
 {
   DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;

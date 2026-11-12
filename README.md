@@ -369,6 +369,33 @@ no effect, and ``eval()`` runs an expression. A constant or a variable has no
 ``eval()``, and the builders that ``if_``, ``switch_``, ``while_``, ``do_`` and
 ``for_`` return have neither.
 
+Concepts
+--------
+
+Concepts are named in lower case, like those of the standard library:
+
+| Concept | Satisfied by |
+| --- | --- |
+| ``deferred::deferred_expression<T>`` | a deferred expression, ignoring cv-qualifiers and references |
+| ``deferred::any_deferred<T...>`` | a pack in which at least one type is a ``deferred_expression`` |
+| ``deferred::has_subexpression_types<T>`` | a type that names ``subexpression_types``; cv-qualifiers and references are not ignored |
+| ``deferred::has_mutable_state<T>`` | a node whose own stored value can change between evaluations, such as a variable |
+
+```C++
+template<deferred::deferred_expression T>
+auto twice(T&& t)
+{
+  return std::forward<T>(t) * deferred::constant(2);
+}
+```
+
+The traits ``is_deferred`` and ``is_constant_expression``, with their ``_v`` and
+``_t`` forms, are unchanged.
+
+Earlier releases spelled these concepts ``Deferred``, ``AnyDeferred``,
+``HasSubexpressionTypes`` and ``HasMutableState``. Those names are removed;
+code that uses them must switch to the lower-case names.
+
 Inspecting expressions
 ----------------------
 

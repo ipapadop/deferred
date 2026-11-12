@@ -13,21 +13,21 @@ namespace deferred {
  * @tparam T The type to check against the concept.
  */
 template<typename T>
-concept HasSubexpressionTypes = requires { typename T::subexpression_types; };
+concept has_subexpression_types = requires { typename T::subexpression_types; };
 
 /**
  * @brief Concept for types that are deferred expressions.
  * @tparam T The type to check against the concept.
  */
 template<typename T>
-concept Deferred = HasSubexpressionTypes<std::remove_cvref_t<T>>;
+concept deferred_expression = has_subexpression_types<std::remove_cvref_t<T>>;
 
 /**
  * @brief Checks if @p T is a type in @c deferred namespace.
  * @tparam T The type to check.
  */
 template<typename T>
-struct is_deferred : public std::bool_constant<Deferred<T>>
+struct is_deferred : public std::bool_constant<deferred_expression<T>>
 { };
 
 /**
@@ -49,7 +49,7 @@ inline constexpr bool is_deferred_v = is_deferred<T>::value;
  * @tparam T A parameter pack of types to check.
  */
 template<typename... T>
-concept AnyDeferred = (Deferred<T> || ...);
+concept any_deferred = (deferred_expression<T> || ...);
 
 } // namespace deferred
 

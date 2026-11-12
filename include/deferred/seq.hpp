@@ -48,7 +48,7 @@ consteval bool sequence_is_nothrow()
  *
  * @tparam Expressions Types of the sequenced expressions.
  */
-template<Deferred... Expressions>
+template<deferred_expression... Expressions>
   requires(sizeof...(Expressions) > 0)
 class seq_expression
 {

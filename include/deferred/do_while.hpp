@@ -22,7 +22,7 @@ namespace deferred {
  * @tparam BodyExpression Type of the body expression.
  * @tparam ConditionExpression Type of the condition expression.
  */
-template<Deferred BodyExpression, Deferred ConditionExpression>
+template<deferred_expression BodyExpression, deferred_expression ConditionExpression>
 class do_while_expression
 {
 public:
@@ -120,7 +120,7 @@ public:
  * @brief Do-while loop waiting for its condition expression.
  * @tparam BodyExpression Type of the body expression.
  */
-template<Deferred BodyExpression>
+template<deferred_expression BodyExpression>
 class do_while_builder
 {
   DEFERRED_NO_UNIQUE_ADDRESS BodyExpression m_body;

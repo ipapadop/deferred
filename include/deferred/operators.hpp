@@ -292,7 +292,7 @@ struct shift_right_assign
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator+(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::plus<>, T, U>())
 {
@@ -308,7 +308,7 @@ operator+(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::plus<>, T, U>())
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator-(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::minus<>, T, U>())
 {
@@ -321,7 +321,7 @@ operator-(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::minus<>, T, U>()
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator+(T&& t) noexcept(detail::invoke_is_nothrow<detail::unary_plus, T>())
 {
@@ -334,7 +334,7 @@ operator+(T&& t) noexcept(detail::invoke_is_nothrow<detail::unary_plus, T>())
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator-(T&& t) noexcept(detail::invoke_is_nothrow<std::negate<>, T>())
 {
@@ -350,7 +350,7 @@ operator-(T&& t) noexcept(detail::invoke_is_nothrow<std::negate<>, T>())
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator*(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::multiplies<>, T, U>())
 {
@@ -366,7 +366,7 @@ operator*(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::multiplies<>, T,
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator/(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::divides<>, T, U>())
 {
@@ -382,7 +382,7 @@ operator/(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::divides<>, T, U>
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator%(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::modulus<>, T, U>())
 {
@@ -395,7 +395,7 @@ operator%(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::modulus<>, T, U>
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator++(T&& t) noexcept(detail::invoke_is_nothrow<detail::pre_increment, T>())
 {
@@ -409,7 +409,7 @@ operator++(T&& t) noexcept(detail::invoke_is_nothrow<detail::pre_increment, T>()
  * @param \<unnamed\> An int for postfix differentiation.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator++(T&& t, int) noexcept(detail::invoke_is_nothrow<detail::post_increment, T>())
 {
@@ -422,7 +422,7 @@ operator++(T&& t, int) noexcept(detail::invoke_is_nothrow<detail::post_increment
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator--(T&& t) noexcept(detail::invoke_is_nothrow<detail::pre_decrement, T>())
 {
@@ -436,7 +436,7 @@ operator--(T&& t) noexcept(detail::invoke_is_nothrow<detail::pre_decrement, T>()
  * @param \<unnamed\> An int for postfix differentiation.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator--(T&& t, int) noexcept(detail::invoke_is_nothrow<detail::post_decrement, T>())
 {
@@ -452,7 +452,7 @@ operator--(T&& t, int) noexcept(detail::invoke_is_nothrow<detail::post_decrement
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator==(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::equal_to<>, T, U>())
 {
@@ -468,7 +468,7 @@ operator==(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::equal_to<>, T, 
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator!=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::not_equal_to<>, T, U>())
 {
@@ -484,7 +484,7 @@ operator!=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::not_equal_to<>,
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator>(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::greater<>, T, U>())
 {
@@ -500,7 +500,7 @@ operator>(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::greater<>, T, U>
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator<(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::less<>, T, U>())
 {
@@ -516,7 +516,7 @@ operator<(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::less<>, T, U>())
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator>=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::greater_equal<>, T, U>())
 {
@@ -532,7 +532,7 @@ operator>=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::greater_equal<>
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator<=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::less_equal<>, T, U>())
 {
@@ -552,7 +552,7 @@ operator<=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::less_equal<>, T
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U> && detail::ShortCircuits<detail::conjunction, T, U>
+  requires any_deferred<T, U> && detail::short_circuits<detail::conjunction, T, U>
 [[nodiscard]] constexpr auto
 operator&&(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::conjunction, T, U>())
 {
@@ -573,7 +573,7 @@ operator&&(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::conjunction
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U> && (!detail::ShortCircuits<detail::conjunction, T, U>)
+  requires any_deferred<T, U> && (!detail::short_circuits<detail::conjunction, T, U>)
 [[nodiscard]] constexpr auto
 operator&&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_and<>, T, U>())
 {
@@ -593,7 +593,7 @@ operator&&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_and<>, 
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U> && detail::ShortCircuits<detail::disjunction, T, U>
+  requires any_deferred<T, U> && detail::short_circuits<detail::disjunction, T, U>
 [[nodiscard]] constexpr auto
 operator||(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::disjunction, T, U>())
 {
@@ -614,7 +614,7 @@ operator||(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::disjunction
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U> && (!detail::ShortCircuits<detail::disjunction, T, U>)
+  requires any_deferred<T, U> && (!detail::short_circuits<detail::disjunction, T, U>)
 [[nodiscard]] constexpr auto
 operator||(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_or<>, T, U>())
 {
@@ -627,7 +627,7 @@ operator||(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_or<>, T
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator!(T&& t) noexcept(detail::invoke_is_nothrow<std::logical_not<>, T>())
 {
@@ -643,7 +643,7 @@ operator!(T&& t) noexcept(detail::invoke_is_nothrow<std::logical_not<>, T>())
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::bit_and<>, T, U>())
 {
@@ -659,7 +659,7 @@ operator&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::bit_and<>, T, U>
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator|(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::bit_or<>, T, U>())
 {
@@ -675,7 +675,7 @@ operator|(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::bit_or<>, T, U>(
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator^(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::bit_xor<>, T, U>())
 {
@@ -688,7 +688,7 @@ operator^(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::bit_xor<>, T, U>
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator~(T&& t) noexcept(detail::invoke_is_nothrow<std::bit_not<>, T>())
 {
@@ -704,7 +704,7 @@ operator~(T&& t) noexcept(detail::invoke_is_nothrow<std::bit_not<>, T>())
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator<<(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::shift_left, T, U>())
 {
@@ -720,7 +720,7 @@ operator<<(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::shift_left, 
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires any_deferred<T, U>
 [[nodiscard]] constexpr auto
 operator>>(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::shift_right, T, U>())
 {
@@ -736,7 +736,7 @@ operator>>(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::shift_right,
  * @return An @ref assign_expression performing <tt>+=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::plus_assign, T, U>
+  requires detail::assignable_with<detail::plus_assign, T, U>
 [[nodiscard]] constexpr auto
 operator+=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::plus_assign, T, U>())
 {
@@ -753,7 +753,7 @@ operator+=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::plus_assign,
  * @return An @ref assign_expression performing <tt>-=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::minus_assign, T, U>
+  requires detail::assignable_with<detail::minus_assign, T, U>
 [[nodiscard]] constexpr auto
 operator-=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::minus_assign, T, U>())
 {
@@ -770,7 +770,7 @@ operator-=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::minus_assign
  * @return An @ref assign_expression performing <tt>*=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::multiplies_assign, T, U>
+  requires detail::assignable_with<detail::multiplies_assign, T, U>
 [[nodiscard]] constexpr auto
 operator*=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::multiplies_assign, T, U>())
 {
@@ -787,7 +787,7 @@ operator*=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::multiplies_a
  * @return An @ref assign_expression performing <tt>/=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::divides_assign, T, U>
+  requires detail::assignable_with<detail::divides_assign, T, U>
 [[nodiscard]] constexpr auto
 operator/=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::divides_assign, T, U>())
 {
@@ -804,7 +804,7 @@ operator/=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::divides_assi
  * @return An @ref assign_expression performing <tt>%=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::modulus_assign, T, U>
+  requires detail::assignable_with<detail::modulus_assign, T, U>
 [[nodiscard]] constexpr auto
 operator%=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::modulus_assign, T, U>())
 {
@@ -821,7 +821,7 @@ operator%=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::modulus_assi
  * @return An @ref assign_expression performing <tt>&=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::bit_and_assign, T, U>
+  requires detail::assignable_with<detail::bit_and_assign, T, U>
 [[nodiscard]] constexpr auto
 operator&=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_and_assign, T, U>())
 {
@@ -838,7 +838,7 @@ operator&=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_and_assi
  * @return An @ref assign_expression performing <tt>|=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::bit_or_assign, T, U>
+  requires detail::assignable_with<detail::bit_or_assign, T, U>
 [[nodiscard]] constexpr auto
 operator|=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_or_assign, T, U>())
 {
@@ -855,7 +855,7 @@ operator|=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_or_assig
  * @return An @ref assign_expression performing <tt>^=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::bit_xor_assign, T, U>
+  requires detail::assignable_with<detail::bit_xor_assign, T, U>
 [[nodiscard]] constexpr auto
 operator^=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_xor_assign, T, U>())
 {
@@ -872,7 +872,7 @@ operator^=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_xor_assi
  * @return An @ref assign_expression performing <tt><<=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::shift_left_assign, T, U>
+  requires detail::assignable_with<detail::shift_left_assign, T, U>
 [[nodiscard]] constexpr auto
 operator<<=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::shift_left_assign, T, U>())
 {
@@ -889,7 +889,7 @@ operator<<=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::shift_left_
  * @return An @ref assign_expression performing <tt>>>=</tt> when evaluated.
  */
 template<typename T, typename U>
-  requires detail::AssignableWith<detail::shift_right_assign, T, U>
+  requires detail::assignable_with<detail::shift_right_assign, T, U>
 [[nodiscard]] constexpr auto
 operator>>=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::shift_right_assign, T, U>())
 {
@@ -903,7 +903,7 @@ operator>>=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::shift_right
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<Deferred T>
+template<deferred_expression T>
 [[nodiscard]] constexpr auto
 operator*(T&& t) noexcept(detail::invoke_is_nothrow<detail::dereference, T>())
 {
@@ -923,7 +923,7 @@ operator*(T&& t) noexcept(detail::invoke_is_nothrow<detail::dereference, T>())
  * @param u Index.
  * @return A deferred expression representing the subscripting.
  */
-template<Deferred T, typename U>
+template<deferred_expression T, typename U>
 [[nodiscard]] constexpr auto
 subscript(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::subscript_at, T, U>())
 {

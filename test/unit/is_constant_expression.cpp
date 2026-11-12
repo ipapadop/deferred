@@ -48,13 +48,13 @@ TEST_CASE("variables are not constant expressions", "[is-constant-expression]")
   STATIC_CHECK(!deferred::is_constant_expression_v<deferred::variable_<int>>);
 }
 
-TEST_CASE("HasMutableState reads the opt-out", "[is-constant-expression]")
+TEST_CASE("has_mutable_state reads the opt-out", "[is-constant-expression]")
 {
-  STATIC_CHECK(deferred::HasMutableState<deferred::variable_<int>>);
-  STATIC_CHECK(deferred::HasMutableState<mutable_node>);
-  STATIC_CHECK(!deferred::HasMutableState<node_declaring_constant_state>);
-  STATIC_CHECK(!deferred::HasMutableState<stateless_node>);
-  STATIC_CHECK(!deferred::HasMutableState<deferred::constant_<int>>);
+  STATIC_CHECK(deferred::has_mutable_state<deferred::variable_<int>>);
+  STATIC_CHECK(deferred::has_mutable_state<mutable_node>);
+  STATIC_CHECK(!deferred::has_mutable_state<node_declaring_constant_state>);
+  STATIC_CHECK(!deferred::has_mutable_state<stateless_node>);
+  STATIC_CHECK(!deferred::has_mutable_state<deferred::constant_<int>>);
 }
 
 TEST_CASE("mutable state is opted out per node, not per subtree", "[is-constant-expression]")

@@ -29,16 +29,16 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   are rejected, and that is not fixable while `variable_` stays non-copyable. `test/unit/assign.cpp` pins it and
   explains why.
 - **Compound assignment**: `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=` are deferred free operators
-  in `operators.hpp` requiring a `Deferred` left operand. They reuse `assign_expression` with an assigning
+  in `operators.hpp` requiring a `deferred_expression` left operand. They reuse `assign_expression` with an assigning
   operation, so the target is evaluated once and the type's own compound operator is used — they do not expand to
   `t = t + u`. Unlike `=`, they have no eager meaning, so they follow the same rule as every other operator.
 - **Short-circuiting**: `&&` and `||` build a `logical_expression`, not an `expression_`; they yield `bool` and
   evaluate the right operand only when the left does not decide the result. Operands that do not convert to
   `bool` (`std::valarray` and expression types like it), or whose types overload the operator themselves (a
   three-valued boolean), take a second, eager overload that calls the type's own operator — which is what C++
-  does for an overloaded `&&` too. `detail::ShortCircuits` decides between the two.
+  does for an overloaded `&&` too. `detail::short_circuits` decides between the two.
 - **Assignment targets must yield an lvalue**: `assign()` and the compound assignments are constrained on
-  `detail::AssignableWith` / `detail::YieldsLvalue` (see `expression.hpp`). Dropping the constraint reintroduces
+  `detail::assignable_with` / `detail::yields_lvalue` (see `expression.hpp`). Dropping the constraint reintroduces
   a dangling reference that only ASan catches.
 - **Operations whose result may refer into their operand** — prefix `++`/`--`, unary `*` and `subscript()` —
   return `detail::operand_result_t` (see `operators.hpp`): a reference when the operand is an lvalue or a raw
@@ -63,7 +63,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `operator_type` / `operator_()`, and `is_constant_expression` checks it through `operator_type`. Nodes whose
   result does not depend on constness name it `result_type`.
 - **Every entry point returns a builder**: `if_`, `switch_`, `while_`, `do_` and `for_` return a type with no
-  `operator()` that is not `Deferred`. `switch_builder` accepts `case_` and `default_` only.
+  `operator()` that is not a `deferred_expression`. `switch_builder` accepts `case_` and `default_` only.
 - **Both chains are extendable**: `case_` may follow `default_`, and `else_if_` may follow `else_`; the new
   branch is checked after the existing ones and before the default or else. `conditional_builder` carries the
   else through its third template parameter. `else_` and `default_` are accepted once.
@@ -73,7 +73,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `evaluate_ref()`. Anything that stores or
   returns a result keeps `evaluate()`, which must decay.
 - **`operator[]` cannot be a free function**, so `deferred::subscript(a, b)` is its spelling. Unary `*` is a normal
-  free operator; both require only a `Deferred` operand. `->` and unary `&` are deliberately absent: `->` must be a member, and overloading `&` would break
+  free operator; both require only a `deferred_expression` operand. `->` and unary `&` are deliberately absent: `->` must be a member, and overloading `&` would break
   taking the address of an expression.
 - **`for_` rejects an effectless clause**: an `init` or `step` clause that is only a `variable_` never has an
   effect, and is almost always `for_(i = 0, ...)` — where the eager `operator=` already ran. A `static_assert` in
@@ -186,6 +186,10 @@ Or simply copy the `include/deferred` directory to your project's include path.
   `[[msvc::no_unique_address]]`. `detail/no_unique_address.hpp` picks by attribute detection rather than by
   compiler macro, because clang-cl reports `__clang__` yet needs the Microsoft spelling. This is the only macro in
   the library besides header guards.
+- **Concept names**: concepts are lower-case with underscores, as in the standard library
+  (`deferred_expression`, `any_deferred`, `has_subexpression_types`, `has_mutable_state`, and everything in
+  `detail`). The earlier capitalized spellings (`Deferred`, `AnyDeferred`, ...) were removed without a
+  compatibility period; do not reintroduce them.
 - **Header Guards**: Use `#ifndef DEFERRED_FILENAME_HPP` format, qualified by directory for
   subdirectories (`DEFERRED_DETAIL_MAP_VOID_HPP`, `DEFERRED_TYPE_TRAITS_IS_DEFERRED_HPP`).
 - **`detail/` Layering**: Headers in `include/deferred/detail/` MUST NOT include anything from the

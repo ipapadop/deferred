@@ -29,10 +29,10 @@ namespace deferred {
  * @tparam StepExpression Type of the step expression.
  * @tparam BodyExpression Type of the body expression.
  */
-template<Deferred InitExpression,
-         Deferred ConditionExpression,
-         Deferred StepExpression,
-         Deferred BodyExpression>
+template<deferred_expression InitExpression,
+         deferred_expression ConditionExpression,
+         deferred_expression StepExpression,
+         deferred_expression BodyExpression>
 class for_expression
 {
 public:
@@ -146,7 +146,9 @@ public:
  * @tparam ConditionExpression Type of the condition expression.
  * @tparam StepExpression Type of the step expression.
  */
-template<Deferred InitExpression, Deferred ConditionExpression, Deferred StepExpression>
+template<deferred_expression InitExpression,
+         deferred_expression ConditionExpression,
+         deferred_expression StepExpression>
 class for_builder
 {
   /**

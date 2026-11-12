@@ -89,7 +89,7 @@ public:
    * @param e Expression whose value is assigned to the variable.
    * @return An expression assigning to the variable when evaluated.
    */
-  template<Deferred E>
+  template<deferred_expression E>
   [[nodiscard]] constexpr detail::assign_expression_t<detail::assign_to, variable_&, E>
   operator=(E&& e) & noexcept(detail::assign_is_nothrow<detail::assign_to, variable_&, E>())
   {

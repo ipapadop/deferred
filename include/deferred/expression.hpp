@@ -25,7 +25,7 @@ namespace deferred {
  * @tparam Operator Type of the operator.
  * @tparam Expressions Types of the subexpressions.
  */
-template<typename Operator, Deferred... Expressions>
+template<typename Operator, deferred_expression... Expressions>
 class expression_
 {
 public:
@@ -141,7 +141,7 @@ template<typename T>
 consteval auto deduce_deferred_type()
 {
   using U = std::decay_t<T>;
-  if constexpr (Deferred<T>)
+  if constexpr (deferred_expression<T>)
   {
     return std::type_identity<T>{};
   }
@@ -182,8 +182,9 @@ namespace detail {
  * @tparam T Expression argument type.
  */
 template<typename T>
-concept YieldsLvalue =
-  Deferred<T> && std::is_lvalue_reference_v<decltype(std::declval<make_deferred_t<T>&>()())>;
+concept yields_lvalue =
+  deferred_expression<T>
+  && std::is_lvalue_reference_v<decltype(std::declval<make_deferred_t<T>&>()())>;
 
 } // namespace detail
 
