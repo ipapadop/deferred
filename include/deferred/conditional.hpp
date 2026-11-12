@@ -301,10 +301,16 @@ public:
   template<typename T>
   [[nodiscard]] constexpr auto then_(T&& then_) const& //
     noexcept(
-      detail::
-        append_conditional_is_nothrow<Else, Branches const&, Condition const&, T, Else const&>())
+      std::is_nothrow_constructible_v<Condition, Condition const&>
+      && detail::append_conditional_is_nothrow<Else, Branches const&, Condition, T, Else const&>())
   {
-    return detail::append_conditional<Else>(m_branches, m_condition, std::forward<T>(then_), m_else);
+    // The condition is this builder's own member, so it is copied here by name. Passing
+    // the member would present it as a named operand, which a condition that owns state
+    // is not allowed to be.
+    return detail::append_conditional<Else>(m_branches,
+                                            Condition(m_condition),
+                                            std::forward<T>(then_),
+                                            m_else);
   }
 };
 

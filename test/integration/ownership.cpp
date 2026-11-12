@@ -4,8 +4,10 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
+#include <functional>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -208,16 +210,46 @@ TEST_CASE("a variable of a const type and a const variable are both read through
   CHECK(sum() == 14);
 }
 
-TEST_CASE("a copy of an expression is independent except for its variables", "[ownership]")
+namespace {
+
+/// @brief A user-written node that holds state of its own.
+struct cell
+{
+  using subexpression_types = std::tuple<>;
+
+  static constexpr bool mutable_state = true;
+
+  int value = 0;
+
+  int& operator()() noexcept
+  {
+    return value;
+  }
+
+  int const& operator()() const noexcept
+  {
+    return value;
+  }
+
+  auto subexpressions() const noexcept
+  {
+    return std::tuple<>{};
+  }
+};
+
+} // namespace
+
+TEST_CASE("an explicit copy of an expression copies the state it owns", "[ownership]")
 {
   deferred::variable v{1};
-  auto calls   = 0;
-  auto counter = deferred::invoke([count = 0, &calls]() mutable {
-    ++calls;
-    return ++count;
-  });
+  auto calls = 0;
 
-  auto ex   = counter + v;
+  // The callable is given to the expression, which then owns its counter.
+  auto ex   = deferred::invoke([count = 0, &calls]() mutable {
+              ++calls;
+              return ++count;
+              })
+              + v;
   auto copy = ex;
 
   // State a callable holds by value belongs to each copy; the variable is shared.
@@ -228,9 +260,74 @@ TEST_CASE("a copy of an expression is independent except for its variables", "[o
   CHECK(ex() == 13);
   CHECK(copy() == 12);
 
-  // State captured by reference is shared too, and the named node was not touched.
+  // State captured by reference is shared too.
   CHECK(calls == 5);
-  CHECK(counter() == 1);
+}
+
+TEST_CASE("std::ref shares a callable that has state between expressions", "[ownership]")
+{
+  auto next = deferred::invoke([count = 0]() mutable { return ++count; });
+
+  auto first  = std::ref(next) + deferred::constant(0);
+  auto second = std::ref(next) + deferred::constant(0);
+
+  CHECK(first() == 1);
+  CHECK(second() == 2);
+  CHECK(next() == 3);
+
+  // A const expression can still call it, because it refers to the callable.
+  auto const fixed = std::ref(next) + deferred::constant(10);
+  CHECK(fixed() == 14);
+}
+
+TEST_CASE("std::move gives a callable that has state to one expression", "[ownership]")
+{
+  auto next = deferred::invoke([count = 0]() mutable { return ++count; });
+  auto ex   = std::move(next) + deferred::constant(0);
+
+  CHECK(ex() == 1);
+  CHECK(ex() == 2);
+}
+
+TEST_CASE("std::ref lets an expression read and write a user node that has state", "[ownership]")
+{
+  // The node is not in namespace deferred, so the operators are not found through it.
+  using namespace deferred;
+
+  cell c;
+
+  auto read = std::ref(c) + deferred::constant(1);
+  c.value   = 5;
+  CHECK(read() == 6);
+
+  auto increment = ++std::ref(c);
+  increment();
+  increment();
+  CHECK(c.value == 7);
+
+  auto add = (std::ref(c) += deferred::constant(3));
+  add();
+  CHECK(c.value == 10);
+
+  deferred::assign(std::ref(c), deferred::constant(1))();
+  CHECK(c.value == 1);
+
+  // std::cref gives read-only access.
+  auto view = std::cref(c) * deferred::constant(2);
+  c.value   = 4;
+  CHECK(view() == 8);
+}
+
+TEST_CASE("std::ref works for a variable too", "[ownership]")
+{
+  deferred::variable v{1};
+
+  auto doubled = std::ref(v) * deferred::constant(2);
+  v            = 5;
+  CHECK(doubled() == 10);
+
+  (++std::ref(v))();
+  CHECK(v() == 6);
 }
 
 TEST_CASE("expressions can be collected and outlive what built them", "[ownership]")

@@ -7,6 +7,7 @@
 #include "deferred/type_traits/is_deferred.hpp"
 #include "deferred/variable.hpp"
 
+#include <functional>
 #include <type_traits>
 #include <vector>
 
@@ -108,4 +109,23 @@ TEST_CASE("has_subexpression_types concept", "[is_deferred]")
   // Unlike deferred_expression, it does not look through cv-qualifiers and references.
   static_assert(!has_subexpression_types<has_types&>);
   static_assert(deferred::deferred_expression<has_types&>);
+}
+
+TEST_CASE("deferred_operand accepts an expression or a reference_wrapper to one", "[is-deferred]")
+{
+  using C = deferred::constant<int>;
+
+  static_assert(deferred::deferred_operand<C>);
+  static_assert(deferred::deferred_operand<C&>);
+  static_assert(deferred::deferred_operand<std::reference_wrapper<C>>);
+  static_assert(deferred::deferred_operand<std::reference_wrapper<C const>>);
+  static_assert(deferred::deferred_operand<std::reference_wrapper<C> const&>);
+
+  static_assert(!deferred::deferred_operand<int>);
+  static_assert(!deferred::deferred_operand<std::reference_wrapper<int>>);
+  // A reference_wrapper is not itself a deferred expression.
+  static_assert(!deferred::deferred_expression<std::reference_wrapper<C>>);
+
+  static_assert(deferred::any_deferred<int, std::reference_wrapper<C>>);
+  static_assert(!deferred::any_deferred<int, std::reference_wrapper<int>>);
 }

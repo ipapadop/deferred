@@ -210,9 +210,34 @@ Some consequences of owning operands:
   and expressions refer to it without copying.
 - An operand that cannot be copied, such as a
   ``constant<std::unique_ptr<int>>``, must be moved in with ``std::move``.
-- A ``const`` expression evaluates its operands as ``const``. An expression
-  that names a callable with its own mutable state, such as
-  ``invoke([n = 0]() mutable { return n++; })``, cannot itself be ``const``.
+
+Operands that have state of their own
+-------------------------------------
+
+Copying a constant cannot be observed, so an expression copies one freely. A
+node that holds state is different: a copy would be a second, independent state.
+Such a node is a callable that changes what it holds, a node you wrote that
+declares ``mutable_state``, or an expression that stores one of those.
+
+Using one by name in an expression is a compile error, whose message asks you
+to say which you mean:
+
+```C++
+auto next = deferred::invoke([count = 0]() mutable { return ++count; });
+
+auto a = next + deferred::constant(0);              // error: next has state of its own
+auto b = std::ref(next) + deferred::constant(0);    // b refers to next
+auto c = std::ref(next) + deferred::constant(0);    // so does c: b() and c() share the count
+auto d = std::move(next) + deferred::constant(0);   // d owns next from here on
+```
+
+``std::ref(x)`` makes the expression refer to ``x``, which must then outlive
+it, and ``std::cref(x)`` does the same for reading only. They work with every
+operator, including ``++std::ref(x)`` and ``std::ref(x) += 1``, and with any
+node, a variable included. A variable needs neither: naming it already refers
+to it.
+
+Copying a whole expression, as in ``auto e2 = e;``, copies the state it owns.
 
 Control flow
 ------------
@@ -544,7 +569,8 @@ Concepts are named in lower case, like those of the standard library:
 | Concept | Satisfied by |
 | --- | --- |
 | ``deferred::deferred_expression<T>`` | a deferred expression, ignoring cv-qualifiers and references |
-| ``deferred::any_deferred<T...>`` | a pack in which at least one type is a ``deferred_expression`` |
+| ``deferred::deferred_operand<T>`` | a ``deferred_expression``, or a ``std::reference_wrapper`` to one |
+| ``deferred::any_deferred<T...>`` | a pack in which at least one type is a ``deferred_operand`` |
 | ``deferred::has_subexpression_types<T>`` | a type that names ``subexpression_types``; cv-qualifiers and references are not ignored |
 | ``deferred::has_mutable_state<T>`` | a node whose own stored value can change between evaluations, such as a variable |
 | ``deferred::constant_expression<T>`` | a ``deferred_expression`` for which ``is_constant_expression_v`` is true |

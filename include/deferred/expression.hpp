@@ -16,6 +16,7 @@
 #include "detail/tuple_references.hpp"
 #include "detail/visit_children.hpp"
 #include "type_traits/expression_visitor.hpp"
+#include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 
 #include "variable_ref.hpp"
@@ -155,6 +156,61 @@ public:
 namespace detail {
 
 /**
+ * @brief Whether evaluating @p Node needs it to be non-const.
+ *
+ * True for an @ref expression_ whose callable cannot be called as @c const , such as a
+ * lambda declared @c mutable : calling it changes state it holds.
+ *
+ * @tparam Node Node type.
+ */
+template<typename Node>
+inline constexpr bool callable_needs_mutable = false;
+
+template<typename Operator, typename... Expressions>
+inline constexpr bool callable_needs_mutable<expression_<Operator, Expressions...>> =
+  !std::is_invocable_v<Operator const&, decltype(std::declval<Expressions const&>()())...>;
+
+template<typename Node>
+consteval bool owns_state();
+
+// Whether any of the node types in a tuple owns state.
+template<typename... Children>
+consteval bool any_owns_state(std::type_identity<std::tuple<Children...>>)
+{
+  return (owns_state<std::remove_cvref_t<Children>>() || ...);
+}
+
+/**
+ * @brief Whether @p Node , or a node it stores, has state of its own.
+ *
+ * A copy of such a node is a second, independent state, so an expression does not take
+ * one silently. A node has state of its own when it declares @c mutable_state and
+ * does not merely refer to state (@ref refers_to_state), when its callable can only
+ * be called as non-const, or when it stores a node that has.
+ *
+ * @tparam Node Node type, without reference or cv-qualifier.
+ * @return @c true when copying @p Node copies state.
+ */
+template<typename Node>
+consteval bool owns_state()
+{
+  if constexpr (has_mutable_state<Node> && !refers_to_state<Node>)
+  {
+    return true;
+  }
+  else if constexpr (any_owns_state(std::type_identity<typename Node::subexpression_types>{}))
+  {
+    return true;
+  }
+  else
+  {
+    // Asked last: it evaluates the subexpressions as const, which is only known to be
+    // possible once none of them owns state.
+    return callable_needs_mutable<Node>;
+  }
+}
+
+/**
  * @brief Deduce the deferred type for @p T.
  *
  * - If @p T is an lvalue reference to a @ref variable , it is transformed to a
@@ -182,6 +238,13 @@ consteval auto deduce_deferred_type()
   }
   else if constexpr (deferred_expression<T>)
   {
+    if constexpr (std::is_lvalue_reference_v<T>)
+    {
+      static_assert(!owns_state<U>(),
+                    "this operand has state of its own, and an expression would take a copy "
+                    "of it: write std::ref(x) for the expression to refer to x, or "
+                    "std::move(x) to give x to the expression");
+    }
     return std::type_identity<U>{};
   }
   else if constexpr (std::is_invocable_v<U>)

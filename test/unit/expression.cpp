@@ -252,3 +252,73 @@ TEST_CASE("a temporary expression over temporaries yields a value", "[expression
   auto const& value = (*text)();
   CHECK(value == std::string(40, 'x'));
 }
+
+namespace {
+
+/// @brief A node that declares state of its own.
+struct stateful_leaf
+{
+  using subexpression_types = std::tuple<>;
+
+  static constexpr bool mutable_state = true;
+
+  int operator()() const noexcept
+  {
+    return 0;
+  }
+};
+
+template<typename T>
+inline constexpr bool owns_state_v = deferred::detail::owns_state<std::remove_cvref_t<T>>();
+
+} // namespace
+
+TEST_CASE("owns_state finds the nodes whose copy would be a second state", "[owns-state]")
+{
+  auto c = deferred::constant(1);
+  auto v = deferred::variable(1);
+
+  // Constants, references to variables and expressions over them do not.
+  static_assert(!owns_state_v<deferred::constant<int>>);
+  static_assert(!owns_state_v<deferred::variable_ref<int>>);
+  static_assert(!owns_state_v<deferred::variable_cref<int>>);
+  static_assert(!owns_state_v<decltype(v + c)>);
+  static_assert(!owns_state_v<decltype(++v)>);
+  static_assert(!owns_state_v<decltype(v = c)>);
+  static_assert(!owns_state_v<decltype(v += c)>);
+  static_assert(!owns_state_v<decltype(deferred::if_(v > c).then_(c).else_(v))>);
+  static_assert(!owns_state_v<decltype(deferred::for_(v = c, v < c, ++v).do_(v += c))>);
+
+  // A variable does, as does a node that says so.
+  static_assert(owns_state_v<deferred::variable<int>>);
+  static_assert(owns_state_v<stateful_leaf>);
+}
+
+TEST_CASE("owns_state follows callables and stored nodes", "[owns-state]")
+{
+  auto c        = deferred::constant(1);
+  auto counting = [n = 0]() mutable {
+    return ++n;
+  };
+  int external   = 0;
+  auto capturing = [&external] {
+    return ++external;
+  };
+
+  // A callable that can only be called as non-const changes state it holds.
+  static_assert(owns_state_v<decltype(deferred::invoke(counting))>);
+  // One that captures by reference holds none, and neither does a plain function object.
+  static_assert(!owns_state_v<decltype(deferred::invoke(capturing))>);
+  static_assert(!owns_state_v<decltype(deferred::invoke(std::plus<>{}, c, c))>);
+
+  // An expression that stores such a node owns its state too.
+  static_assert(owns_state_v<decltype(deferred::invoke(counting) + c)>);
+  static_assert(owns_state_v<decltype(deferred::if_(c).then_(deferred::invoke(counting)))>);
+  static_assert(owns_state_v<decltype(deferred::seq(c, stateful_leaf{}))>);
+
+  // A std::reference_wrapper refers to the node, so the expression owns nothing.
+  auto next = deferred::invoke(counting);
+  static_assert(!owns_state_v<decltype(std::ref(next) + c)>);
+  static_assert(
+    !owns_state_v<decltype(deferred::make_deferred_t<decltype(std::ref(next))>{std::ref(next)})>);
+}

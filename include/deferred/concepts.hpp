@@ -42,7 +42,7 @@ concept expression_yielding =
  */
 template<typename T>
 concept lvalue_expression =
-  deferred_expression<T>
+  deferred_operand<T>
   && std::is_lvalue_reference_v<decltype(std::declval<make_deferred_t<T>&>()())>;
 
 /**

@@ -180,6 +180,24 @@ public:
 
 namespace detail {
 
+/**
+ * @brief Whether the state @p Node marks with @c mutable_state is held somewhere else.
+ *
+ * A node that owns state must not be copied without being asked, but a node that
+ * only refers to state -- a @ref variable_ref , or an assignment, which changes its
+ * target -- can be.
+ *
+ * @tparam Node Node type.
+ */
+template<typename Node>
+inline constexpr bool refers_to_state = false;
+
+template<typename T>
+inline constexpr bool refers_to_state<variable_ref<T>> = true;
+
+template<typename T>
+inline constexpr bool refers_to_state<variable_cref<T>> = true;
+
 // A visitor is called with the variable a variable_ref or a variable_cref refers to.
 template<typename Visitor, typename T>
 struct visits_tree<Visitor, variable_ref<T>> : visits_tree<Visitor, variable<T>>

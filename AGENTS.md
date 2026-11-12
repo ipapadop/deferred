@@ -124,6 +124,24 @@ This project is a C++23 header-only library for creating deferred evaluation exp
     object optimizes as the reference did; shared state reached through handles did not.
   - `test/unit/variable_ref.cpp` and `test/integration/ownership.cpp` pin this; the latter needs ASan to
     catch a regression.
+- **A named operand that owns state is a compile error**: `detail::deduce_deferred_type` has a
+  `static_assert` for an lvalue operand for which `detail::owns_state` holds. The message names the two
+  fixes: `std::ref(x)` to refer to it, `std::move(x)` to hand it over. Copying it silently was the first
+  behaviour of by-value storage and was rejected: a user node with `mutable_state` lost its writes, and a
+  named `invoke([n = 0]() mutable { ... })` used in two expressions ran two counters.
+  - `owns_state` is true for a node with `mutable_state` that does not merely refer to state
+    (`detail::refers_to_state`: `variable_ref`, `variable_cref`, `assign_expression`), for an `expression_`
+    whose callable cannot be called as const, and for any node that stores one of those. The callable is
+    asked last, because asking evaluates the subexpressions as const.
+  - Like the `immediate_assignment` check it is a hard error, so no test pins it; check it by hand. Only an
+    *lvalue* operand is checked. `conditional_builder::then_() const&` therefore copies its stored condition
+    explicitly rather than passing the member, which would present it as a named operand.
+  - `std::ref` / `std::cref` need no node of their own: a `std::reference_wrapper` is a callable, so it is
+    stored as `expression_<std::reference_wrapper<N>>`. The `deferred_operand` concept lets the unary
+    operators, compound assignments, `subscript()` and `assign()` accept it, and `any_deferred` is defined
+    over it. A visitor sees that `expression_`, not the node referred to.
+  - A user node outside `namespace deferred` is not found by the operators through ADL, with or without
+    `std::ref`; such code needs `using namespace deferred`.
 - **Lazy operand types and temporaries**: an operator on `std::valarray` may return a proxy that refers to its
   operands. A node evaluates its operands inside its own call, so a proxy over a *temporary* operand —
   `invoke([] { return std::valarray<float>(...); }) * constant(2.0f)` — dangles once the node returns, where
@@ -281,10 +299,12 @@ Or simply copy the `include/deferred` directory to your project's include path.
   compiler macro, because clang-cl reports `__clang__` yet needs the Microsoft spelling. This is the only macro in
   the library besides header guards.
 - **Concept names**: concepts are lower-case with underscores, as in the standard library
-  (`deferred_expression`, `any_deferred`, `has_subexpression_types`, `has_mutable_state`, and everything in
+  (`deferred_expression`, `deferred_operand`, `any_deferred`, `has_subexpression_types`, `has_mutable_state`,
+  and everything in
   `detail`). The earlier capitalized spellings (`Deferred`, `AnyDeferred`, ...) were removed without a
   compatibility period; do not reintroduce them.
-- **Public concepts and where they live**: `deferred_expression`, `any_deferred` and `has_subexpression_types`
+- **Public concepts and where they live**: `deferred_expression`, `deferred_operand`, `any_deferred` and
+  `has_subexpression_types`
   are in `type_traits/is_deferred.hpp`; `has_mutable_state` and `constant_expression` in
   `type_traits/is_constant_expression.hpp`; `expression_visitor` in `type_traits/expression_visitor.hpp`;
   `expression_yielding`, `lvalue_expression`, `condition` and `case_label_for` in `concepts.hpp`, which needs

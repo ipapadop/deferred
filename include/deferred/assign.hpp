@@ -198,6 +198,11 @@ public:
 
 namespace detail {
 
+// An assignment changes its target, not state of its own.
+template<typename Operation, typename TargetExpression, typename ValueExpression>
+inline constexpr bool
+  refers_to_state<assign_expression<Operation, TargetExpression, ValueExpression>> = true;
+
 /**
  * @brief Assignment expression type produced for an operation and its operands.
  * @tparam Operation Type of the assigning operation.
