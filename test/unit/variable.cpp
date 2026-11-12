@@ -234,47 +234,94 @@ TEST_CASE("variable deduces the result type of a callable and stores the result"
   CHECK(from_constant() == 5);
 }
 
-TEST_CASE("a variable built from a variable is independent of it", "[variable-ctad]")
+TEST_CASE("how a variable is copied", "[variable-ctad]")
 {
-  using V = deferred::variable<int>;
+  using V = deferred::variable<std::string>;
 
-  V v{3};
-  deferred::variable w{v};
-  static_assert(std::is_same_v<decltype(w), V>);
-  static_assert(std::is_same_v<decltype(deferred::variable(v)), V>);
-  CHECK(w() == 3);
+  V v{std::string("value")};
+  V const cv{std::string("const value")};
 
-  w = 4;
-  CHECK(v() == 3);
-  CHECK(w() == 4);
+  SECTION("from a non-const variable, by naming it")
+  {
+    deferred::variable w{v};
+    auto x = deferred::variable(v);
+    static_assert(std::is_same_v<decltype(w), V>);
+    static_assert(std::is_same_v<decltype(x), V>);
+    static_assert(std::is_constructible_v<V, V&>);
 
-  // A variable of another type works the same way.
-  deferred::variable<long> widened{v};
-  CHECK(widened() == 3L);
-}
+    // The copy is independent of its source.
+    w = std::string("changed");
+    CHECK(v() == "value");
+    CHECK(w() == "changed");
+    CHECK(x() == "value");
 
-TEST_CASE("a variable is built from a non-const lvalue variable only", "[variable-ctad]")
-{
-  using V = deferred::variable<int>;
+    // A variable of another type works the same way.
+    deferred::variable<int> narrow{3};
+    deferred::variable<long> wide{narrow};
+    CHECK(wide() == 3L);
+  }
 
-  static_assert(std::is_constructible_v<V, V&>);
-  // The deleted copy and move constructors are chosen for a const or temporary source;
-  // `variable(v())` is the spelling for those.
-  static_assert(!std::is_constructible_v<V, V const&>);
-  static_assert(!std::is_constructible_v<V, V&&>);
-}
+  SECTION("from a const variable, through its value")
+  {
+    deferred::variable w{cv()};
+    deferred::variable x{cv.get()};
+    static_assert(std::is_same_v<decltype(w), V>);
+    CHECK(w() == "const value");
+    CHECK(x() == "const value");
 
-TEST_CASE("a variable is never copied or moved implicitly", "[variable-ctad]")
-{
-  using V = deferred::variable<int>;
+    // Naming a const variable selects the deleted copy constructor.
+    static_assert(!std::is_constructible_v<V, V const&>);
+  }
 
-  static_assert(!std::is_copy_constructible_v<V>);
-  static_assert(!std::is_move_constructible_v<V>);
-  static_assert(!std::is_convertible_v<V&, V>);
+  SECTION("from a temporary, through its moved value")
+  {
+    deferred::variable w{std::move(v)()};
+    static_assert(std::is_same_v<decltype(w), V>);
+    CHECK(w() == "value");
+    CHECK(v().empty());
 
-  // Assignment between variables stays deferred, never a copy.
-  static_assert(!std::is_assignable_v<V&, V const&>);
-  static_assert(!std::is_assignable_v<V&, V&&>);
+    // Naming a temporary selects the deleted move constructor.
+    static_assert(!std::is_constructible_v<V, V&&>);
+    static_assert(!std::is_constructible_v<V, V const&&>);
+  }
+
+  SECTION("into an existing variable, by assigning the value")
+  {
+    V w;
+    w = v();
+    CHECK(w() == "value");
+
+    // Assigning the variable itself builds an expression that assigns when evaluated.
+    auto later = (w = cv());
+    static_assert(!deferred::deferred_expression<decltype(later)>);
+    auto deferred_assignment = (w = v);
+    v                        = std::string("newer");
+    CHECK(w() == "const value");
+    deferred_assignment();
+    CHECK(w() == "newer");
+
+    // Copy and move assignment are deleted.
+    static_assert(!std::is_assignable_v<V&, V const&>);
+    static_assert(!std::is_assignable_v<V&, V&&>);
+  }
+
+  SECTION("never implicitly")
+  {
+    static_assert(!std::is_copy_constructible_v<V>);
+    static_assert(!std::is_move_constructible_v<V>);
+
+    // `auto w = v;` and returning a named variable.
+    static_assert(!std::is_convertible_v<V&, V>);
+    static_assert(!std::is_convertible_v<V const&, V>);
+    static_assert(!std::is_convertible_v<V&&, V>);
+
+    // Passing a variable by value; by reference is the way.
+    static_assert(!std::is_invocable_v<void (*)(V), V&>);
+    static_assert(!std::is_invocable_v<void (*)(V), V const&>);
+    static_assert(!std::is_invocable_v<void (*)(V), V>);
+    static_assert(std::is_invocable_v<void (*)(V&), V&>);
+    static_assert(std::is_invocable_v<void (*)(V const&), V const&>);
+  }
 }
 
 TEST_CASE("a variable of a move-only type is not built from a variable", "[variable-ctad]")
