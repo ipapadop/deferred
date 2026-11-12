@@ -8,8 +8,8 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
-#include "detail/is_nothrow_visitable.hpp"
 #include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
@@ -91,9 +91,9 @@ public:
   template<typename Visitor>
     requires expression_visitor<Visitor, variable_ref>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
-    noexcept(detail::is_nothrow_visitable_v<Visitor, variable_type, subexpression_types>)
+    noexcept(noexcept(std::as_const(*m_variable).visit(v, nesting)))
   {
-    v(std::as_const(*m_variable), nesting);
+    std::as_const(*m_variable).visit(v, nesting);
   }
 };
 
@@ -102,8 +102,7 @@ namespace detail {
 // A visitor is called with the variable a variable_ref refers to.
 template<typename Visitor, typename T>
 struct visits_tree<Visitor, variable_ref<T>> :
-  std::bool_constant<
-    std::is_invocable_v<Visitor&, typename variable_ref<T>::variable_type const&, std::size_t>>
+  visits_tree<Visitor, variable<std::remove_const_t<T>>>
 { };
 
 /**

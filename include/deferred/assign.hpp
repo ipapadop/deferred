@@ -88,13 +88,10 @@ struct assign_to
  * exactly as a built-in assignment would, so a later change to the right-hand side
  * does not affect the target.
  *
- * This is a node of its own rather than an @ref expression_ over an assigning operator,
- * for two independent reasons. An @ref expression_ evaluates its subexpressions as the
- * arguments of one call, which are only indeterminately sequenced, so it cannot give the
- * right-before-left ordering a built-in assignment guarantees. And it holds them in a
- * @c std::tuple, so instantiating one that holds a @ref variable reference asks whether
- * that reference is assignable -- the question this operator answers -- re-entering the
- * type while it is still incomplete. Both were reproduced on GCC and Clang.
+ * This is a node of its own rather than an @ref expression_ over an assigning operator.
+ * An @ref expression_ evaluates its subexpressions as the arguments of one call, which
+ * are only indeterminately sequenced, so it cannot give the right-before-left ordering a
+ * built-in assignment guarantees.
  *
  * @p Operation selects which assignment is performed: @ref detail::assign_to for a
  * plain assignment, or one of the compound assigning operations in @ref operators.hpp.

@@ -297,16 +297,10 @@ public:
   template<typename T>
   [[nodiscard]] constexpr auto then_(T&& then_) const& //
     noexcept(
-      std::is_nothrow_constructible_v<Condition, Condition const&>
-      && detail::append_conditional_is_nothrow<Else, Branches const&, Condition, T, Else const&>())
+      detail::
+        append_conditional_is_nothrow<Else, Branches const&, Condition const&, T, Else const&>())
   {
-    // The branch stores the deduced type of the condition argument, so the condition is
-    // passed as its stored type: a copy of an owned expression, or the same reference
-    // for a referenced one. Forwarding the member itself would deduce a reference to it.
-    return detail::append_conditional<Else>(m_branches,
-                                            Condition(m_condition),
-                                            std::forward<T>(then_),
-                                            m_else);
+    return detail::append_conditional<Else>(m_branches, m_condition, std::forward<T>(then_), m_else);
   }
 };
 

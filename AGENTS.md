@@ -13,14 +13,13 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   clause on every evaluation.
 - **`for_` is a flat node**: `for_expression` holds its four clauses directly and runs the loop itself. It was
   briefly a `seq`+`while_` composition; that cost extra moves per construction and leaked those nodes into every
-  visitor, for no reuse worth having. `for_builder::do_` must keep *naming* the node rather than deducing it, or
-  the builder's members get deduced as references into a builder that does not outlive the call —
-  `test/unit/for.cpp`'s "a loop outlives the builder" catches that only under ASan.
+  visitor, for no reuse worth having. `test/unit/for.cpp`'s "a loop outlives the builder" needs ASan to catch a
+  loop that refers into its builder.
 - **Assignment**: `variable::operator=` is overloaded on the right-hand side. A *value* is stored immediately; a
   *deferred expression* returns an `assign_expression` that assigns when evaluated, which is what makes
   `for_(i = constant(0), i < 10, ++i)` work without a lambda. `i = j` between variables therefore assigns by
   value, re-reading the right-hand side on every evaluation. The deferred form is `[[nodiscard]]` and
-  `&`-qualified, and its return type is spelled out rather than deduced.
+  `&`-qualified.
 - **An immediate assignment is not an expression**: `v = value` returns `detail::immediate_assignment`, an empty
   tag, not `variable&`. Returning the variable let `if_(c).then_(i = 0)`, `seq(flag = true, ...)` and
   `for_(i = 0, ...)` compile as expressions that only read the variable, after the assignment had already
@@ -157,7 +156,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
 - **`assign_expression`, `logical_expression` and `seq_expression` cannot be `expression_`s**: `expression_`
   evaluates its subexpressions as the arguments of one call, so it can express neither ordering nor conditional
   evaluation. `assign.hpp` gives the full reason. Do not "simplify" any of them back into an `expression_` over a
-  function object — it was tried, and it does not compile on GCC or Clang.
+  function object.
 - **Visitor order**: children are visited in `subexpression_types` order, which is the source order of the
   construct, not its evaluation order.
 - **Switch expressions**: Existing switch expressions can be expanded with `case_(label).then_(body)`, which adds the
