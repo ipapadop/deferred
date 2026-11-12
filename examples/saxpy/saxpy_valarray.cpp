@@ -57,7 +57,7 @@ int main()
   auto dx = constant(x);
   auto dy = constant(y);
 
-  // this is fine
+  // Part of the expression can be evaluated on its own.
   auto partial_dres = da * dx;
 
   std::valarray<float> partial_eval_res = partial_dres();
@@ -67,7 +67,7 @@ int main()
             std::ostream_iterator<float>(std::cout, " "));
   std::cout << "\n\n";
 
-  // FIXME this is not
+  // An expression nests in another one.
   auto dres = partial_dres + dy;
 
   dres.visit(print_visitor{});

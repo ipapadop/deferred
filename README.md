@@ -351,6 +351,30 @@ int result = from_tuple();  // 3
 Everything ``invoke`` supports carries over, including member pointers and the
 storage rules described above.
 
+Lazily evaluated operand types
+------------------------------
+
+Some types evaluate their own operators lazily: arithmetic on ``std::valarray``
+may return a proxy that refers to its operands. Store such operands in a
+``constant`` or a ``variable``, and expressions over them nest freely:
+
+```C++
+auto a = deferred::constant(2.0f);
+auto x = deferred::constant(std::valarray<float>(0.5f, 100));
+auto y = deferred::variable(std::valarray<float>(1.0f, 100));
+
+auto saxpy = a * x + y;
+std::valarray<float> result = saxpy();
+```
+
+An operand that is a temporary is not safe. It is destroyed when the operator
+that used it returns, while the proxy still refers to it:
+
+```C++
+auto made = deferred::invoke([] { return std::valarray<float>(0.5f, 100); });
+auto bad  = made * a;   // the result of bad() refers to a destroyed valarray
+```
+
 Short-circuiting
 ----------------
 
