@@ -383,3 +383,53 @@ TEST_CASE("visiting through std::ref is checked against the node referred to", "
   REQUIRE(visitor.seen.size() == 1);
   CHECK(visitor.seen[0] == &wrapped);
 }
+
+namespace {
+
+/// @brief An empty callable whose operator() is not const.
+struct non_const_generator
+{
+  int operator()() noexcept
+  {
+    return 4;
+  }
+};
+
+} // namespace
+
+TEST_CASE("an empty callable owns no state whatever its operator() is qualified with",
+          "[owns-state]")
+{
+  auto generator = deferred::invoke(non_const_generator{});
+  static_assert(!owns_state_v<decltype(generator)>);
+
+  // An expression that stores it can still be asked, and can be named as an operand.
+  int offset   = 1;
+  auto shifted = deferred::invoke([offset](int x) { return x + offset; }, generator);
+  static_assert(!owns_state_v<decltype(shifted)>);
+
+  auto sum = shifted + deferred::constant(1);
+  CHECK(sum() == 6);
+}
+
+TEST_CASE("invoke stores a node as any other operand", "[expression]")
+{
+  auto v    = deferred::variable(1);
+  auto c    = deferred::constant(2);
+  auto next = deferred::invoke([count = 0]() mutable { return ++count; });
+
+  // A variable is referred to, a constant is copied, std::ref refers to any node.
+  static_assert(std::is_same_v<decltype(deferred::invoke(v)), deferred::variable_ref<int>>);
+  static_assert(std::is_same_v<decltype(deferred::invoke(c)), deferred::constant<int>>);
+  static_assert(
+    std::is_same_v<decltype(deferred::invoke(std::ref(next))), deferred::node_ref<decltype(next)>>);
+
+  auto shared = deferred::invoke(std::ref(next));
+  CHECK(shared() == 1);
+  CHECK(next() == 2);
+
+  address_visitor visitor;
+  shared.visit(visitor);
+  REQUIRE(visitor.seen.size() == 1);
+  CHECK(visitor.seen[0] == &next);
+}

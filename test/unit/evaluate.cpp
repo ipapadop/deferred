@@ -275,4 +275,8 @@ TEST_CASE("evaluate_for_node evaluates everything else as recursive_evaluate doe
 
   static_assert(noexcept(deferred::detail::evaluate_for_node(deferred::constant(1))));
   static_assert(!noexcept(deferred::detail::evaluate_for_node(throwing_node{})));
+
+  // A reference result is not copied, so a throwing copy or move does not matter.
+  auto v = deferred::variable<throwing_move>();
+  static_assert(noexcept(deferred::detail::evaluate_for_node(v)));
 }

@@ -203,11 +203,11 @@ inline constexpr bool callable_needs_mutable = false;
 
 template<typename Operator, typename... Expressions>
 inline constexpr bool callable_needs_mutable<expression_<Operator, Expressions...>> =
-  !std::is_invocable_v<Operator const&, decltype(std::declval<Expressions const&>()())...>;
+  !std::is_invocable_v<Operator const&, decltype(std::declval<Expressions&>()())...>;
 
-// A callable with no members has no state to change, and asking is costly: it
-// instantiates the const evaluation of every subexpression. Every operator object of
-// the library is empty.
+// A callable with no members has no state to change, whatever its operator() is
+// qualified with. Every operator object of the library is empty, so this also spares
+// most expressions the question.
 template<typename Operator, typename... Expressions>
   requires std::is_empty_v<Operator>
 inline constexpr bool callable_needs_mutable<expression_<Operator, Expressions...>> = false;
@@ -243,8 +243,8 @@ consteval bool owns_state()
   }
   else
   {
-    // Asked last: it evaluates the subexpressions as const, which is only known to be
-    // possible once none of them owns state.
+    // Asked last, and with the subexpressions evaluated as they are stored rather than
+    // as const: a subexpression may be callable only as non-const without owning state.
     return callable_needs_mutable<Node>;
   }
 }

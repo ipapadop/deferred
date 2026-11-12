@@ -206,7 +206,8 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   taking the address of an expression.
 - **`for_` accepts a bare variable as a clause**: it has no effect, so `for_(i, i < n, ++i)` resumes from the
   current `i`. `for_` once rejected it with its own `static_assert`, to catch `for_(i = 0, ...)`; the
-  `immediate_assignment` tag now catches that everywhere, and `detail::is_variable` is gone.
+  `immediate_assignment` tag now catches that everywhere. (`detail::is_variable` exists again, in
+  `node_ref.hpp`, for a different purpose: choosing a `node_ref` for a variable operand.)
 - **`seq`**: `seq(a, b, ...)` evaluates left to right and yields the last, like the comma operator. It is how a
   loop body, branch or `for_` clause does more than one thing without a lambda.
 - **`assign_expression`, `logical_expression` and `seq_expression` cannot be `expression_`s**: `expression_`
