@@ -5,9 +5,12 @@
 
 #include <cstddef>
 #include <functional>
+#include <optional>
+#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "deferred/deferred.hpp"
 
@@ -31,8 +34,7 @@ TEST_CASE("make_deferred_t refers to a named variable through a variable_ref", "
   using V = deferred::variable<int>;
 
   static_assert(std::is_same_v<deferred::make_deferred_t<V&>, deferred::variable_ref<int>>);
-  static_assert(
-    std::is_same_v<deferred::make_deferred_t<V const&>, deferred::variable_ref<int const>>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<V const&>, deferred::variable_cref<int>>);
 
   // A temporary variable is not referred to. It cannot be stored either, since a
   // variable is not movable, so an expression over one does not compile.
@@ -70,10 +72,7 @@ TEST_CASE("make_deferred_t wraps a value in a constant", "[expression]")
 
 TEST_CASE("expression exposes its operator and subexpressions", "[expression]")
 {
-  auto ex = deferred::expression_<std::plus<>, deferred::constant<int>, deferred::constant<int>>(
-    std::plus<>{},
-    deferred::constant<int>(1),
-    deferred::constant<int>(2));
+  auto ex = deferred::constant(1) + deferred::constant(2);
 
   static_assert(std::is_same_v<decltype(ex)::operator_type, std::plus<>>);
   // Only the visited children are subexpressions; the operator is not one of them.
@@ -87,10 +86,7 @@ TEST_CASE("expression exposes its operator and subexpressions", "[expression]")
 TEST_CASE("expression evaluates its subexpressions on every evaluation", "[expression]")
 {
   auto v  = deferred::variable(1);
-  auto ex = deferred::expression_<std::plus<>, deferred::variable<int>&, deferred::constant<int>>(
-    std::plus<>{},
-    v,
-    deferred::constant<int>(10));
+  auto ex = v + deferred::constant(10);
 
   CHECK(ex() == 11);
   v = 5;
@@ -193,4 +189,66 @@ TEST_CASE("every node exposes its subexpressions", "[expression]")
   CHECK(std::get<1>(branch.subexpressions())() == 2);
   auto const& first_case = std::get<2>(full_sw.subexpressions());
   CHECK(std::get<0>(first_case.subexpressions())() == 1);
+}
+
+TEST_CASE("a temporary expression yields a value where a stored one yields a reference",
+          "[expression-temporary]")
+{
+  auto table =
+    deferred::constant(std::vector<std::string>{std::string(40, 'a'), std::string(40, 'b')});
+  auto index = deferred::variable(std::size_t{1});
+
+  // A stored expression owns a copy of the table and may refer into it.
+  auto stored = deferred::subscript(table, index);
+  static_assert(std::is_same_v<decltype(stored()), std::string const&>);
+  static_assert(std::is_same_v<decltype(stored.eval()), std::string const&>);
+  CHECK(stored() == std::string(40, 'b'));
+
+  // A temporary one is destroyed at the end of the statement, with its copy.
+  static_assert(std::is_same_v<decltype(deferred::subscript(table, index)()), std::string>);
+  static_assert(std::is_same_v<decltype(deferred::subscript(table, index).eval()), std::string>);
+  static_assert(std::is_same_v<decltype(std::move(stored)()), std::string>);
+
+  // The reference is to a value that lives as long as it does; ASan checks that.
+  auto const& element = deferred::subscript(table, index)();
+  CHECK(element == std::string(40, 'b'));
+
+  auto const& named = deferred::subscript(table, index).eval();
+  CHECK(named == std::string(40, 'b'));
+}
+
+TEST_CASE("a temporary expression still yields a reference into a variable",
+          "[expression-temporary]")
+{
+  auto values = deferred::variable(std::vector<int>{1, 2, 3});
+  auto index  = deferred::variable(std::size_t{1});
+  auto count  = deferred::variable(0);
+
+  // The variable outlives the expression, so the reference is valid.
+  static_assert(std::is_same_v<decltype(deferred::subscript(values, index)()), int&>);
+  static_assert(std::is_same_v<decltype((++count)()), int&>);
+  static_assert(std::is_same_v<decltype((count += deferred::constant(1))()), int&>);
+
+  deferred::subscript(values, index)() = 20;
+  CHECK(values()[1] == 20);
+
+  int& incremented = (++count)();
+  CHECK(&incremented == &count());
+  CHECK(count() == 1);
+}
+
+TEST_CASE("a temporary expression over temporaries yields a value", "[expression-temporary]")
+{
+  auto index = deferred::variable(std::size_t{0});
+
+  static_assert(
+    std::is_same_v<decltype(deferred::subscript(deferred::constant(std::vector<int>{4, 5}), index)()),
+                   int>);
+  CHECK(deferred::subscript(deferred::constant(std::vector<int>{4, 5}), index)() == 4);
+
+  // Nested temporaries are evaluated as temporaries all the way down.
+  auto text = deferred::constant(std::optional<std::string>(std::string(40, 'x')));
+  static_assert(std::is_same_v<decltype((*text)()), std::string>);
+  auto const& value = (*text)();
+  CHECK(value == std::string(40, 'x'));
 }

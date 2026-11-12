@@ -178,13 +178,30 @@ int result = ex();            // 15
 - A named variable is **referred to**: the expression stores a
   ``deferred::variable_ref``, which is a pointer to the variable, so it sees
   every later change. The variable must outlive the expression. A copy of the
-  expression refers to the same variable.
+  expression refers to the same variable. A variable that is ``const`` where it
+  is used is stored as a ``deferred::variable_cref``, which can only read it.
 
 So the type of ``v * factor`` above is
 ``expression_<std::multiplies<>, variable_ref<int>, constant<int>>``; no
 expression type contains a reference.
 
-Three consequences:
+An expression may yield a reference into an operand it owns, such as an element
+of a table held in a constant. That reference is valid for as long as the
+expression is. A temporary expression is destroyed at the end of the statement,
+so evaluating one yields a value instead:
+
+```C++
+auto table = deferred::constant(std::vector<std::string>{"a", "b"});
+auto index = deferred::variable(std::size_t{1});
+
+auto element = deferred::subscript(table, index);
+std::string const& stored = element();                               // refers into element
+std::string const& copied = deferred::subscript(table, index)();     // a value, kept alive by the reference
+```
+
+A reference into a variable is unaffected: ``int& r = (++i)();`` refers to ``i``.
+
+Some consequences of owning operands:
 
 - A variable declared in a function cannot be used by an expression that the
   function returns. Declare it in the caller and pass it by reference.
@@ -585,8 +602,8 @@ auto sum = i + deferred::constant(2);
 auto const& [left, right] = sum.subexpressions();   // left is a variable_ref to i
 ```
 
-A named variable appears among the subexpressions as the ``variable_ref`` that
-refers to it. A visitor is called with the variable itself.
+A named variable appears among the subexpressions as the ``variable_ref`` or
+``variable_cref`` that refers to it. A visitor is called with the variable itself.
 
 ``deferred::type_name<T>()`` returns a readable name for a type, which helps
 when printing an expression tree.

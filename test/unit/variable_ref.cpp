@@ -22,7 +22,7 @@ namespace {
 
 using V   = deferred::variable<int>;
 using R   = deferred::variable_ref<int>;
-using CR  = deferred::variable_ref<int const>;
+using CR  = deferred::variable_cref<int>;
 using Sum = deferred::expression_<std::plus<>, R, deferred::constant<int>>;
 
 /// @brief Records the address of every variable it is called with.
@@ -63,9 +63,15 @@ TEST_CASE("a variable_ref is a leaf node with mutable state", "[variable-ref]")
   static_assert(R::mutable_state);
   static_assert(!deferred::is_constant_expression_v<R>);
 
-  static_assert(std::is_same_v<CR::value_type, int const>);
+  static_assert(deferred::deferred_expression<CR>);
+  static_assert(std::is_same_v<CR::value_type, int>);
   static_assert(std::is_same_v<CR::variable_type, V const>);
+  static_assert(std::is_same_v<CR::subexpression_types, std::tuple<>>);
+  static_assert(CR::mutable_state);
   static_assert(!deferred::is_constant_expression_v<CR>);
+  static_assert(sizeof(CR) == sizeof(void*));
+  static_assert(std::is_trivially_copy_constructible_v<CR>);
+  static_assert(!std::is_copy_assignable_v<CR>);
 
   // It is a pointer, and copying it is trivial.
   static_assert(sizeof(R) == sizeof(void*));
@@ -89,7 +95,9 @@ TEST_CASE("a variable_ref is built from a named variable only", "[variable-ref]"
 
   // Never by accident.
   static_assert(!std::is_convertible_v<V&, R>);
+  static_assert(!std::is_convertible_v<V const&, CR>);
   static_assert(!std::is_default_constructible_v<R>);
+  static_assert(!std::is_default_constructible_v<CR>);
 }
 
 TEST_CASE("a variable_ref reads and writes the variable it refers to", "[variable-ref]")
@@ -116,13 +124,49 @@ TEST_CASE("a variable_ref reads and writes the variable it refers to", "[variabl
   CHECK(v.get() == 4);
 }
 
-TEST_CASE("a variable_ref to a const variable is read-only", "[variable-ref]")
+TEST_CASE("a variable_cref reads a const variable and cannot write it", "[variable-ref]")
 {
   V const v{4};
   CR r{v};
 
   static_assert(std::is_same_v<decltype(r()), int const&>);
+  static_assert(std::is_same_v<decltype(r.get()), int const&>);
+  static_assert(noexcept(r()));
   CHECK(&r() == &v());
+  CHECK(r.get() == 4);
+
+  // It reads a variable that is const only where the expression is built, and sees
+  // writes made through the variable itself.
+  V w{5};
+  CR view{std::as_const(w)};
+  w = 6;
+  CHECK(view() == 6);
+}
+
+TEST_CASE("a variable of a const type is referred to by a variable_ref", "[variable-ref]")
+{
+  using KV = deferred::variable<int const>;
+  using KR = deferred::variable_ref<int const>;
+
+  KV k{5};
+
+  // The type of the value is const, which is distinct from the variable being const.
+  static_assert(std::is_same_v<KR::variable_type, KV>);
+  static_assert(std::is_constructible_v<KR, KV&>);
+  static_assert(!std::is_constructible_v<KR, V&>);
+  static_assert(!std::is_constructible_v<KR, V const&>);
+  static_assert(std::is_same_v<decltype(KR{k}()), int const&>);
+  static_assert(
+    std::is_same_v<deferred::make_deferred_t<KV const&>, deferred::variable_cref<int const>>);
+
+  auto sum = k + deferred::constant(1);
+  static_assert(
+    std::is_same_v<decltype(sum), deferred::expression_<std::plus<>, KR, deferred::constant<int>>>);
+  CHECK(sum() == 6);
+
+  variable_address_visitor visitor;
+  sum.visit(visitor);
+  CHECK(visitor.seen == &k);
 }
 
 TEST_CASE("copies of a variable_ref refer to the same variable", "[variable-ref]")
@@ -183,6 +227,13 @@ TEST_CASE("a visitor is called with the variable, not the variable_ref", "[varia
   static_assert(!deferred::expression_visitor<variable_only_visitor, Sum>);
   static_assert(noexcept(r.visit(variable_only_visitor{})));
   static_assert(!noexcept(r.visit(visitor)));
+
+  V const cv{2};
+  CR cr{cv};
+  variable_address_visitor const_visitor;
+  cr.visit(const_visitor);
+  CHECK(const_visitor.seen == &cv);
+  static_assert(deferred::expression_visitor<variable_only_visitor, CR>);
 
   auto sum = v + deferred::constant(1);
   variable_address_visitor tree_visitor;

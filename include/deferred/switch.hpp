@@ -11,6 +11,7 @@
 
 #include "concepts.hpp"
 #include "detail/expression_reference.hpp"
+#include "detail/forwarded_pair.hpp"
 #include "detail/homogenized_type.hpp"
 #include "detail/is_nothrow_evaluable.hpp"
 #include "detail/is_nothrow_visitable.hpp"
@@ -148,6 +149,23 @@ public:
     std::is_nothrow_constructible_v<LabelExpression, LabelEx&&>
     && std::is_nothrow_constructible_v<BodyExpression, BodyEx&&>) :
     m_label(std::forward<LabelEx>(label)), m_body(std::forward<BodyEx>(body))
+  { }
+
+  /**
+   * @brief Constructs a case_expression in place from the arguments of its expressions.
+   *
+   * The arguments arrive as one @ref detail::forwarded_pair , so that a @c std::tuple of
+   * cases can construct this one directly, without a temporary case to move from.
+   *
+   * @tparam LabelEx Type of the label argument.
+   * @tparam BodyEx Type of the body argument.
+   * @param parts The label and body arguments.
+   */
+  template<typename LabelEx, typename BodyEx>
+  constexpr explicit case_expression(detail::forwarded_pair<LabelEx, BodyEx> parts) noexcept(
+    std::is_nothrow_constructible_v<LabelExpression, LabelEx&&>
+    && std::is_nothrow_constructible_v<BodyExpression, BodyEx&&>) :
+    m_label(std::forward<LabelEx>(parts.first)), m_body(std::forward<BodyEx>(parts.second))
   { }
 
   /// @brief Compares @p T with the label expression.
@@ -375,13 +393,12 @@ private:
   {
     using case_type = case_expression<LabelExpression, make_deferred_t<Body>>;
     using result = switch_expression<ConditionExpression, DefaultExpression, Cases..., case_type>;
-    return std::is_nothrow_constructible_v<case_type, Label, Body&&>
-           && std::is_nothrow_constructible_v<result,
-                                              Condition,
-                                              Default,
-                                              Cs,
-                                              case_type&&,
-                                              std::index_sequence_for<Cases...>>;
+    return std::is_nothrow_constructible_v<result,
+                                           Condition,
+                                           Default,
+                                           Cs,
+                                           detail::forwarded_pair<Label, Body>&&,
+                                           std::index_sequence_for<Cases...>>;
   }
 
 public:
@@ -401,12 +418,13 @@ public:
   {
     using case_type = case_expression<LabelExpression, make_deferred_t<BodyExpression>>;
     using result = switch_expression<ConditionExpression, DefaultExpression, Cases..., case_type>;
-    return result(
-      std::forward<ConditionExpression>(m_condition),
-      std::forward<DefaultExpression>(m_default),
-      std::move(m_cases),
-      case_type(std::forward<LabelExpression>(m_label), std::forward<BodyExpression>(body)),
-      std::index_sequence_for<Cases...>{});
+    return result(std::forward<ConditionExpression>(m_condition),
+                  std::forward<DefaultExpression>(m_default),
+                  std::move(m_cases),
+                  detail::forwarded_pair<LabelExpression, BodyExpression>{
+                    std::forward<LabelExpression>(m_label),
+                    std::forward<BodyExpression>(body)},
+                  std::index_sequence_for<Cases...>{});
   }
 
   /// @copydoc then_
@@ -423,7 +441,9 @@ public:
     return result(m_condition,
                   m_default,
                   m_cases,
-                  case_type(m_label, std::forward<BodyExpression>(body)),
+                  detail::forwarded_pair<LabelExpression const&, BodyExpression>{
+                    m_label,
+                    std::forward<BodyExpression>(body)},
                   std::index_sequence_for<Cases...>{});
   }
 };
@@ -535,8 +555,7 @@ private:
   {
     using default_type = default_expression<make_deferred_t<DefaultEx>>;
     using result       = switch_expression<ConditionExpression, default_type, CaseExpression...>;
-    return std::is_nothrow_constructible_v<default_type, DefaultEx&&>
-           && std::is_nothrow_constructible_v<result, Condition, default_type&&, Cs>;
+    return std::is_nothrow_constructible_v<result, Condition, DefaultEx&&, Cs>;
   }
 
 public:
@@ -594,7 +613,7 @@ public:
     using default_type = default_expression<make_deferred_t<DefaultEx>>;
     return switch_expression<ConditionExpression, default_type, CaseExpression...>(
       std::forward<ConditionExpression>(m_condition),
-      default_type(std::forward<DefaultEx>(df)),
+      std::forward<DefaultEx>(df),
       std::move(m_cases));
   }
 
@@ -607,7 +626,7 @@ public:
     using default_type = default_expression<make_deferred_t<DefaultEx>>;
     return switch_expression<ConditionExpression, default_type, CaseExpression...>(
       m_condition,
-      default_type(std::forward<DefaultEx>(df)),
+      std::forward<DefaultEx>(df),
       m_cases);
   }
 
@@ -737,11 +756,8 @@ class switch_builder
   template<typename Condition, typename DefaultEx>
   static consteval bool default_is_nothrow()
   {
-    return std::is_nothrow_constructible_v<default_type<DefaultEx>, DefaultEx&&>
-           && std::is_nothrow_constructible_v<finalized_type<DefaultEx>,
-                                              Condition,
-                                              default_type<DefaultEx>&&,
-                                              std::tuple<>&&>;
+    return std::
+      is_nothrow_constructible_v<finalized_type<DefaultEx>, Condition, DefaultEx&&, std::tuple<>&&>;
   }
 
 public:
@@ -803,7 +819,7 @@ public:
     noexcept(default_is_nothrow<ConditionExpression&&, DefaultEx>())
   {
     return finalized_type<DefaultEx>(std::forward<ConditionExpression>(m_condition),
-                                     default_type<DefaultEx>(std::forward<DefaultEx>(df)),
+                                     std::forward<DefaultEx>(df),
                                      std::tuple<>{});
   }
 
@@ -812,9 +828,7 @@ public:
   [[nodiscard]] constexpr auto default_(DefaultEx&& df) const& //
     noexcept(default_is_nothrow<ConditionExpression const&, DefaultEx>())
   {
-    return finalized_type<DefaultEx>(m_condition,
-                                     default_type<DefaultEx>(std::forward<DefaultEx>(df)),
-                                     std::tuple<>{});
+    return finalized_type<DefaultEx>(m_condition, std::forward<DefaultEx>(df), std::tuple<>{});
   }
 };
 

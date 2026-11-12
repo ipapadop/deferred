@@ -11,8 +11,7 @@ namespace deferred::detail {
 /**
  * @brief Returns a tuple of lvalue references to the elements of @p t.
  *
- * An element held by value is referred to as @c const, as @p t is; an element that is
- * itself a reference keeps the type it has.
+ * Each element is referred to as @c const, as @p t is.
  *
  * @tparam Tuple Type of the tuple.
  * @param t Tuple whose elements are referred to.

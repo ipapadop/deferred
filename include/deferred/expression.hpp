@@ -69,16 +69,32 @@ public:
    * @return The result of the operator.
    */
   constexpr decltype(auto)
-  operator()() const noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
+  operator()() const& noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
     return detail::apply_evaluated(m_op, m_expressions);
   }
 
-  /// @copydoc operator()() const
+  /// @copydoc operator()() const&
   constexpr decltype(auto)
-  operator()() noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
+  operator()() & noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
     return detail::apply_evaluated(m_op, m_expressions);
+  }
+
+  /**
+   * @brief Evaluates a temporary expression.
+   *
+   * The subexpressions are evaluated as temporaries too. One that owns its value then
+   * yields the value rather than a reference to it, so the result cannot refer into
+   * this expression, which is about to be destroyed. A @ref variable_ref still yields
+   * a reference, because the variable it refers to outlives the expression.
+   *
+   * @return The result of the operator.
+   */
+  constexpr decltype(auto)
+  operator()() && noexcept(noexcept(detail::apply_evaluated(m_op, std::move(m_expressions))))
+  {
+    return detail::apply_evaluated(m_op, std::move(m_expressions));
   }
 
   /**
@@ -88,15 +104,21 @@ public:
    *
    * @return The result of calling the expression.
    */
-  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  constexpr decltype(auto) eval() const& noexcept(noexcept((*this)()))
   {
     return (*this)();
   }
 
-  /// @copydoc expression_::eval() const
-  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  /// @copydoc expression_::eval() const&
+  constexpr decltype(auto) eval() & noexcept(noexcept((*this)()))
   {
     return (*this)();
+  }
+
+  /// @copydoc expression_::eval() const&
+  constexpr decltype(auto) eval() && noexcept(noexcept(std::move(*this)()))
+  {
+    return std::move(*this)();
   }
 
   /// @brief Returns the operator.

@@ -53,7 +53,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   pointer, and a decayed value otherwise. So `++i` yields `int&` like `i += 1`, `*(p + 1)` yields a reference,
   and `*invoke(make_unique)` yields a copy. Returning `decltype(auto)` from these function objects reintroduces
   a dangling reference that only ASan catches.
-- **`[[nodiscard]]` on evaluation**: only `constant`, `variable` and `variable_ref` have it on `operator()`. Every other node
+- **`[[nodiscard]]` on evaluation**: only `constant`, `variable`, `variable_ref` and `variable_cref` have it on `operator()`. Every other node
   may be evaluated for effect, so neither its `operator()` nor `evaluate()`, `evaluate_ref()` and
   `recursive_evaluate()` are `[[nodiscard]]`. Constructing a `constant` or a `variable`, the free factories such
   as `invoke()` and `seq()`, and builder methods all are.
@@ -98,13 +98,21 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   so it cannot be passed to `invoke()` or stored in a node.
 - **A node stores every operand by value** (#26). `make_deferred_t` never yields a reference: a named
   constant or expression is copied into the node, a temporary is moved in, and a named variable becomes a
-  `variable_ref<T>` — `variable_ref<T const>` for a const variable — which is a pointer to it. So an
+  `variable_ref<T>` — a `variable_cref<T>` for a const variable — which is a pointer to it. So an
   expression can be copied, returned and kept in a container; only its variables must outlive it. They used
   to be held as `X&`, and `auto c2 = c * 2; return c2;` dangled.
-  - `variable_ref` (`variable_ref.hpp`) forward-declares `variable`, so `expression.hpp` can include it.
-    `detail::variable_ref_for` maps an operand type to it and is what `deduce_deferred_type` asks first.
+  - `variable_ref` and `variable_cref` (`variable_ref.hpp`) forward-declare `variable`, so `expression.hpp`
+    can include them. `detail::variable_ref_for` maps an operand type to one of them and is what
+    `deduce_deferred_type` asks first. They are two types, not `variable_ref<T const>`, because
+    `variable<T const>` is a distinct, valid variable and needs `variable_ref<T const>` for itself.
   - A visitor is called with the *variable*, not the `variable_ref`; `detail::visits_tree` is specialized
     to match. `subexpressions()` does hand back the `variable_ref`.
+  - **A temporary `expression_` evaluates its operands as temporaries** (`operator()() &&`, and `eval()`
+    likewise). An owned `constant` then yields its value, not a reference, and `operand_result_t` returns
+    a copy; a `variable_ref` still yields a reference. Without this,
+    `auto const& s = subscript(table, i)();` over a named constant refers into the temporary node's copy.
+    Only `expression_` needs it: every other node returns through `evaluate()`, which decays, or yields
+    the target of an assignment.
   - A temporary variable still cannot enter an expression: `make_deferred_t<variable<T>>` is `variable<T>`,
     which is not movable. An operand that cannot be copied must be moved in. Both fail inside
     `std::tuple`'s constructor, as a hard error, so neither can be pinned by a test.
@@ -125,19 +133,27 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `if_(c).then_([&] { return dx + dy; })`, yields a proxy into copies that die with it. libstdc++ has held
   nested proxies by value since GCC 9, which is what fixed #2. `test/integration/operators.cpp` pins the safe
   case.
-- **Named access**: `constant`, `variable` and `variable_ref` have `get()`, a named spelling of `operator()` with the same
+- **Named access**: `constant`, `variable`, `variable_ref` and `variable_cref` have `get()`, a named spelling of `operator()` with the same
   cv/ref-qualified overloads, return types and `noexcept`. It delegates to `operator()`, so the two cannot
   drift apart. No other node has it: `get()` reads a stored value, and the call evaluates an expression.
 - **Named evaluation**: every other node — `expression_`, `assign_expression`, `logical_expression`,
   `seq_expression`, `conditional_expression`, `switch_expression` with its `case_expression` and
   `default_expression`, and the three loops — has `eval()`, a named spelling of `operator()`. Each class defines
   a const and a non-const overload that return `(*this)()`, so result type and `noexcept` are the operator's. A
-  new node must define both. `eval()` is not `[[nodiscard]]`, for the same reason the operator is not.
-  `constant`, `variable`, `variable_ref` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
+  new node must define both. `expression_` also has an rvalue overload of each. `eval()` is not
+  `[[nodiscard]]`, for the same reason the operator is not. `constant`, `variable`, `variable_ref`,
+  `variable_cref` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
 - **Node interface**: every node has `subexpression_types` and `subexpressions()`, which returns a tuple of
   references in the same order; a named variable appears there as its `variable_ref`. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
   `operator_type` / `operator_()`, and `is_constant_expression` checks it through `operator_type`. Nodes whose
   result does not depend on constness name it `result_type`.
+- **Builders construct the last operand in place**: `then_`, `else_` and `default_` forward their argument
+  into the node rather than building a branch, case or default and moving it in. `conditional_branch` and
+  `case_expression` take a `detail::forwarded_pair` for that, since a `std::tuple` element is constructed
+  from one argument. Do not replace it with a `std::tuple` of references: that was the first version, and
+  GCC 15 at `-O2` then ran a nested `while_`/`if_` loop 4.5x slower (31 ms against 140 ms; `-O3` and Clang
+  were unaffected). Operands are owned now, so an extra move is a move of the value, not of a reference;
+  `test/integration/ownership.cpp` pins one copy and no move.
 - **Every entry point returns a builder**: `if_`, `switch_`, `while_`, `do_` and `for_` return a type with no
   `operator()` that is not a `deferred_expression`. `switch_builder` accepts `case_` and `default_` only.
 - **Both chains are extendable**: `case_` may follow `default_`, and `else_if_` may follow `else_`; the new

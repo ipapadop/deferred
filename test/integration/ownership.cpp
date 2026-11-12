@@ -3,6 +3,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -131,6 +133,79 @@ TEST_CASE("a named operand is copied once for each use", "[ownership]")
   auto moved = std::move(c) + deferred::constant(counted(copies, moves, 2));
   CHECK(copies == 0);
   CHECK(moved() == 3);
+}
+
+TEST_CASE("a builder constructs the operand it is given in place", "[ownership]")
+{
+  int copies = 0;
+  int moves  = 0;
+  auto c     = deferred::constant(counted(copies, moves, 1));
+  auto flag  = deferred::constant(true);
+  auto i     = deferred::variable(0);
+
+  auto reset = [&] {
+    copies = 0;
+    moves  = 0;
+  };
+
+  // The operand handed to the last call of a chain is copied once and never moved.
+  reset();
+  auto with_then = deferred::if_(flag).then_(c);
+  CHECK(copies == 1);
+  CHECK(moves == 0);
+
+  reset();
+  auto with_else = deferred::if_(flag).then_(1).else_(c);
+  CHECK(copies == 1);
+  CHECK(moves == 0);
+
+  reset();
+  auto extended = with_then.else_(c);
+  CHECK(copies == 2);
+  CHECK(moves == 0);
+
+  reset();
+  auto with_default = deferred::switch_(i).default_(c);
+  CHECK(copies == 1);
+  CHECK(moves == 0);
+
+  reset();
+  auto with_case = deferred::switch_(i).case_(1).then_(c);
+  CHECK(copies == 1);
+  CHECK(moves == 0);
+
+  reset();
+  auto case_and_default = deferred::switch_(i).case_(1).then_(2).default_(c);
+  CHECK(copies == 1);
+  CHECK(moves == 0);
+}
+
+TEST_CASE("a reference from a temporary expression over a named constant is safe", "[ownership]")
+{
+  auto table =
+    deferred::constant(std::vector<std::string>{std::string(40, 'a'), std::string(40, 'b')});
+  auto index = deferred::variable(std::size_t{1});
+
+  // The temporary expression owns a copy of the table and dies with the statement, so
+  // it yields the element by value.
+  auto const& element = deferred::subscript(table, index)();
+  CHECK(element == std::string(40, 'b'));
+
+  auto text                = deferred::constant(std::optional<std::string>(std::string(40, 'x')));
+  std::string const& value = (*text)();
+  CHECK(value == std::string(40, 'x'));
+}
+
+TEST_CASE("a variable of a const type and a const variable are both read through", "[ownership]")
+{
+  deferred::variable<int const> fixed{5};
+  deferred::variable<int> const frozen{7};
+  deferred::variable<int> v{1};
+
+  auto sum = fixed + frozen + v;
+  CHECK(sum() == 13);
+  v = 2;
+  CHECK(sum() == 14);
 }
 
 TEST_CASE("a copy of an expression is independent except for its variables", "[ownership]")
