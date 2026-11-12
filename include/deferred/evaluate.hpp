@@ -4,6 +4,7 @@
 #ifndef DEFERRED_EVALUATE_HPP
 #define DEFERRED_EVALUATE_HPP
 
+#include <concepts>
 #include <type_traits>
 #include <utility>
 
@@ -195,6 +196,21 @@ consteval bool evaluation_result_is_nothrow()
  */
 template<typename T>
 using node_result_t = std::decay_t<decltype(recursive_evaluate(std::declval<T>()))>;
+
+/**
+ * @brief Whether @p U is callable with no arguments and evaluating it yields a @p T .
+ *
+ * A leaf node evaluates such an argument and stores the result; any other argument is
+ * stored as it is. Whether @p U is callable is asked first, so the result type of
+ * @ref recursive_evaluate is never formed for an argument that is merely a value --
+ * its return type is deduced, and forming it for an lvalue that cannot be copied is an
+ * error, not a failed requirement.
+ *
+ * @tparam U Node argument type.
+ * @tparam T Type the node stores.
+ */
+template<typename U, typename T>
+concept evaluates_to = std::invocable<U> && std::convertible_to<node_result_t<U>, T>;
 
 } // namespace detail
 

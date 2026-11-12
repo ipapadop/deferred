@@ -3,9 +3,14 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "deferred/constant.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
@@ -248,20 +253,66 @@ TEST_CASE("a variable built from a variable is independent of it", "[variable-ct
   CHECK(widened() == 3L);
 }
 
-TEST_CASE("a variable is still neither copyable nor movable", "[variable-ctad]")
+TEST_CASE("a variable is built from a non-const lvalue variable only", "[variable-ctad]")
 {
   using V = deferred::variable<int>;
 
-  // A const or temporary source selects the deleted copy or move constructor, so a
-  // temporary variable cannot be stored by value in an expression.
   static_assert(std::is_constructible_v<V, V&>);
+  // The deleted copy and move constructors are chosen for a const or temporary source;
+  // `variable(v())` is the spelling for those.
   static_assert(!std::is_constructible_v<V, V const&>);
   static_assert(!std::is_constructible_v<V, V&&>);
+}
+
+TEST_CASE("a variable is never copied or moved implicitly", "[variable-ctad]")
+{
+  using V = deferred::variable<int>;
+
   static_assert(!std::is_copy_constructible_v<V>);
   static_assert(!std::is_move_constructible_v<V>);
+  static_assert(!std::is_convertible_v<V&, V>);
 
-  // Passing the value works for any source.
-  V const fixed{5};
-  deferred::variable from_value{fixed()};
-  CHECK(from_value() == 5);
+  // Assignment between variables stays deferred, never a copy.
+  static_assert(!std::is_assignable_v<V&, V const&>);
+  static_assert(!std::is_assignable_v<V&, V&&>);
+}
+
+TEST_CASE("a variable of a move-only type is not built from a variable", "[variable-ctad]")
+{
+  using V = deferred::variable<std::unique_ptr<int>>;
+
+  // These must be false, not ill-formed.
+  static_assert(!std::is_constructible_v<V, V&>);
+  static_assert(!std::is_constructible_v<V, V const&>);
+  static_assert(!std::is_constructible_v<V, V&&>);
+
+  V v{std::make_unique<int>(5)};
+  deferred::variable moved{std::move(v)()};
+  REQUIRE(moved() != nullptr);
+  CHECK(*moved() == 5);
+  CHECK(v() == nullptr);
+}
+
+TEST_CASE("a variable with a named type is built from a braced list", "[variable-ctad]")
+{
+  deferred::variable<std::vector<int>> v({1, 2, 3});
+  CHECK(v().size() == 3);
+
+  deferred::variable<std::pair<int, int>> p({1, 2});
+  CHECK(p().second == 2);
+}
+
+TEST_CASE("a variable stores a value that is not callable without evaluating it", "[variable-ctad]")
+{
+  // A view built from an lvalue owner refers to the owner, not to a temporary copy.
+  std::vector<int> numbers{1, 2, 3};
+  deferred::variable<std::span<int const>> view{numbers};
+  CHECK(view().data() == numbers.data());
+
+  // A variable named as holding a callable stores it.
+  deferred::variable<std::function<int()>> stored{[] { return 5; }};
+  CHECK(stored()() == 5);
+
+  // An lvalue that cannot be copied is a failed requirement, not an error.
+  static_assert(!std::is_constructible_v<deferred::variable<int>, std::mutex&>);
 }

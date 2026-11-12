@@ -121,21 +121,36 @@ deferred::constant c{[] { return 1; }};   // constant<int> holding 1
 deferred::variable v{c + c};              // variable<int> holding 2
 ```
 
-So neither can hold a nullary callable such as a ``std::function<int()>``.
-
-A constant can be copied. A variable cannot be copied or moved, but it is an
-expression like any other, so a new variable can start from its value:
+A deduced constant or variable therefore never holds something it could
+evaluate. To hold a callable, name the type; an argument is evaluated only when
+its result is what the type stores:
 
 ```C++
-deferred::variable w{v};     // a new, independent variable with the current value of v
-deferred::variable x{v()};   // the same; required when v is const or a temporary
+deferred::variable<std::function<int()>> f{[] { return 1; }};   // stores the callable
+```
+
+A constant can be copied. A variable cannot be copied or moved, so that an
+expression never holds a stale copy of it. Building a variable from another one
+makes a new, independent variable; a const or temporary source passes its value:
+
+```C++
+deferred::variable w{v};                  // a new variable with the current value of v
+deferred::variable x{std::as_const(v)()}; // from a const variable: pass the value
+deferred::variable y{std::move(v)()};     // from a temporary: pass the moved value
+auto z = v;                               // error: a variable is never copied
 ```
 
 Earlier releases named the class templates ``constant_`` and ``variable_`` and
 provided ``constant()`` and ``variable()`` as factory functions. Calls such as
 ``deferred::constant(42)`` and ``deferred::variable<int>()`` compile unchanged,
-because they now construct the class. Code that named the types must drop the
-trailing underscore: ``constant_<int>`` is now ``constant<int>``.
+because they now construct the class. Two kinds of code must change:
+
+- Code that named the types drops the trailing underscore: ``constant_<int>`` is
+  now ``constant<int>``.
+- Code that passed a template argument to a factory, such as
+  ``deferred::constant<int const&>(i)``, named the *argument* type. That argument
+  is now the stored type, and a reference is rejected. Write
+  ``deferred::constant(i)``.
 
 Control flow
 ------------

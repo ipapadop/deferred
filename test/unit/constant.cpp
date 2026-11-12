@@ -3,7 +3,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <functional>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -317,4 +321,69 @@ TEST_CASE("constant from a constant is a copy", "[constant-ctad]")
   static_assert(std::is_same_v<decltype(from_const), deferred::constant<int>>);
   CHECK(copy() == 42);
   CHECK(from_const() == 42);
+}
+
+namespace {
+
+bool always_false()
+{
+  return false;
+}
+
+// Callable only as an lvalue, so its decayed type is not callable.
+struct lvalue_counter
+{
+  int n = 0;
+
+  int operator()() &
+  {
+    return ++n;
+  }
+};
+
+} // namespace
+
+TEST_CASE("a value that is not callable is stored without being evaluated or copied twice",
+          "[constant-ctad]")
+{
+  // A view built from an lvalue owner refers to the owner, not to a temporary copy.
+  std::string text(64, 'x');
+  deferred::constant<std::string_view> view{text};
+  CHECK(view().data() == text.data());
+  CHECK(view().size() == 64);
+}
+
+TEST_CASE("asking whether a constant can be built never fails to compile", "[constant-ctad]")
+{
+  // An lvalue that cannot be copied is a failed requirement, not an error.
+  static_assert(!std::is_constructible_v<deferred::constant<int>, std::mutex&>);
+
+  // A constant of a move-only type can be moved, and the question about copying it has
+  // an answer; std::tuple asks it for every expression that holds one.
+  using C = deferred::constant<std::unique_ptr<int>>;
+  static_assert(!std::is_constructible_v<C, C&>);
+  static_assert(!std::is_constructible_v<C, C const&>);
+  static_assert(std::is_constructible_v<C, C&&>);
+}
+
+TEST_CASE("a callable is evaluated only when its result is what the constant stores",
+          "[constant-ctad]")
+{
+  // A function converts to bool through its address; it is called instead.
+  static_assert(
+    std::is_same_v<decltype(deferred::constant{always_false}), deferred::constant<bool>>);
+  CHECK(deferred::constant{always_false}() == false);
+  CHECK(deferred::constant{[] { return false; }}() == false);
+  CHECK(deferred::constant<bool>{always_false}() == false);
+
+  // A constant named as holding the callable stores it.
+  deferred::constant<std::function<int()>> stored{[] { return 4; }};
+  CHECK(stored()() == 4);
+
+  // So does one whose type is the callable's own: evaluating it yields an int, which is
+  // not an lvalue_counter.
+  lvalue_counter counter;
+  deferred::constant<lvalue_counter> kept{counter};
+  CHECK(counter.n == 0);
+  CHECK(kept().n == 0);
 }

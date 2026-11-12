@@ -231,9 +231,8 @@ TEST_CASE("only a plain lvalue variable is a deferred assignment source", "[assi
   // `i = j` builds a deferred assignment.
   static_assert(std::is_assignable_v<target&, target&>);
 
-  // The other value categories are rejected. variable is deliberately non-copyable,
-  // and its user-declared move constructor makes the implicit copy assignment deleted;
-  // being a non-template, that wins overload resolution against this operator. The
+  // The other value categories are rejected. Copy and move assignment of a variable are
+  // deleted; being non-templates, they win overload resolution against this operator. The
   // rejection is the right outcome anyway: a deferred assignment reads its right-hand
   // side when it is evaluated, so the value category at build time carries no meaning.
   static_assert(!std::is_assignable_v<target&, target const&>);

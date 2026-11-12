@@ -31,25 +31,50 @@ public:
   using value_type          = T;
   using subexpression_types = std::tuple<>;
 
+  static_assert(!std::is_reference_v<T>,
+                "a constant owns its value, so T cannot be a reference; write constant(x) and "
+                "let T be deduced");
+
 private:
   DEFERRED_NO_UNIQUE_ADDRESS T m_t;
 
 public:
   /**
-   * @brief Constructs a constant from @p u.
+   * @brief Constructs a constant holding a copy of @p t.
    *
-   * If @p u is callable with no arguments, it is called and the result is stored; this
-   * repeats until the result is not callable, and applies to a @c deferred expression
-   * too. A constant therefore never holds something it could evaluate.
+   * The parameter does not take part in deducing @p T , so that a deduced
+   * <tt>constant(x)</tt> always goes through the deduction guide.
    *
-   * @tparam U Type of the value to initialize the constant with.
-   * @param u Value, or callable yielding the value, to initialize the constant with.
+   * @param t Value to store.
+   */
+  [[nodiscard]] constexpr explicit constant(std::type_identity_t<T> const& t) //
+    noexcept(std::is_nothrow_copy_constructible_v<T>) : m_t(t)
+  { }
+
+  /**
+   * @brief Constructs a constant holding @p t , moved.
+   * @param t Value to store.
+   */
+  [[nodiscard]] constexpr explicit constant(std::type_identity_t<T>&& t) //
+    noexcept(std::is_nothrow_move_constructible_v<T>) : m_t(std::move(t))
+  { }
+
+  /**
+   * @brief Constructs a constant from the result of evaluating @p u.
+   *
+   * Chosen when @p u is callable with no arguments and the result of evaluating it
+   * converts to @p T . It is called, and the result called again until it is not
+   * callable; this applies to a @c deferred expression too. An argument that is not
+   * callable, or whose result is not a @p T , is stored by the constructors above.
+   *
+   * @tparam U Type of the callable.
+   * @param u Callable yielding the value to store.
    */
   template<typename U>
-    requires std::convertible_to<decltype(recursive_evaluate(std::declval<U>())), T>
+    requires(!std::same_as<std::remove_cvref_t<U>, constant>) && detail::evaluates_to<U, T>
   [[nodiscard]] constexpr explicit constant(U&& u) noexcept(
     noexcept(recursive_evaluate(std::declval<U>()))
-    && std::is_nothrow_constructible_v<T, decltype(recursive_evaluate(std::declval<U>()))>) :
+    && std::is_nothrow_constructible_v<T, detail::node_result_t<U>>) :
     m_t(recursive_evaluate(std::forward<U>(u)))
   { }
 

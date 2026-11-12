@@ -37,6 +37,10 @@ public:
   /// @brief The stored value can change between evaluations.
   static constexpr bool mutable_state = true;
 
+  static_assert(!std::is_reference_v<T>,
+                "a variable owns its value, so T cannot be a reference; write variable(x) and "
+                "let T be deduced");
+
 private:
   DEFERRED_NO_UNIQUE_ADDRESS T m_t{};
 
@@ -44,25 +48,48 @@ public:
   variable() = default;
 
   /**
-   * @brief Constructs a variable from @p u.
+   * @brief Constructs a variable holding a copy of @p t.
    *
-   * If @p u is callable with no arguments, it is called and the result is stored; this
-   * repeats until the result is not callable, and applies to a @c deferred expression
-   * too.
+   * The parameter does not take part in deducing @p T , so that a deduced
+   * <tt>variable(x)</tt> always goes through the deduction guide.
+   *
+   * @param t Value to store.
+   */
+  constexpr explicit variable(std::type_identity_t<T> const& t) //
+    noexcept(std::is_nothrow_copy_constructible_v<T>) : m_t(t)
+  { }
+
+  /**
+   * @brief Constructs a variable holding @p t , moved.
+   * @param t Value to store.
+   */
+  constexpr explicit variable(std::type_identity_t<T>&& t) //
+    noexcept(std::is_nothrow_move_constructible_v<T>) : m_t(std::move(t))
+  { }
+
+  /**
+   * @brief Constructs a variable from the result of evaluating @p u.
+   *
+   * Chosen when @p u is callable with no arguments and the result of evaluating it
+   * converts to @p T . It is called, and the result called again until it is not
+   * callable; this applies to a @c deferred expression too. An argument that is not
+   * callable, or whose result is not a @p T , is stored by the constructors above.
    *
    * A variable is such an expression, so <tt>variable w{v};</tt> makes a new,
    * independent variable holding the current value of @c v . The source must be a
    * non-const lvalue: a const or temporary variable selects the deleted copy or move
    * constructor instead, and <tt>variable w{v()};</tt> is the spelling for those.
    *
-   * @tparam U Type of the value to initialize the variable with.
-   * @param u Value, or callable yielding the value, to initialize the variable with.
+   * @tparam U Type of the callable.
+   * @param u Callable yielding the value to store.
    */
   template<typename U>
-    requires std::convertible_to<decltype(recursive_evaluate(std::declval<U>())), T>
+    requires(!std::same_as<std::remove_cvref_t<U>, variable>
+             || (std::same_as<U, variable&> && std::copy_constructible<T>))
+            && detail::evaluates_to<U, T>
   constexpr explicit variable(U&& u) noexcept(
     noexcept(recursive_evaluate(std::declval<U>()))
-    && std::is_nothrow_constructible_v<T, decltype(recursive_evaluate(std::declval<U>()))>) :
+    && std::is_nothrow_constructible_v<T, detail::node_result_t<U>>) :
     m_t(recursive_evaluate(std::forward<U>(u)))
   { }
 
