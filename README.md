@@ -218,7 +218,10 @@ Some consequences of owning operands:
   Hold it in a ``variable`` instead -- a ``const`` one if it must not change --
   and expressions refer to it without copying.
 - An operand that cannot be copied, such as a
-  ``constant<std::unique_ptr<int>>``, must be moved in with ``std::move``.
+  ``constant<std::unique_ptr<int>>``, must be moved in with ``std::move`` or
+  referred to with ``std::ref``. Naming it is a compile error that says so.
+- A temporary variable, as in ``variable(1) + c``, is a compile error: the
+  expression would refer to it after it is destroyed.
 
 Operands that have state of their own
 -------------------------------------
@@ -245,6 +248,15 @@ it, and ``std::cref(x)`` does the same for reading only. They work with every
 operator, including ``++std::ref(x)`` and ``std::ref(x) += 1``, and with any
 node, a variable included. A variable needs neither: naming it already refers
 to it.
+
+A node of your own that is not in ``namespace deferred`` is not found by the
+operators, with or without ``std::ref``. Bring them into scope where you build
+the expression:
+
+```C++
+using namespace deferred;
+auto increment = ++std::ref(my_node);
+```
 
 Copying a whole expression, as in ``auto e2 = e;``, copies the state it owns.
 
@@ -638,7 +650,8 @@ auto const& [left, right] = sum.subexpressions();   // left is a variable_ref to
 ```
 
 A named variable appears among the subexpressions as the ``variable_ref`` or
-``variable_cref`` that refers to it. A visitor is called with the variable itself.
+``variable_cref`` that refers to it. A visitor is called with the variable itself, and with the node
+behind a ``std::ref`` or ``std::cref`` operand.
 
 ``deferred::type_name<T>()`` returns a readable name for a type, which helps
 when printing an expression tree.

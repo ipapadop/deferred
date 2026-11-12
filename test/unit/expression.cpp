@@ -36,10 +36,7 @@ TEST_CASE("make_deferred_t refers to a named variable through a variable_ref", "
   static_assert(std::is_same_v<deferred::make_deferred_t<V&>, deferred::variable_ref<int>>);
   static_assert(std::is_same_v<deferred::make_deferred_t<V const&>, deferred::variable_cref<int>>);
 
-  // A temporary variable is not referred to. It cannot be stored either, since a
-  // variable is not movable, so an expression over one does not compile.
-  static_assert(std::is_same_v<deferred::make_deferred_t<V>, V>);
-  static_assert(std::is_same_v<deferred::make_deferred_t<V&&>, V>);
+  // A temporary variable is rejected with a static_assert, which a test cannot pin.
 }
 
 TEST_CASE("make_deferred_t never yields a reference", "[expression]")
@@ -321,4 +318,68 @@ TEST_CASE("owns_state follows callables and stored nodes", "[owns-state]")
   static_assert(!owns_state_v<decltype(std::ref(next) + c)>);
   static_assert(
     !owns_state_v<decltype(deferred::make_deferred_t<decltype(std::ref(next))>{std::ref(next)})>);
+}
+
+namespace {
+
+/// @brief Records the address of every node it is called with.
+struct address_visitor
+{
+  std::vector<void const*> seen;
+
+  template<typename Node>
+  void operator()(Node const& node, std::size_t)
+  {
+    seen.push_back(&node);
+  }
+};
+
+/// @brief Accepts a variable only.
+struct int_variable_visitor
+{
+  void operator()(deferred::variable<int> const&, std::size_t) const noexcept
+  { }
+};
+
+} // namespace
+
+TEST_CASE("a visitor is called with the node a std::ref operand refers to", "[expression-visit]")
+{
+  auto v    = deferred::variable(1);
+  auto next = deferred::invoke([count = 0]() mutable { return ++count; });
+
+  auto sum = std::ref(next) + std::cref(v);
+
+  address_visitor visitor;
+  sum.visit(visitor);
+
+  // The expression itself, then the two nodes referred to; not the reference_wrappers.
+  REQUIRE(visitor.seen.size() == 3);
+  CHECK(visitor.seen[0] == &sum);
+  CHECK(visitor.seen[1] == &next);
+  CHECK(visitor.seen[2] == &v);
+}
+
+TEST_CASE("visiting through std::ref is checked against the node referred to", "[expression-visit]")
+{
+  auto v = deferred::variable(1);
+  auto referred =
+    deferred::make_deferred_t<std::reference_wrapper<deferred::variable<int>>>(std::ref(v));
+
+  static_assert(deferred::expression_visitor<int_variable_visitor, decltype(referred)>);
+  static_assert(noexcept(referred.visit(int_variable_visitor{})));
+
+  address_visitor throwing;
+  static_assert(!noexcept(referred.visit(throwing)));
+
+  // A reference_wrapper to something that is not a node is an ordinary callable.
+  int i         = 0;
+  auto function = [&i] {
+    return ++i;
+  };
+  auto wrapped = deferred::invoke(std::ref(function));
+  address_visitor visitor;
+  wrapped.visit(visitor);
+  REQUIRE(visitor.seen.size() == 1);
+  CHECK(visitor.seen[0] == &wrapped);
 }

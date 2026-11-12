@@ -4,6 +4,8 @@
 #ifndef DEFERRED_EXPRESSION_HPP
 #define DEFERRED_EXPRESSION_HPP
 
+#include <cstddef>
+#include <functional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -148,10 +150,35 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, expression_, subexpression_types>)
   {
-    v(*this, nesting);
-    detail::visit_children(m_expressions, v, nesting + 1);
+    if constexpr (sizeof...(Expressions) == 0 && detail::is_reference_to_deferred<operator_type>)
+    {
+      // std::ref(node) or std::cref(node): the visitor is shown the node referred to,
+      // as it is shown the variable behind a variable_ref.
+      m_op.get().visit(v, nesting);
+    }
+    else
+    {
+      v(*this, nesting);
+      detail::visit_children(m_expressions, v, nesting + 1);
+    }
   }
 };
+
+namespace detail {
+
+// A visitor is called with the node a std::reference_wrapper operand refers to.
+template<typename Visitor, deferred_expression Node>
+struct visits_tree<Visitor, expression_<std::reference_wrapper<Node>>> :
+  visits_tree<Visitor, std::remove_const_t<Node>>
+{ };
+
+template<typename Visitor, deferred_expression Node>
+struct is_nothrow_visitable<Visitor, expression_<std::reference_wrapper<Node>>, std::tuple<>> :
+  std::bool_constant<noexcept(
+    std::declval<Node const&>().visit(std::declval<Visitor&>(), std::size_t{}))>
+{ };
+
+} // namespace detail
 
 namespace detail {
 
@@ -236,10 +263,23 @@ consteval auto deduce_deferred_type()
   {
     return variable_ref_for<T>{};
   }
+  else if constexpr (requires { typename variable_ref_for<U&>::type; })
+  {
+    // The condition is spelled with T so that it is checked only when this branch is
+    // taken.
+    static_assert(std::is_lvalue_reference_v<T>,
+                  "a temporary variable cannot be used in an expression, which would refer "
+                  "to it after it is destroyed: give the variable a name");
+    return std::type_identity<U>{};
+  }
   else if constexpr (deferred_expression<T>)
   {
     if constexpr (std::is_lvalue_reference_v<T>)
     {
+      static_assert(owns_state<U>() || std::is_copy_constructible_v<U>,
+                    "this operand cannot be copied into the expression: write std::move(x) "
+                    "to give x to the expression, or std::ref(x) for the expression to "
+                    "refer to x");
       static_assert(!owns_state<U>(),
                     "this operand has state of its own, and an expression would take a copy "
                     "of it: write std::ref(x) for the expression to refer to x, or "

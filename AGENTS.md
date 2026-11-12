@@ -118,9 +118,10 @@ This project is a C++23 header-only library for creating deferred evaluation exp
     `auto const& s = subscript(table, i)();` over a named constant refers into the temporary node's copy.
     Only `expression_` needs it: every other node returns through `evaluate()`, which decays, or yields
     the target of an assignment.
-  - A temporary variable still cannot enter an expression: `make_deferred_t<variable<T>>` is `variable<T>`,
-    which is not movable. An operand that cannot be copied must be moved in. Both fail inside
-    `std::tuple`'s constructor, as a hard error, so neither can be pinned by a test.
+  - A temporary variable cannot enter an expression, and a named operand that cannot be copied must be
+    moved in or passed with `std::ref`. Each has its own `static_assert` in `deduce_deferred_type` that
+    names the fix; they used to fail inside `std::tuple`'s constructor. They are hard errors, so no test
+    pins them; check the messages by hand.
   - A variable local to a function still cannot be used by an expression the function returns.
   - Rejected, with measurements (GCC 15 and Clang 22, `-O2`, minimum of 9 runs): making `variable` a
     handle to shared state, so that it too is owned. Linked handles with no heap, and a heap count, both
@@ -144,7 +145,8 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   - `std::ref` / `std::cref` need no node of their own: a `std::reference_wrapper` is a callable, so it is
     stored as `expression_<std::reference_wrapper<N>>`. The `deferred_operand` concept lets the unary
     operators, compound assignments, `subscript()` and `assign()` accept it, and `any_deferred` is defined
-    over it. A visitor sees that `expression_`, not the node referred to.
+    over it. A visitor is shown the node referred to: `expression_::visit` forwards to it, and
+    `detail::visits_tree` and `detail::is_nothrow_visitable` are specialized to match.
   - A user node outside `namespace deferred` is not found by the operators through ADL, with or without
     `std::ref`; such code needs `using namespace deferred`.
 - **Lazy operand types and temporaries**: an operator on `std::valarray` may return a proxy that refers to its
