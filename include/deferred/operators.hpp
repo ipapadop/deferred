@@ -7,7 +7,9 @@
 #include <functional>
 #include <utility>
 
+#include "assign.hpp"
 #include "invoke.hpp"
+#include "logical.hpp"
 #include "type_traits/is_deferred.hpp"
 
 namespace deferred {
@@ -25,12 +27,33 @@ struct unary_plus
   }
 };
 
+/**
+ * @brief Result type of an operation whose result may refer into its operand.
+ *
+ * Prefix increment, dereference and subscripting hand back a reference into, or reached
+ * through, their operand. That reference outlives the evaluation when the operand is an
+ * lvalue, or a raw pointer, which never owns what it points to. Any other operand is a
+ * temporary of the evaluation, so the result is returned by value instead.
+ *
+ * @tparam Operand Type of the operand, as deduced for a forwarding reference.
+ * @tparam Result Type the operation yields.
+ */
+template<typename Operand, typename Result>
+using operand_result_t = std::conditional_t<std::is_lvalue_reference_v<Operand>
+                                              || std::is_pointer_v<std::remove_cvref_t<Operand>>,
+                                            Result,
+                                            std::decay_t<Result>>;
+
 /** @brief Implements deferred prefix increment. */
 struct pre_increment
 {
   /// @brief Prefix-increments @p value.
   template<typename T>
-  constexpr auto operator()(T&& value) const noexcept(noexcept(++std::forward<T>(value)))
+  constexpr auto operator()(T&& value) const noexcept(
+    noexcept(++std::forward<T>(value))
+    && std::is_nothrow_constructible_v<operand_result_t<T, decltype(++std::forward<T>(value))>,
+                                       decltype(++std::forward<T>(value))>)
+    -> operand_result_t<T, decltype(++std::forward<T>(value))>
   {
     return ++std::forward<T>(value);
   }
@@ -52,7 +75,11 @@ struct pre_decrement
 {
   /// @brief Prefix-decrements @p value.
   template<typename T>
-  constexpr auto operator()(T&& value) const noexcept(noexcept(--std::forward<T>(value)))
+  constexpr auto operator()(T&& value) const noexcept(
+    noexcept(--std::forward<T>(value))
+    && std::is_nothrow_constructible_v<operand_result_t<T, decltype(--std::forward<T>(value))>,
+                                       decltype(--std::forward<T>(value))>)
+    -> operand_result_t<T, decltype(--std::forward<T>(value))>
   {
     return --std::forward<T>(value);
   }
@@ -66,6 +93,37 @@ struct post_decrement
   constexpr auto operator()(T&& value) const noexcept(noexcept(std::forward<T>(value)--))
   {
     return std::forward<T>(value)--;
+  }
+};
+
+/** @brief Implements deferred dereference. */
+struct dereference
+{
+  /// @brief Dereferences @p value.
+  template<typename T>
+  constexpr auto operator()(T&& value) const noexcept(
+    noexcept(*std::forward<T>(value))
+    && std::is_nothrow_constructible_v<operand_result_t<T, decltype(*std::forward<T>(value))>,
+                                       decltype(*std::forward<T>(value))>)
+    -> operand_result_t<T, decltype(*std::forward<T>(value))>
+  {
+    return *std::forward<T>(value);
+  }
+};
+
+/** @brief Implements deferred subscripting. */
+struct subscript_at
+{
+  /// @brief Subscripts @p value with @p index.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& value, U&& index) const
+    noexcept(noexcept(std::forward<T>(value)[std::forward<U>(index)])
+             && std::is_nothrow_constructible_v<
+               operand_result_t<T, decltype(std::forward<T>(value)[std::forward<U>(index)])>,
+               decltype(std::forward<T>(value)[std::forward<U>(index)])>)
+      -> operand_result_t<T, decltype(std::forward<T>(value)[std::forward<U>(index)])>
+  {
+    return std::forward<T>(value)[std::forward<U>(index)];
   }
 };
 
@@ -90,6 +148,136 @@ struct shift_right
     noexcept(noexcept(std::forward<T>(left) >> std::forward<U>(right)))
   {
     return std::forward<T>(left) >> std::forward<U>(right);
+  }
+};
+
+/** @brief Implements deferred += assignment. */
+struct plus_assign
+{
+  /// @brief Applies <tt>+=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) += std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) += std::forward<U>(value))
+  {
+    return std::forward<T>(target) += std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred -= assignment. */
+struct minus_assign
+{
+  /// @brief Applies <tt>-=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) -= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) -= std::forward<U>(value))
+  {
+    return std::forward<T>(target) -= std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred *= assignment. */
+struct multiplies_assign
+{
+  /// @brief Applies <tt>*=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) *= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) *= std::forward<U>(value))
+  {
+    return std::forward<T>(target) *= std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred /= assignment. */
+struct divides_assign
+{
+  /// @brief Applies <tt>/=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) /= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) /= std::forward<U>(value))
+  {
+    return std::forward<T>(target) /= std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred %= assignment. */
+struct modulus_assign
+{
+  /// @brief Applies <tt>%=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) %= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) %= std::forward<U>(value))
+  {
+    return std::forward<T>(target) %= std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred &= assignment. */
+struct bit_and_assign
+{
+  /// @brief Applies <tt>&=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) &= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) &= std::forward<U>(value))
+  {
+    return std::forward<T>(target) &= std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred |= assignment. */
+struct bit_or_assign
+{
+  /// @brief Applies <tt>|=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) |= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) |= std::forward<U>(value))
+  {
+    return std::forward<T>(target) |= std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred ^= assignment. */
+struct bit_xor_assign
+{
+  /// @brief Applies <tt>^=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) ^= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) ^= std::forward<U>(value))
+  {
+    return std::forward<T>(target) ^= std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred <<= assignment. */
+struct shift_left_assign
+{
+  /// @brief Applies <tt><<=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) <<= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) <<= std::forward<U>(value))
+  {
+    return std::forward<T>(target) <<= std::forward<U>(value);
+  }
+};
+
+/** @brief Implements deferred >>= assignment. */
+struct shift_right_assign
+{
+  /// @brief Applies <tt>>>=</tt> to @p target with @p value.
+  template<typename T, typename U>
+  constexpr auto operator()(T&& target, U&& value) const
+    noexcept(noexcept(std::forward<T>(target) >>= std::forward<U>(value)))
+      -> decltype(std::forward<T>(target) >>= std::forward<U>(value))
+  {
+    return std::forward<T>(target) >>= std::forward<U>(value);
   }
 };
 
@@ -352,7 +540,11 @@ operator<=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::less_equal<>, T
 }
 
 /**
- * @brief Deferred binary operator &&
+ * @brief Deferred short-circuiting binary operator &&
+ *
+ * @p u is evaluated only when @p t does not already decide the result, as the built-in
+ * operator does.
+ *
  * @tparam T Type of the left operand.
  * @tparam U Type of the right operand.
  * @param t Left operand.
@@ -360,15 +552,20 @@ operator<=(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::less_equal<>, T
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U> && detail::ShortCircuits<detail::conjunction, T, U>
 [[nodiscard]] constexpr auto
-operator&&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_and<>, T, U>())
+operator&&(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::conjunction, T, U>())
 {
-  return invoke(std::logical_and<>{}, std::forward<T>(t), std::forward<U>(u));
+  return detail::logical_expression_t<detail::conjunction, T, U>(std::forward<T>(t),
+                                                                 std::forward<U>(u));
 }
 
 /**
- * @brief Deferred binary operator ||
+ * @brief Deferred elementwise binary operator &&
+ *
+ * The overload for operands that do not convert to @c bool, such as @c std::valarray.
+ * Like an overloaded @c && in C++, it evaluates both operands.
+ *
  * @tparam T Type of the left operand.
  * @tparam U Type of the right operand.
  * @param t Left operand.
@@ -376,11 +573,52 @@ operator&&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_and<>, 
  * @return A deferred expression representing the operation.
  */
 template<typename T, typename U>
-  requires AnyDeferred<T, U>
+  requires AnyDeferred<T, U> && (!detail::ShortCircuits<detail::conjunction, T, U>)
+[[nodiscard]] constexpr auto
+operator&&(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_and<>, T, U>())
+{
+  return deferred::invoke(std::logical_and<>{}, std::forward<T>(t), std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred short-circuiting binary operator ||
+ *
+ * @p u is evaluated only when @p t does not already decide the result, as the built-in
+ * operator does.
+ *
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
+ * @return A deferred expression representing the operation.
+ */
+template<typename T, typename U>
+  requires AnyDeferred<T, U> && detail::ShortCircuits<detail::disjunction, T, U>
+[[nodiscard]] constexpr auto
+operator||(T&& t, U&& u) noexcept(detail::logical_is_nothrow<detail::disjunction, T, U>())
+{
+  return detail::logical_expression_t<detail::disjunction, T, U>(std::forward<T>(t),
+                                                                 std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred elementwise binary operator ||
+ *
+ * The overload for operands that do not convert to @c bool, such as @c std::valarray.
+ * Like an overloaded @c || in C++, it evaluates both operands.
+ *
+ * @tparam T Type of the left operand.
+ * @tparam U Type of the right operand.
+ * @param t Left operand.
+ * @param u Right operand.
+ * @return A deferred expression representing the operation.
+ */
+template<typename T, typename U>
+  requires AnyDeferred<T, U> && (!detail::ShortCircuits<detail::disjunction, T, U>)
 [[nodiscard]] constexpr auto
 operator||(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_or<>, T, U>())
 {
-  return invoke(std::logical_or<>{}, std::forward<T>(t), std::forward<U>(u));
+  return deferred::invoke(std::logical_or<>{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 /**
@@ -487,6 +725,209 @@ template<typename T, typename U>
 operator>>(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::shift_right, T, U>())
 {
   return invoke(detail::shift_right{}, std::forward<T>(t), std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator +=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>+=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::plus_assign, T, U>
+[[nodiscard]] constexpr auto
+operator+=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::plus_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::plus_assign, T, U>(std::forward<T>(t),
+                                                                std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator -=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>-=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::minus_assign, T, U>
+[[nodiscard]] constexpr auto
+operator-=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::minus_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::minus_assign, T, U>(std::forward<T>(t),
+                                                                 std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator *=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>*=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::multiplies_assign, T, U>
+[[nodiscard]] constexpr auto
+operator*=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::multiplies_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::multiplies_assign, T, U>(std::forward<T>(t),
+                                                                      std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator /=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>/=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::divides_assign, T, U>
+[[nodiscard]] constexpr auto
+operator/=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::divides_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::divides_assign, T, U>(std::forward<T>(t),
+                                                                   std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator %=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>%=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::modulus_assign, T, U>
+[[nodiscard]] constexpr auto
+operator%=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::modulus_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::modulus_assign, T, U>(std::forward<T>(t),
+                                                                   std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator &=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>&=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::bit_and_assign, T, U>
+[[nodiscard]] constexpr auto
+operator&=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_and_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::bit_and_assign, T, U>(std::forward<T>(t),
+                                                                   std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator |=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>|=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::bit_or_assign, T, U>
+[[nodiscard]] constexpr auto
+operator|=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_or_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::bit_or_assign, T, U>(std::forward<T>(t),
+                                                                  std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator ^=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>^=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::bit_xor_assign, T, U>
+[[nodiscard]] constexpr auto
+operator^=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::bit_xor_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::bit_xor_assign, T, U>(std::forward<T>(t),
+                                                                   std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator <<=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt><<=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::shift_left_assign, T, U>
+[[nodiscard]] constexpr auto
+operator<<=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::shift_left_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::shift_left_assign, T, U>(std::forward<T>(t),
+                                                                      std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred compound assignment operator >>=
+ * @tparam T Type of the assignment target.
+ * @tparam U Type of the right operand.
+ * @param t Assignment target; must be a deferred expression yielding an lvalue.
+ * @param u Right operand.
+ * @return An @ref assign_expression performing <tt>>>=</tt> when evaluated.
+ */
+template<typename T, typename U>
+  requires detail::AssignableWith<detail::shift_right_assign, T, U>
+[[nodiscard]] constexpr auto
+operator>>=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::shift_right_assign, T, U>())
+{
+  return detail::assign_expression_t<detail::shift_right_assign, T, U>(std::forward<T>(t),
+                                                                       std::forward<U>(u));
+}
+
+/**
+ * @brief Deferred prefix or unary operator *
+ * @tparam T Type of the operand.
+ * @param t Operand.
+ * @return A deferred expression representing the operation.
+ */
+template<Deferred T>
+[[nodiscard]] constexpr auto
+operator*(T&& t) noexcept(detail::invoke_is_nothrow<detail::dereference, T>())
+{
+  return deferred::invoke(detail::dereference{}, std::forward<T>(t));
+}
+
+/**
+ * @brief Deferred subscripting, the named form of @c operator[] .
+ *
+ * @c operator[] can only be a non-static member function, so it cannot be supplied for
+ * every deferred expression the way the other operators are. This is the free-function
+ * spelling of it.
+ *
+ * @tparam T Type of the subscripted operand.
+ * @tparam U Type of the index.
+ * @param t Operand to subscript.
+ * @param u Index.
+ * @return A deferred expression representing the subscripting.
+ */
+template<Deferred T, typename U>
+[[nodiscard]] constexpr auto
+subscript(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::subscript_at, T, U>())
+{
+  return deferred::invoke(detail::subscript_at{}, std::forward<T>(t), std::forward<U>(u));
 }
 
 } // namespace deferred

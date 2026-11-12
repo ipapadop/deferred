@@ -5,12 +5,18 @@
 #define DEFERRED_DEFERRED_HPP
 
 #include "apply.hpp"
+#include "assign.hpp"
 #include "conditional.hpp"
 #include "constant.hpp"
+#include "do_while.hpp"
 #include "expression.hpp"
+#include "for.hpp"
 #include "invoke.hpp"
+#include "logical.hpp"
 #include "operators.hpp"
+#include "seq.hpp"
 #include "switch.hpp"
+#include "type_name.hpp"
 #include "type_traits/is_constant_expression.hpp"
 #include "variable.hpp"
 #include "while.hpp"

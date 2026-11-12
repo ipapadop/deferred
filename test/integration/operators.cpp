@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2019-2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
 // SPDX-License-Identifier: MIT
 
+#include <vector>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <type_traits>
@@ -409,12 +411,38 @@ TEST_CASE("increment and decrement operators return by value", "[operators-retur
   CHECK((+source)().value == 1);
 }
 
-TEST_CASE("increment through a variable still updates the original", "[operators-return-by-value]")
+TEST_CASE("increment through a variable yields the variable", "[operators-return-lvalue]")
 {
   auto v  = deferred::variable<int>(1);
   auto ex = ++v;
 
-  CHECK(ex() == 2);
+  // The operand yields an lvalue, so the result is one too, as the built-in ++v is and
+  // as the deferred v += 1 is.
+  STATIC_CHECK(std::is_same_v<decltype(ex()), int&>);
+  STATIC_CHECK(std::is_same_v<decltype((--v)()), int&>);
+  STATIC_CHECK(std::is_same_v<decltype(ex()), decltype((v += 1)())>);
+
+  CHECK(&ex() == &v());
   CHECK(v() == 2);
-  STATIC_CHECK(!std::is_reference_v<decltype(ex())>);
+}
+
+TEST_CASE("deferred dereference", "[operators-dereference]")
+{
+  auto n  = 7;
+  auto ex = *deferred::constant(&n);
+
+  CHECK(ex() == 7);
+  n = 9;
+  CHECK(ex() == 9);
+}
+
+TEST_CASE("deferred subscripting", "[operators-subscript]")
+{
+  std::vector<int> values{10, 20, 30};
+  auto index = deferred::variable(1);
+  auto ex    = deferred::subscript(deferred::constant(values), index);
+
+  CHECK(ex() == 20);
+  index = 2;
+  CHECK(ex() == 30);
 }

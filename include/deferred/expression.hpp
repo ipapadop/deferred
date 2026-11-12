@@ -11,6 +11,8 @@
 #include "constant.hpp"
 #include "detail/apply_evaluated.hpp"
 #include "detail/is_nothrow_visitable.hpp"
+#include "detail/no_unique_address.hpp"
+#include "detail/tuple_references.hpp"
 #include "detail/visit_children.hpp"
 #include "type_traits/is_deferred.hpp"
 
@@ -23,17 +25,16 @@ namespace deferred {
  * @tparam Operator Type of the operator.
  * @tparam Expressions Types of the subexpressions.
  */
-template<typename Operator, typename... Expressions>
+template<typename Operator, Deferred... Expressions>
 class expression_
 {
 public:
   using operator_type       = Operator;
-  using expression_types    = std::tuple<Expressions...>;
-  using subexpression_types = std::tuple<Operator, Expressions...>;
+  using subexpression_types = std::tuple<Expressions...>;
 
 private:
-  [[no_unique_address]] operator_type m_op;
-  [[no_unique_address]] expression_types m_expressions;
+  DEFERRED_NO_UNIQUE_ADDRESS operator_type m_op;
+  DEFERRED_NO_UNIQUE_ADDRESS subexpression_types m_expressions;
 
 public:
   /**
@@ -47,7 +48,7 @@ public:
     requires(!std::is_same_v<std::remove_cvref_t<Op>, expression_>)
   constexpr explicit expression_(Op&& op, Ex&&... ex) noexcept(
     std::is_nothrow_constructible_v<operator_type, Op&&>
-    && std::is_nothrow_constructible_v<expression_types, Ex&&...>) :
+    && std::is_nothrow_constructible_v<subexpression_types, Ex&&...>) :
     m_op(std::forward<Op>(op)), m_expressions(std::forward<Ex>(ex)...)
   { }
 
@@ -59,27 +60,36 @@ public:
   expression_& operator=(expression_ const&) = delete;
   expression_& operator=(expression_&&)      = delete;
 
-  [[nodiscard]] constexpr decltype(auto)
+  /**
+   * @brief Evaluates the subexpressions and applies the operator to the results.
+   * @return The result of the operator.
+   */
+  constexpr decltype(auto)
   operator()() const noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
     return detail::apply_evaluated(m_op, m_expressions);
   }
 
   /// @copydoc operator()() const
-  [[nodiscard]] constexpr decltype(auto)
+  constexpr decltype(auto)
   operator()() noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
     return detail::apply_evaluated(m_op, m_expressions);
   }
 
+  /// @brief Returns the operator.
   [[nodiscard]] constexpr operator_type const& operator_() const noexcept
   {
     return m_op;
   }
 
-  [[nodiscard]] constexpr expression_types const& subexpressions() const noexcept
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
   {
-    return m_expressions;
+    return detail::tuple_references(m_expressions);
   }
 
   /**
@@ -90,7 +100,7 @@ public:
    */
   template<typename Visitor>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
-    noexcept(detail::is_nothrow_visitable_v<Visitor, expression_, expression_types>)
+    noexcept(detail::is_nothrow_visitable_v<Visitor, expression_, subexpression_types>)
   {
     v(*this, nesting);
     detail::visit_children(m_expressions, v, nesting + 1);
@@ -140,6 +150,24 @@ consteval auto deduce_deferred_type()
  */
 template<typename T>
 using make_deferred_t = typename decltype(detail::deduce_deferred_type<T>())::type;
+
+namespace detail {
+
+/**
+ * @brief Whether evaluating @p T yields an lvalue.
+ *
+ * A node that hands back a reference into its operand -- a subscript, a dereference, an
+ * assignment target -- is only safe when the operand yields an lvalue that outlives the
+ * call. An operand yielding a prvalue is materialized for the duration of one call and
+ * the reference would dangle.
+ *
+ * @tparam T Expression argument type.
+ */
+template<typename T>
+concept YieldsLvalue =
+  Deferred<T> && std::is_lvalue_reference_v<decltype(std::declval<make_deferred_t<T>&>()())>;
+
+} // namespace detail
 
 } // namespace deferred
 

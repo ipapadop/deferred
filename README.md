@@ -5,8 +5,11 @@ Library for creating deferred evaluation expressions in C++23.
 ``deferred`` provides:
 - functions to declare constants and variables,
 - functions to create deferred evaluation expressions from functions,
-- deferred ``if``, ``switch`` and ``while`` built from chained expressions,
-- ``deferred``-enabled commonly used operators.
+- deferred ``if``, ``switch``, ``while``, ``do``-``while`` and ``for`` built from chained
+  expressions,
+- deferred assignment to variables, including compound assignment,
+- ``deferred::seq`` for sequencing several expressions where one is expected,
+- ``deferred``-enabled commonly used operators, with short-circuiting ``&&`` and ``||``.
 
 Requirements
 ------------
@@ -100,7 +103,66 @@ auto s = deferred::switch_(var)
            .default_("unknown");
 
 auto loop = deferred::while_(n != 0).do_(--n);
+
+auto at_least_once = deferred::do_(--n).while_(n != 0);
+
+auto counted = deferred::for_(i = deferred::constant(0), i < 10, ++i).do_(body);
 ```
+
+Loops evaluate to ``void``, and a loop expression may be evaluated more than
+once: ``for_`` re-runs its initialization on every evaluation rather than once
+at construction.
+
+Assigning to a variable has two meanings, chosen by the right-hand side.
+Assigning a *value* stores it immediately, as it always has; assigning a
+*deferred expression* instead builds an expression that assigns when it is
+evaluated, which is what lets a loop clause assign:
+
+```C++
+n = 10;                                   // assigns now, returns variable_<int>&
+auto init = (i = deferred::constant(0));  // assigns nothing yet
+init();                                   // now i is 0
+```
+
+Because the deferred form looks like an ordinary assignment, it is
+``[[nodiscard]]`` -- writing ``i = deferred::constant(0);`` as a statement warns
+rather than silently doing nothing -- and it only binds to a named variable, so
+it cannot capture a temporary.
+
+A variable is itself a deferred expression, so ``i = j`` assigns one variable to
+another. It follows ordinary C++ assignment: the target receives a copy of the
+value the right-hand side evaluates to, and the two stay independent afterwards.
+The right-hand side is read on every evaluation, not captured when the
+expression is built. Only a plain lvalue works as the source:
+``i = std::move(j)`` and ``i = std::as_const(j)`` are rejected.
+
+The one place the two meanings bite is a loop clause: ``i = 0`` assigns
+immediately and yields the variable itself, so the clause would merely read
+``i``. ``for_`` rejects an initialization or step clause that is only a
+variable, so this is a compile error rather than a silent one:
+
+```C++
+auto ex = deferred::for_(i = 0, i < 5, ++i).do_(body);   // rejected
+auto ok = deferred::for_(i = deferred::constant(0), i < 5, ++i).do_(body);
+```
+
+``deferred::assign`` is the free-function form, for targets that are not a
+variable. A target must evaluate to an lvalue, since the result refers into it;
+an expression yielding a temporary is rejected rather than left dangling:
+
+```C++
+auto ex = deferred::assign(deferred::invoke(&counter::value, &c), deferred::constant(42));
+```
+
+A variable holding a reference-like type, such as ``std::reference_wrapper``,
+does whatever that type's own assignment does -- it rebinds rather than
+assigning through.
+
+Compound assignment (``+=``, ``-=``, ``*=``, ``/=``, ``%=``, ``&=``, ``|=``,
+``^=``, ``<<=``, ``>>=``) is deferred whenever its left operand is, like every
+other operator in the library -- only plain ``=`` carries the eager meaning.
+Each uses the target type's own compound operator and evaluates the target once,
+rather than expanding to ``t = t + u``.
 
 An ``if_`` chain without ``else_``, and a ``switch_`` without ``default_``, are
 usable expressions that return a ``std::optional`` (or nothing, when the branches
@@ -117,6 +179,32 @@ checked after the cases already present and before the default:
 
 ```C++
 auto expanded = s.case_(11).then_([] { return "11"; });
+```
+
+An ``if_`` chain is extended the same way: an ``else_if_`` added to a chain that
+already has an ``else_`` is checked after the branches already present and
+before the else. A chain has a single ``else_``.
+
+```C++
+auto base     = deferred::if_(n == 1).then_(10).else_(-1);
+auto expanded = base.else_if_(n == 2).then_(20);
+```
+
+``if_(c)``, ``switch_(c)``, ``while_(c)``, ``do_(b)`` and ``for_(i, c, s)`` only
+start a chain. None of them is an expression until its next piece is supplied:
+``then_``, a ``case_`` with its ``then_`` or a ``default_``, ``do_`` or
+``while_``.
+
+Sequencing
+----------
+
+``deferred::seq`` evaluates several expressions left to right and yields the
+last, as the built-in comma operator does. It is what lets a construct that
+takes a single expression -- a loop body, a branch, a ``for_`` clause -- do more
+than one thing without a lambda:
+
+```C++
+auto ex = deferred::while_(n != 0).do_(deferred::seq(ticks += 1, n -= 1));
 ```
 
 Visiting expressions
@@ -182,6 +270,89 @@ int result = from_tuple();  // 3
 
 Everything ``invoke`` supports carries over, including member pointers and the
 storage rules described above.
+
+Short-circuiting
+----------------
+
+``&&`` and ``||`` evaluate their right operand only when the left one does not
+already decide the result, as the built-in operators do. Operands that do not
+convert to ``bool``, such as ``std::valarray``, or whose types overload the
+operator themselves, such as a three-valued boolean, keep that operator's
+meaning and result type and are both evaluated -- which is also what C++ does
+for an overloaded ``&&``.
+
+```C++
+auto ex = n != 0 && (bumps += 1);   // bumps is not touched while n is 0
+```
+
+Subscripting and dereferencing
+------------------------------
+
+``*`` dereferences a deferred expression. ``operator[]`` can only be a
+non-static member function, so it cannot be supplied for every deferred
+expression the way the other operators are; ``deferred::subscript`` is its
+free-function spelling:
+
+```C++
+auto element = deferred::subscript(container, index);
+auto pointee = *pointer_expression;
+```
+
+Both yield a reference when it cannot dangle: when the operand evaluates to an
+lvalue, or to a raw pointer, which does not own what it points to. Any other
+operand is a temporary of the evaluation, so the result is returned by value.
+Prefix ``++`` and ``--`` follow the same rule, so ``++i`` on a variable yields
+the variable, as ``i += 1`` does:
+
+```C++
+int& first  = deferred::subscript(vector_variable, 0)();  // refers into the variable
+int& second = (*(pointer_variable + 1))();                // a raw pointer owns nothing
+int  third  = deferred::subscript(deferred::invoke(make_vector), 2)();  // a copy
+```
+
+Evaluating expressions
+----------------------
+
+Calling an expression evaluates it. An expression may be evaluated only for its
+effect, so discarding the result does not warn, except for a constant or a
+variable, whose evaluation has no effect:
+
+```C++
+(++i)();                      // fine, like (i += 1)();
+deferred::seq(++i, ++j)();    // fine
+```
+
+Three functions evaluate an argument that may or may not be a deferred
+expression; a plain value is returned unchanged.
+
+- ``deferred::evaluate(x)`` evaluates ``x`` and returns the result by value. If
+  the result is itself a deferred expression, it is evaluated once more.
+- ``deferred::evaluate_ref(x)`` does the same but keeps a reference result as a
+  reference, which avoids a copy when the result is only read.
+- ``deferred::recursive_evaluate(x)`` keeps evaluating until the result is not
+  callable.
+
+Inspecting expressions
+----------------------
+
+Every node names the types of its subexpressions as ``subexpression_types``, a
+``std::tuple``, and returns references to them with ``subexpressions()``, in the
+same order. A constant or a variable has none. An ``expression_`` additionally
+exposes its operator as ``operator_type`` and ``operator_()``; the operator is
+not a subexpression.
+
+A node whose result type does not depend on how it is evaluated names it as
+``result_type``: ``void`` for the loops, ``bool`` for ``&&`` and ``||``, and the
+common or variant type for ``if_`` and ``switch_``. A constant or a variable
+names the type it stores as ``value_type``.
+
+```C++
+auto sum = i + deferred::constant(2);
+auto const& [left, right] = sum.subexpressions();   // left is i itself
+```
+
+``deferred::type_name<T>()`` returns a readable name for a type, which helps
+when printing an expression tree.
 
 Exception guarantees
 --------------------

@@ -15,6 +15,8 @@
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/map_result.hpp"
 #include "detail/no_match_is_nothrow.hpp"
+#include "detail/no_unique_address.hpp"
+#include "detail/tuple_references.hpp"
 #include "detail/unmatched_result.hpp"
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
@@ -22,7 +24,7 @@
 
 namespace deferred {
 
-template<typename Else, typename... Branches>
+template<typename Else, Deferred... Branches>
 class conditional_expression;
 
 namespace detail {
@@ -68,8 +70,17 @@ struct conditional_branch
 {
   using then_type           = Then;
   using subexpression_types = std::tuple<Condition, Then>;
-  [[no_unique_address]] Condition condition;
-  [[no_unique_address]] Then then;
+  DEFERRED_NO_UNIQUE_ADDRESS Condition condition;
+  DEFERRED_NO_UNIQUE_ADDRESS Then then;
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return std::forward_as_tuple(condition, then);
+  }
 
   /**
    * @brief Visits the conditional branch with a visitor.
@@ -96,7 +107,7 @@ consteval bool conditional_branch_is_nothrow()
   using branch_reference    = expression_reference_t<Self, Branch>;
   using condition_reference = decltype((std::declval<branch_reference>().condition));
   using then_reference      = decltype((std::declval<branch_reference>().then));
-  return noexcept(static_cast<bool>(evaluate(std::declval<condition_reference>())))
+  return noexcept(static_cast<bool>(evaluate_ref(std::declval<condition_reference>())))
          && (std::is_void_v<Result> ? noexcept(evaluate(std::declval<then_reference>()))
                                     : evaluation_result_is_nothrow<Result, then_reference>());
 }
@@ -169,26 +180,33 @@ consteval bool carried_branches_are_nothrow(std::index_sequence<I...>)
 }
 
 /** @brief Whether appending a branch to a conditional expression cannot throw. */
-template<typename Branches, typename C, typename T>
+template<typename Else, typename Branches, typename C, typename T, typename E>
 consteval bool append_conditional_is_nothrow()
 {
   using branch = conditional_branch<make_deferred_t<C>, make_deferred_t<T>>;
   return std::is_nothrow_constructible_v<make_deferred_t<C>, C&&>
          && std::is_nothrow_constructible_v<make_deferred_t<T>, T&&>
+         && std::is_nothrow_constructible_v<Else, E&&>
          && carried_branches_are_nothrow<Branches, branch>(
            std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Branches>>>{});
 }
 
-/** @brief Appends a branch to a non-finalized conditional expression's branch tuple. */
-template<typename Branches, typename C, typename T>
-constexpr auto append_conditional(Branches&& branches, C&& condition, T&& then_) //
-  noexcept(append_conditional_is_nothrow<Branches, C, T>())
+/**
+ * @brief Appends a branch to a conditional expression's branch tuple.
+ *
+ * The @c else expression, or @ref no_else, is carried over unchanged, so the new branch
+ * is checked after the branches already present and before the @c else.
+ */
+template<typename Else, typename Branches, typename C, typename T, typename E>
+constexpr auto append_conditional(Branches&& branches, C&& condition, T&& then_, E&& else_) //
+  noexcept(append_conditional_is_nothrow<Else, Branches, C, T, E>())
 {
   using branch = conditional_branch<make_deferred_t<C>, make_deferred_t<T>>;
-  using result = conditional_from_branches_t<no_else, std::remove_cvref_t<Branches>, branch>;
+  using result = conditional_from_branches_t<Else, std::remove_cvref_t<Branches>, branch>;
   return result(std::forward<Branches>(branches),
                 branch{make_deferred_t<C>(std::forward<C>(condition)),
                        make_deferred_t<T>(std::forward<T>(then_))},
+                std::forward<E>(else_),
                 std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Branches>>>{});
 }
 
@@ -228,26 +246,32 @@ constexpr auto finalize_conditional(Branches&& branches, E&& else_branch) //
  * @brief Conditional chain waiting for the @c then expression of its last condition.
  * @tparam Branches Tuple of the branches accumulated so far.
  * @tparam Condition Type of the pending condition expression.
+ * @tparam Else Type of the @c else branch carried over, or @ref detail::no_else.
  */
-template<typename Branches, Deferred Condition>
+template<typename Branches, Deferred Condition, typename Else = detail::no_else>
 class conditional_builder
 {
-  [[no_unique_address]] Branches m_branches;
-  [[no_unique_address]] Condition m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS Branches m_branches;
+  DEFERRED_NO_UNIQUE_ADDRESS Condition m_condition;
+  DEFERRED_NO_UNIQUE_ADDRESS Else m_else;
 
 public:
   /**
    * @brief Constructs a conditional_builder.
    * @tparam B Type of the branch tuple.
    * @tparam C Type of the condition expression.
+   * @tparam E Type of the else expression.
    * @param branches Branches accumulated so far.
    * @param condition Condition expression awaiting a @c then expression.
+   * @param else_branch Else expression carried over, or @ref detail::no_else.
    */
-  template<typename B, typename C>
-  constexpr explicit conditional_builder(B&& branches, C&& condition) noexcept(
+  template<typename B, typename C, typename E>
+  constexpr explicit conditional_builder(B&& branches, C&& condition, E&& else_branch) noexcept(
     std::is_nothrow_constructible_v<Branches, B&&>
-    && std::is_nothrow_constructible_v<Condition, C&&>) :
-    m_branches(std::forward<B>(branches)), m_condition(std::forward<C>(condition))
+    && std::is_nothrow_constructible_v<Condition, C&&>
+    && std::is_nothrow_constructible_v<Else, E&&>) :
+    m_branches(std::forward<B>(branches)), m_condition(std::forward<C>(condition)),
+    m_else(std::forward<E>(else_branch))
   { }
 
   /**
@@ -258,23 +282,28 @@ public:
    */
   template<typename T>
   [[nodiscard]] constexpr auto then_(T&& then_) && //
-    noexcept(detail::append_conditional_is_nothrow<Branches, Condition, T>())
+    noexcept(detail::append_conditional_is_nothrow<Else, Branches, Condition, T, Else>())
   {
-    return detail::append_conditional(std::move(m_branches),
-                                      std::forward<Condition>(m_condition),
-                                      std::forward<T>(then_));
+    return detail::append_conditional<Else>(std::move(m_branches),
+                                            std::forward<Condition>(m_condition),
+                                            std::forward<T>(then_),
+                                            std::forward<Else>(m_else));
   }
 
   /// @copydoc then_
   template<typename T>
   [[nodiscard]] constexpr auto then_(T&& then_) const& //
-    noexcept(std::is_nothrow_constructible_v<Condition, Condition const&>
-             && detail::append_conditional_is_nothrow<Branches const&, Condition, T>())
+    noexcept(
+      std::is_nothrow_constructible_v<Condition, Condition const&>
+      && detail::append_conditional_is_nothrow<Else, Branches const&, Condition, T, Else const&>())
   {
     // The branch stores the deduced type of the condition argument, so the condition is
     // passed as its stored type: a copy of an owned expression, or the same reference
     // for a referenced one. Forwarding the member itself would deduce a reference to it.
-    return detail::append_conditional(m_branches, Condition(m_condition), std::forward<T>(then_));
+    return detail::append_conditional<Else>(m_branches,
+                                            Condition(m_condition),
+                                            std::forward<T>(then_),
+                                            m_else);
   }
 };
 
@@ -283,7 +312,7 @@ public:
  * @tparam Else Type of the @c else branch.
  * @tparam Branches Types of the @c if and @c else_if branches.
  */
-template<typename Else, typename... Branches>
+template<typename Else, Deferred... Branches>
 class conditional_expression
 {
   constexpr static inline bool finalized = !std::is_same_v<Else, detail::no_else>;
@@ -304,8 +333,11 @@ public:
   using result_type = detail::unmatched_result_t<finalized, base_result_type>;
 
 private:
-  [[no_unique_address]] branch_types m_branches;
-  [[no_unique_address]] Else m_else;
+  DEFERRED_NO_UNIQUE_ADDRESS branch_types m_branches;
+  DEFERRED_NO_UNIQUE_ADDRESS Else m_else;
+
+  template<typename C>
+  using builder_type = conditional_builder<branch_types, make_deferred_t<C>, Else>;
 
   template<std::size_t I = 0, typename Self>
   static constexpr result_type
@@ -314,7 +346,7 @@ private:
     if constexpr (I < sizeof...(Branches))
     {
       auto&& branch = std::get<I>(self.m_branches);
-      if (evaluate(branch.condition))
+      if (evaluate_ref(branch.condition))
       {
         if constexpr (std::is_void_v<result_type>)
         {
@@ -346,8 +378,8 @@ private:
 
 public:
   /**
-   * @brief Constructs a non-finalized conditional expression by appending a branch to
-   * the branches of another.
+   * @brief Constructs a conditional expression by appending a branch to the branches of
+   * another.
    *
    * The branches already present are carried over element by element rather than
    * through @c std::tuple_cat, so each is constructed exactly once and the exception
@@ -355,22 +387,23 @@ public:
    *
    * @tparam Accumulated Type of the branch tuple to extend.
    * @tparam Branch Type of the branch to append.
+   * @tparam E Type of the else expression.
    * @tparam I Indices of the branches to carry over.
    * @param branches Branches accumulated so far.
    * @param appended Branch to append after them.
+   * @param else_branch Else expression carried over, or @ref detail::no_else.
    */
-  template<typename Accumulated, typename Branch, std::size_t... I>
+  template<typename Accumulated, typename Branch, typename E, std::size_t... I>
   constexpr explicit conditional_expression(Accumulated&& branches,
                                             Branch&& appended,
+                                            E&& else_branch,
                                             std::index_sequence<I...>) //
     noexcept(std::is_nothrow_constructible_v<branch_types,
                                              decltype(std::get<I>(std::declval<Accumulated>()))...,
                                              Branch&&>
-             && std::is_nothrow_default_constructible_v<Else>)
-    requires(!finalized)
-    :
+             && std::is_nothrow_constructible_v<Else, E&&>) :
     m_branches(std::get<I>(std::forward<Accumulated>(branches))..., std::forward<Branch>(appended)),
-    m_else{}
+    m_else(std::forward<E>(else_branch))
   { }
 
   /**
@@ -387,31 +420,29 @@ public:
 
   /**
    * @brief Starts an @c else_if branch of the conditional chain.
+   *
+   * A new branch is checked after the branches already present and before the @c else
+   * branch, so it may be added to a conditional expression that already has one.
+   *
    * @tparam C Type of the condition expression.
    * @param condition Condition expression.
    * @return A @ref conditional_builder awaiting the @c then expression.
    */
   template<typename C>
   [[nodiscard]] constexpr auto else_if_(C&& condition) && //
-    noexcept(std::is_nothrow_constructible_v<conditional_builder<branch_types, make_deferred_t<C>>,
-                                             branch_types&&,
-                                             C&&>)
-    requires(!finalized)
+    noexcept(std::is_nothrow_constructible_v<builder_type<C>, branch_types&&, C&&, Else&&>)
   {
-    return conditional_builder<branch_types, make_deferred_t<C>>(std::move(m_branches),
-                                                                 std::forward<C>(condition));
+    return builder_type<C>(std::move(m_branches),
+                           std::forward<C>(condition),
+                           std::forward<Else>(m_else));
   }
 
   /// @copydoc else_if_
   template<typename C>
   [[nodiscard]] constexpr auto else_if_(C&& condition) const& //
-    noexcept(std::is_nothrow_constructible_v<conditional_builder<branch_types, make_deferred_t<C>>,
-                                             branch_types const&,
-                                             C&&>)
-    requires(!finalized)
+    noexcept(std::is_nothrow_constructible_v<builder_type<C>, branch_types const&, C&&, Else const&>)
   {
-    return conditional_builder<branch_types, make_deferred_t<C>>(m_branches,
-                                                                 std::forward<C>(condition));
+    return builder_type<C>(m_branches, std::forward<C>(condition), m_else);
   }
 
   /**
@@ -441,17 +472,33 @@ public:
    * @brief Evaluates the conditional expression.
    * @return Result of the conditional expression.
    */
-  [[nodiscard]] constexpr result_type
+  constexpr result_type
   operator()() const noexcept(detail::is_nothrow_evaluable_v<conditional_expression const&>)
   {
     return evaluate_impl(*this);
   }
 
   /// @copydoc operator()() const
-  [[nodiscard]] constexpr result_type
+  constexpr result_type
   operator()() noexcept(detail::is_nothrow_evaluable_v<conditional_expression&>)
   {
     return evaluate_impl(*this);
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    if constexpr (finalized)
+    {
+      return std::tuple_cat(detail::tuple_references(m_branches), std::forward_as_tuple(m_else));
+    }
+    else
+    {
+      return detail::tuple_references(m_branches);
+    }
   }
 
   /**
@@ -493,7 +540,8 @@ template<typename Condition>
 {
   return conditional_builder<std::tuple<>, make_deferred_t<Condition>>(
     std::tuple<>{},
-    std::forward<Condition>(condition));
+    std::forward<Condition>(condition),
+    detail::no_else{});
 }
 
 } // namespace deferred

@@ -15,7 +15,7 @@ namespace deferred::detail {
 /**
  * @brief Invokes a callable with evaluated deferred arguments.
  *
- * Implementation detail of @ref apply_evaluated(); it is the function object
+ * Implementation detail of @c apply_evaluated(); it is the function object
  * handed to @c std::apply.
  *
  * @tparam F Type of the callable.

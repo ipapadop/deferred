@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "detail/is_nothrow_visitable.hpp"
+#include "detail/no_unique_address.hpp"
 
 #include "evaluate.hpp"
 
@@ -26,7 +27,7 @@ public:
   using subexpression_types = std::tuple<>;
 
 private:
-  [[no_unique_address]] T m_t;
+  DEFERRED_NO_UNIQUE_ADDRESS T m_t;
 
 public:
   /**
@@ -55,6 +56,15 @@ public:
   [[nodiscard]] constexpr T operator()() && noexcept(std::is_nothrow_move_constructible_v<T>)
   {
     return std::move(m_t);
+  }
+
+  /**
+   * @brief Returns references to the subexpressions.
+   * @return A @c std::tuple of references, in @c subexpression_types order.
+   */
+  [[nodiscard]] constexpr auto subexpressions() const noexcept
+  {
+    return std::tuple<>{};
   }
 
   /**

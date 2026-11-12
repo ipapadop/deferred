@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <optional>
+#include <type_traits>
 
 #include "deferred/switch.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
@@ -232,13 +233,21 @@ TEST_CASE("switch builders copy from const lvalues", "[switch-builders]")
   CHECK(builder.then_(30)().value() == 20);
 }
 
-TEST_CASE("switch with no cases and no default", "[switch-empty]")
+TEST_CASE("switch with no cases and no default is not an expression", "[switch-empty]")
 {
-  auto ex = deferred::switch_(1);
+  // Like if_(c) and while_(c), switch_(c) only starts a chain.
+  auto builder = deferred::switch_(1);
 
-  static_assert(deferred::is_constant_expression_v<decltype(ex)>);
-  static_assert(std::is_void_v<decltype(ex())>);
-  ex();
+  static_assert(!deferred::Deferred<decltype(builder)>);
+  static_assert(!std::is_invocable_v<decltype(builder)>);
+  static_assert(!std::is_invocable_v<decltype(builder) const&>);
+
+  // It becomes one with a case, or with only a default.
+  static_assert(deferred::Deferred<decltype(builder.case_(1).then_(2))>);
+  static_assert(deferred::Deferred<decltype(builder.default_(3))>);
+  CHECK(builder.case_(1).then_(2)().value() == 2);
+  CHECK(builder.default_(3)() == 3);
+  CHECK(deferred::switch_(1).default_(4)() == 4);
 }
 
 TEST_CASE("switch with void bodies", "[switch-void]")
@@ -398,4 +407,16 @@ TEST_CASE("switch accounts for throwing comparison conversion", "[switch-noexcep
   auto ex = deferred::switch_(comparable{}).case_(comparable{}).then_(1).default_(0);
 
   static_assert(!noexcept(ex()));
+}
+
+TEST_CASE("a default_expression can be copied from a non-const lvalue", "[switch]")
+{
+  auto df = deferred::default_expression<deferred::constant_<int>>(deferred::constant(1));
+
+  // Direct-initialization considers the explicit forwarding constructor, which must
+  // not be chosen over the copy constructor.
+  auto copy(df);
+
+  static_assert(std::is_same_v<decltype(copy), decltype(df)>);
+  CHECK(copy() == 1);
 }
