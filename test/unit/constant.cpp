@@ -14,6 +14,7 @@
 
 #include "deferred/constant.hpp"
 #include "deferred/type_traits/is_constant_expression.hpp"
+#include "deferred/variable.hpp"
 
 namespace {
 
@@ -386,4 +387,23 @@ TEST_CASE("a callable is evaluated only when its result is what the constant sto
   deferred::constant<lvalue_counter> kept{counter};
   CHECK(counter.n == 0);
   CHECK(kept().n == 0);
+}
+
+TEST_CASE("a view-typed constant built from a node views what that node holds", "[constant-ctad]")
+{
+  deferred::constant<std::string> text{std::string(40, 'a')};
+  deferred::constant<std::string_view> view{text};
+  CHECK(view().data() == text().data());
+
+  deferred::variable<std::string> changing{std::string(40, 'b')};
+  deferred::constant<std::string_view> of_variable{changing};
+  CHECK(of_variable().data() == changing().data());
+
+  // A callable that returns a reference is treated the same way.
+  std::string owner(40, 'c');
+  auto by_reference = [&owner]() -> std::string const& {
+    return owner;
+  };
+  deferred::constant<std::string_view> of_callable{by_reference};
+  CHECK(of_callable().data() == owner.data());
 }

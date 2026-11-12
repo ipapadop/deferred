@@ -129,6 +129,15 @@ its result is what the type stores:
 deferred::variable<std::function<int()>> f{[] { return 1; }};   // stores the callable
 ```
 
+A constant or a variable of a view type that is built from another one views
+the value its source holds, as it would in plain C++. The source must outlive
+it:
+
+```C++
+deferred::variable<std::string> text{"some text"};
+deferred::variable<std::string_view> view{text};   // views the string text holds
+```
+
 A constant can be copied. A variable cannot be copied or moved, so that an
 expression never holds a stale copy of it. Building a variable from another one
 makes a new, independent variable; a const or temporary source passes its value:

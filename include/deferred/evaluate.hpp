@@ -198,11 +198,39 @@ template<typename T>
 using node_result_t = std::decay_t<decltype(recursive_evaluate(std::declval<T>()))>;
 
 /**
+ * @brief Evaluates the callable @p u to the value a leaf node is constructed from.
+ *
+ * As @ref recursive_evaluate , except that a result which is an lvalue reference to
+ * something that is not callable is returned as that reference rather than as a
+ * copy. A node whose type is a view, such as a <tt>variable<std::string_view></tt>
+ * built from a <tt>variable<std::string></tt>, then views the string the source
+ * holds and not a temporary copy of it.
+ *
+ * @tparam U Type of the callable; it must be callable with no arguments.
+ * @param u Callable to evaluate.
+ * @return The reference @p u yields, or the value @ref recursive_evaluate yields.
+ */
+template<typename U>
+constexpr decltype(auto) evaluate_for_node(U&& u) //
+  noexcept(noexcept(recursive_evaluate(std::declval<U>())))
+{
+  using result = decltype(std::forward<U>(u)());
+  if constexpr (std::is_lvalue_reference_v<result> && !std::is_invocable_v<result>)
+  {
+    return std::forward<U>(u)();
+  }
+  else
+  {
+    return recursive_evaluate(std::forward<U>(u));
+  }
+}
+
+/**
  * @brief Whether @p U is callable with no arguments and evaluating it yields a @p T .
  *
  * A leaf node evaluates such an argument and stores the result; any other argument is
  * stored as it is. Whether @p U is callable is asked first, so the result type of
- * @ref recursive_evaluate is never formed for an argument that is merely a value --
+ * @ref evaluate_for_node is never formed for an argument that is merely a value --
  * its return type is deduced, and forming it for an lvalue that cannot be copied is an
  * error, not a failed requirement.
  *
@@ -210,7 +238,8 @@ using node_result_t = std::decay_t<decltype(recursive_evaluate(std::declval<T>()
  * @tparam T Type the node stores.
  */
 template<typename U, typename T>
-concept evaluates_to = std::invocable<U> && std::convertible_to<node_result_t<U>, T>;
+concept evaluates_to =
+  std::invocable<U> && std::convertible_to<decltype(evaluate_for_node(std::declval<U>())), T>;
 
 } // namespace detail
 

@@ -75,6 +75,10 @@ public:
    * callable; this applies to a @c deferred expression too. An argument that is not
    * callable, or whose result is not a @p T , is stored by the constructors above.
    *
+   * When evaluating @p u yields an lvalue, @p T is constructed from that lvalue and
+   * not from a copy of it. A view type such as @c std::string_view therefore views
+   * the value the source holds, which must then outlive this node.
+   *
    * A variable is such an expression, so <tt>variable w{v};</tt> makes a new,
    * independent variable holding the current value of @c v . The source must be a
    * non-const lvalue: a const or temporary variable selects the deleted copy or move
@@ -88,9 +92,9 @@ public:
              || (std::same_as<U, variable&> && std::copy_constructible<T>))
             && detail::evaluates_to<U, T>
   constexpr explicit variable(U&& u) noexcept(
-    noexcept(recursive_evaluate(std::declval<U>()))
-    && std::is_nothrow_constructible_v<T, detail::node_result_t<U>>) :
-    m_t(recursive_evaluate(std::forward<U>(u)))
+    noexcept(detail::evaluate_for_node(std::declval<U>()))
+    && std::is_nothrow_constructible_v<T, decltype(detail::evaluate_for_node(std::declval<U>()))>) :
+    m_t(detail::evaluate_for_node(std::forward<U>(u)))
   { }
 
   variable(variable const&) = delete;

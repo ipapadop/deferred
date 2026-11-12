@@ -72,6 +72,11 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `test/unit/constant.cpp` and `test/unit/variable.cpp`:
   - A value is stored directly, never through `recursive_evaluate`, which returns a decayed copy; a
     `constant<std::string_view>` built from an lvalue `std::string` would otherwise view a dead temporary.
+  - An argument that is evaluated goes through `detail::evaluate_for_node`, which returns an lvalue result
+    as that reference and otherwise does what `recursive_evaluate` does. So
+    `variable<std::string_view> view{string_variable}` views the string the source holds, where it used to
+    view a decayed temporary copy. `detail::evaluates_to` asks about the same type, so
+    `variable<std::span<int>>` can be built from a `variable<std::vector<int>>`.
   - `detail::evaluates_to` asks `std::invocable` before forming `node_result_t`. The return type of
     `recursive_evaluate` is deduced, so forming it for an lvalue that cannot be copied is a hard error;
     `std::is_constructible_v<constant<int>, std::mutex&>` must be `false`, not ill-formed.
