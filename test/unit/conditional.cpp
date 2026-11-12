@@ -37,6 +37,12 @@ struct throwing_copy
 
   throwing_copy(throwing_copy&&) noexcept
   { }
+
+  // Lets the type be a condition.
+  explicit operator bool() const noexcept
+  {
+    return true;
+  }
 };
 
 struct throwing_boolean
@@ -329,8 +335,9 @@ TEST_CASE("conditional builder is copy constructible from a mutable lvalue",
 
 TEST_CASE("conditional builders are not deferred expressions", "[conditional-builders]")
 {
-  static_assert(!deferred::Deferred<decltype(deferred::if_(true))>);
-  static_assert(!deferred::Deferred<decltype(deferred::if_(true).then_(1).else_if_(false))>);
+  static_assert(!deferred::deferred_expression<decltype(deferred::if_(true))>);
+  static_assert(
+    !deferred::deferred_expression<decltype(deferred::if_(true).then_(1).else_if_(false))>);
 }
 
 TEST_CASE("building a conditional chain carries its exception guarantee", "[conditional-noexcept]")
@@ -380,7 +387,7 @@ TEST_CASE("else_if_ extends a conditional that already has an else", "[condition
 
   // The result is still a value, not an optional: the else is carried over.
   static_assert(std::is_same_v<decltype(expanded()), int>);
-  static_assert(!deferred::Deferred<decltype(ex.else_if_(n == 2))>);
+  static_assert(!deferred::deferred_expression<decltype(ex.else_if_(n == 2))>);
 
   // The new branch is checked after the existing ones and before the else.
   n = 1;

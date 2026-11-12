@@ -118,7 +118,7 @@ TEST_CASE("while builder is copy constructible from a mutable lvalue", "[while-b
 
 TEST_CASE("while builders are not deferred expressions", "[while-builders]")
 {
-  static_assert(!deferred::Deferred<decltype(deferred::while_(false))>);
+  static_assert(!deferred::deferred_expression<decltype(deferred::while_(false))>);
 }
 
 TEST_CASE("building a while loop carries its exception guarantee", "[while-noexcept]")

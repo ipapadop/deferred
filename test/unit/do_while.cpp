@@ -21,6 +21,12 @@ struct throwing_expression
 
   throwing_expression(throwing_expression&&) noexcept(false)
   { }
+
+  // Lets the type be a condition.
+  explicit operator bool() const noexcept
+  {
+    return false;
+  }
 };
 
 /// @brief Records whether it was moved from, to catch a builder that steals its body.
@@ -157,7 +163,7 @@ TEST_CASE("do-while builder is copy constructible from a mutable lvalue", "[do-w
 
 TEST_CASE("do-while builders are not deferred expressions", "[do-while-builders]")
 {
-  static_assert(!deferred::Deferred<decltype(deferred::do_(1))>);
+  static_assert(!deferred::deferred_expression<decltype(deferred::do_(1))>);
 }
 
 TEST_CASE("building a do-while loop carries its exception guarantee", "[do-while-noexcept]")

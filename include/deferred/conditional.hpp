@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "concepts.hpp"
 #include "detail/expression_reference.hpp"
 #include "detail/homogenized_type.hpp"
 #include "detail/is_nothrow_evaluable.hpp"
@@ -21,10 +22,11 @@
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
 
-template<typename Else, Deferred... Branches>
+template<typename Else, deferred_expression... Branches>
 class conditional_expression;
 
 namespace detail {
@@ -65,7 +67,7 @@ using conditional_base_result_t = typename conditional_base_result<Else, Branche
  * @tparam Condition Type of the condition expression.
  * @tparam Then Type of the then expression.
  */
-template<Deferred Condition, Deferred Then>
+template<deferred_expression Condition, deferred_expression Then>
 struct conditional_branch
 {
   using then_type           = Then;
@@ -89,6 +91,7 @@ struct conditional_branch
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, conditional_branch>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, conditional_branch, subexpression_types>)
   {
@@ -248,7 +251,7 @@ constexpr auto finalize_conditional(Branches&& branches, E&& else_branch) //
  * @tparam Condition Type of the pending condition expression.
  * @tparam Else Type of the @c else branch carried over, or @ref detail::no_else.
  */
-template<typename Branches, Deferred Condition, typename Else = detail::no_else>
+template<typename Branches, deferred_expression Condition, typename Else = detail::no_else>
 class conditional_builder
 {
   DEFERRED_NO_UNIQUE_ADDRESS Branches m_branches;
@@ -312,7 +315,7 @@ public:
  * @tparam Else Type of the @c else branch.
  * @tparam Branches Types of the @c if and @c else_if branches.
  */
-template<typename Else, Deferred... Branches>
+template<typename Else, deferred_expression... Branches>
 class conditional_expression
 {
   constexpr static inline bool finalized = !std::is_same_v<Else, detail::no_else>;
@@ -428,7 +431,7 @@ public:
    * @param condition Condition expression.
    * @return A @ref conditional_builder awaiting the @c then expression.
    */
-  template<typename C>
+  template<condition C>
   [[nodiscard]] constexpr auto else_if_(C&& condition) && //
     noexcept(std::is_nothrow_constructible_v<builder_type<C>, branch_types&&, C&&, Else&&>)
   {
@@ -438,7 +441,7 @@ public:
   }
 
   /// @copydoc else_if_
-  template<typename C>
+  template<condition C>
   [[nodiscard]] constexpr auto else_if_(C&& condition) const& //
     noexcept(std::is_nothrow_constructible_v<builder_type<C>, branch_types const&, C&&, Else const&>)
   {
@@ -526,6 +529,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, conditional_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, conditional_expression, subexpression_types>)
   {
@@ -552,7 +556,7 @@ public:
  * @param condition Condition expression.
  * @return A @ref conditional_builder awaiting the @c then expression.
  */
-template<typename Condition>
+template<condition Condition>
 [[nodiscard]] constexpr auto if_(Condition&& condition) noexcept(
   std::is_nothrow_constructible_v<make_deferred_t<Condition>, Condition&&>)
 {

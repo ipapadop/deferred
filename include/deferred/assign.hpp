@@ -8,10 +8,12 @@
 #include <type_traits>
 #include <utility>
 
+#include "concepts.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
 
@@ -48,7 +50,7 @@ constexpr decltype(auto) assigned_value(Expression& expression) //
 /**
  * @brief Whether @p Operation can assign @p Value to what evaluating @p Target yields.
  *
- * @c YieldsLvalue keeps the target's result alive; this additionally requires that the
+ * @c lvalue_expression keeps the target's result alive; this additionally requires that the
  * assignment itself is well formed, so a @c const target is rejected at the call rather
  * than deep inside the node.
  *
@@ -57,8 +59,8 @@ constexpr decltype(auto) assigned_value(Expression& expression) //
  * @tparam Value Assigned value argument type.
  */
 template<typename Operation, typename Target, typename Value>
-concept AssignableWith =
-  YieldsLvalue<Target> && requires(Target& target, make_deferred_t<Value>& value) {
+concept assignable_with =
+  lvalue_expression<Target> && requires(Target& target, make_deferred_t<Value>& value) {
     Operation{}(target(), assigned_value(value));
   };
 
@@ -102,7 +104,7 @@ struct assign_to
  * @tparam TargetExpression Type of the assignment target expression.
  * @tparam ValueExpression Type of the assigned value expression.
  */
-template<typename Operation, Deferred TargetExpression, Deferred ValueExpression>
+template<typename Operation, deferred_expression TargetExpression, deferred_expression ValueExpression>
 class assign_expression
 {
 public:
@@ -187,6 +189,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, assign_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, assign_expression, subexpression_types>)
   {
@@ -240,12 +243,12 @@ consteval bool assign_is_nothrow()
  * @tparam Target Type of the assignment target expression.
  * @tparam Value Type of the assigned value expression.
  * @param target Assignment target; must be a deferred expression yielding an lvalue, which
- * @ref detail::YieldsLvalue enforces.
+ * @ref lvalue_expression enforces.
  * @param value Expression whose value is assigned.
  * @return An @ref assign_expression assigning to @p target when evaluated.
  */
 template<typename Target, typename Value>
-  requires detail::AssignableWith<detail::assign_to, Target, Value>
+  requires detail::assignable_with<detail::assign_to, Target, Value>
 [[nodiscard]] constexpr auto assign(Target&& target, Value&& value) //
   noexcept(detail::assign_is_nothrow<detail::assign_to, Target, Value>())
 {

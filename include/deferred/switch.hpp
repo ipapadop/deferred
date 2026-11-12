@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "concepts.hpp"
 #include "detail/expression_reference.hpp"
 #include "detail/homogenized_type.hpp"
 #include "detail/is_nothrow_evaluable.hpp"
@@ -21,10 +22,13 @@
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
 
-template<Deferred ConditionExpression, typename DefaultExpression, Deferred... CaseExpression>
+template<deferred_expression ConditionExpression,
+         typename DefaultExpression,
+         deferred_expression... CaseExpression>
 class switch_expression;
 
 namespace detail {
@@ -41,7 +45,7 @@ struct no_default
  * @brief Switch default expression.
  * @tparam Expression Type of the underlying expression.
  */
-template<Deferred Expression>
+template<deferred_expression Expression>
 class default_expression
 {
 public:
@@ -107,6 +111,7 @@ public:
    * @param nesting The nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, default_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, default_expression, subexpression_types>)
   {
@@ -120,7 +125,7 @@ public:
  * @tparam LabelExpression Type of the label expression.
  * @tparam BodyExpression Type of the body expression.
  */
-template<Deferred LabelExpression, Deferred BodyExpression>
+template<deferred_expression LabelExpression, deferred_expression BodyExpression>
 class case_expression
 {
 public:
@@ -207,6 +212,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, case_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, case_expression, subexpression_types>)
   {
@@ -324,10 +330,10 @@ struct is_nothrow_evaluable<
  * @tparam Cases Tuple of the cases accumulated so far.
  * @tparam LabelExpression Type of the pending case label expression.
  */
-template<Deferred ConditionExpression,
+template<deferred_expression ConditionExpression,
          typename DefaultExpression,
-         Deferred LabelExpression,
-         Deferred... Cases>
+         deferred_expression LabelExpression,
+         deferred_expression... Cases>
 class switch_case_builder
 {
   using case_types = std::tuple<Cases...>;
@@ -432,7 +438,9 @@ public:
  * @tparam DefaultExpression Type of the @c default case, or @ref detail::no_default.
  * @tparam CaseExpression Types of the case expressions.
  */
-template<Deferred ConditionExpression, typename DefaultExpression, Deferred... CaseExpression>
+template<deferred_expression ConditionExpression,
+         typename DefaultExpression,
+         deferred_expression... CaseExpression>
 class switch_expression
 {
   constexpr static inline bool finalized = !std::is_same_v<DefaultExpression, detail::no_default>;
@@ -542,7 +550,7 @@ public:
    * @param label Label expression to compare the condition against.
    * @return A @ref switch_case_builder awaiting the body expression.
    */
-  template<typename LabelEx>
+  template<case_label_for<ConditionExpression> LabelEx>
   [[nodiscard]] constexpr auto case_(LabelEx&& label) && //
     noexcept(case_is_nothrow<ConditionExpression&&, DefaultExpression&&, case_types&&, LabelEx>())
   {
@@ -556,7 +564,7 @@ public:
   }
 
   /// @copydoc case_
-  template<typename LabelEx>
+  template<case_label_for<ConditionExpression> LabelEx>
   [[nodiscard]] constexpr auto case_(LabelEx&& label) const& //
     noexcept(case_is_nothrow<ConditionExpression const&,
                              DefaultExpression const&,
@@ -692,6 +700,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, switch_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, switch_expression, subexpression_types>)
   {
@@ -709,7 +718,7 @@ public:
  * @brief Switch chain waiting for its first @c case or its @c default case.
  * @tparam ConditionExpression Type of the condition expression.
  */
-template<Deferred ConditionExpression>
+template<deferred_expression ConditionExpression>
 class switch_builder
 {
   DEFERRED_NO_UNIQUE_ADDRESS ConditionExpression m_condition;
@@ -754,7 +763,7 @@ public:
    * @param label Label expression to compare the condition against.
    * @return A @ref switch_case_builder awaiting the body expression.
    */
-  template<typename LabelEx>
+  template<case_label_for<ConditionExpression> LabelEx>
   [[nodiscard]] constexpr auto case_(LabelEx&& label) && //
     noexcept(std::is_nothrow_constructible_v<case_builder<LabelEx>,
                                              ConditionExpression&&,
@@ -769,7 +778,7 @@ public:
   }
 
   /// @copydoc case_
-  template<typename LabelEx>
+  template<case_label_for<ConditionExpression> LabelEx>
   [[nodiscard]] constexpr auto case_(LabelEx&& label) const& //
     noexcept(std::is_nothrow_constructible_v<case_builder<LabelEx>,
                                              ConditionExpression const&,

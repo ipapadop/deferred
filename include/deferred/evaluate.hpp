@@ -23,7 +23,7 @@ namespace detail {
 template<typename T, bool Recursive>
 consteval bool evaluation_is_nothrow()
 {
-  if constexpr (Recursive ? std::is_invocable_v<T> : Deferred<T>)
+  if constexpr (Recursive ? std::is_invocable_v<T> : deferred_expression<T>)
   {
     if constexpr (!std::is_nothrow_invocable_v<T>)
     {
@@ -55,7 +55,7 @@ consteval bool evaluation_is_nothrow()
 template<typename T>
 constexpr auto evaluate(T&& t) noexcept(detail::evaluation_is_nothrow<T, false>())
 {
-  if constexpr (Deferred<T>)
+  if constexpr (deferred_expression<T>)
   {
     if constexpr (std::is_void_v<decltype(std::forward<T>(t)())>)
     {
@@ -82,7 +82,7 @@ namespace detail {
 template<typename T>
 consteval bool reference_evaluation_is_nothrow()
 {
-  if constexpr (!Deferred<T>)
+  if constexpr (!deferred_expression<T>)
   {
     return std::is_nothrow_constructible_v<T, T&&>;
   }
@@ -90,7 +90,7 @@ consteval bool reference_evaluation_is_nothrow()
   {
     return false;
   }
-  else if constexpr (Deferred<std::invoke_result_t<T>>)
+  else if constexpr (deferred_expression<std::invoke_result_t<T>>)
   {
     return evaluation_is_nothrow<std::invoke_result_t<T>, false>();
   }
@@ -121,13 +121,13 @@ consteval bool reference_evaluation_is_nothrow()
 template<typename T>
 constexpr decltype(auto) evaluate_ref(T&& t) noexcept(detail::reference_evaluation_is_nothrow<T>())
 {
-  if constexpr (!Deferred<T>)
+  if constexpr (!deferred_expression<T>)
   {
     // An lvalue stays a reference; an rvalue is returned by value, because a reference
     // to it would dangle once the caller's full expression ends.
     return static_cast<T>(std::forward<T>(t));
   }
-  else if constexpr (Deferred<decltype(std::forward<T>(t)())>)
+  else if constexpr (deferred_expression<decltype(std::forward<T>(t)())>)
   {
     return evaluate(std::forward<T>(t)());
   }

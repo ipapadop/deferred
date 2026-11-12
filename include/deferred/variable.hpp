@@ -10,6 +10,7 @@
 
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 #include "assign.hpp"
 #include "evaluate.hpp"
@@ -89,7 +90,7 @@ public:
    * @param e Expression whose value is assigned to the variable.
    * @return An expression assigning to the variable when evaluated.
    */
-  template<Deferred E>
+  template<deferred_expression E>
   [[nodiscard]] constexpr detail::assign_expression_t<detail::assign_to, variable_&, E>
   operator=(E&& e) & noexcept(detail::assign_is_nothrow<detail::assign_to, variable_&, E>())
   {
@@ -161,6 +162,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, variable_>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, variable_, subexpression_types>)
   {

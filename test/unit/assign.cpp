@@ -62,7 +62,7 @@ TEST_CASE("assigning a deferred expression builds an expression", "[assign]")
   auto v = deferred::variable<int>();
   auto e = (v = deferred::constant(7));
 
-  static_assert(deferred::Deferred<decltype(e)>);
+  static_assert(deferred::deferred_expression<decltype(e)>);
   static_assert(!deferred::is_constant_expression_v<decltype(e)>);
   CHECK(v() == 0);
 
@@ -146,7 +146,7 @@ TEST_CASE("compound assignment builds an expression", "[assign-compound]")
   auto v = deferred::variable(10);
   auto e = (v += 5);
 
-  static_assert(deferred::Deferred<decltype(e)>);
+  static_assert(deferred::deferred_expression<decltype(e)>);
   static_assert(!deferred::is_constant_expression_v<decltype(e)>);
   CHECK(v() == 10);
 
