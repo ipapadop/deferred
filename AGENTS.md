@@ -53,7 +53,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   pointer, and a decayed value otherwise. So `++i` yields `int&` like `i += 1`, `*(p + 1)` yields a reference,
   and `*invoke(make_unique)` yields a copy. Returning `decltype(auto)` from these function objects reintroduces
   a dangling reference that only ASan catches.
-- **`[[nodiscard]]` on evaluation**: only `constant`, `variable`, `variable_ref` and `variable_cref` have it on `operator()`. Every other node
+- **`[[nodiscard]]` on evaluation**: only `constant` and `variable` have it on `operator()`. Every other node
   may be evaluated for effect, so neither its `operator()` nor `evaluate()`, `evaluate_ref()` and
   `recursive_evaluate()` are `[[nodiscard]]`. Constructing a `constant` or a `variable`, the free factories such
   as `invoke()` and `seq()`, and builder methods all are.
@@ -103,19 +103,24 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   so it cannot be passed to `invoke()` or stored in a node (#73).
 - **A node stores every operand by value** (#26). `make_deferred_t` never yields a reference: a named
   constant or expression is copied into the node, a temporary is moved in, and a named variable becomes a
-  `variable_ref<T>` — a `variable_cref<T>` for a const variable — which is a pointer to it. So an
+  `node_ref` — `variable_ref<T>`, or `variable_cref<T>` for a const variable — which is a pointer to it. So an
   expression can be copied, returned and kept in a container; only its variables must outlive it. They used
   to be held as `X&`, and `auto c2 = c * 2; return c2;` dangled.
-  - `variable_ref` and `variable_cref` (`variable_ref.hpp`) forward-declare `variable`, so `expression.hpp`
-    can include them. `detail::variable_ref_for` maps an operand type to one of them and is what
-    `deduce_deferred_type` asks first. They are two types, not `variable_ref<T const>`, because
-    `variable<T const>` is a distinct, valid variable and needs `variable_ref<T const>` for itself.
-  - A visitor is called with the *variable*, not the `variable_ref`; `detail::visits_tree` is specialized
-    to match. `subexpressions()` does hand back the `variable_ref` (#72).
+  - `node_ref<Node>` (`node_ref.hpp`) is the one node that refers to another. `variable_ref<T>` and
+    `variable_cref<T>` are aliases for `node_ref<variable<T>>` and `node_ref<variable<T> const>`, and
+    `std::ref(x)` / `std::cref(x)` on any node become `node_ref<X>` / `node_ref<X const>`, so
+    `std::ref(v) + 1` and `v + 1` have the same type. It was three mechanisms before: two near-identical
+    classes and an `expression_` over a `std::reference_wrapper` with a special case in
+    `expression_::visit`. `variable<T const>` is a distinct, valid variable, so its reference is
+    `node_ref<variable<T const>>`, not the const form.
+  - The header forward-declares `variable`, so `expression.hpp` can include it. A `node_ref` evaluates and
+    visits the node it refers to, and has `get()` when that node has. `detail::visits_tree` is
+    specialized so that a visitor is checked against, and shown, the node; `subexpressions()` does hand
+    back the `node_ref` (#72).
   - **A temporary `expression_` yields a value where a stored one would yield a reference into itself**
     (`operator()() &&`, and `eval()` likewise). Whether a result is such a reference is read from the
     *type* the operator would yield if the operands were evaluated as temporaries: an owned `constant`
-    then yields a value, so `operand_result_t` gives a decayed type, while a `variable_ref` still gives a
+    then yields a value, so `operand_result_t` gives a decayed type, while a `node_ref` still gives a
     reference. The operands are nevertheless evaluated as stored, and the result is copied when the two
     types disagree. Without this, `auto const& s = subscript(table, i)();` over a named constant refers
     into the temporary node's copy. Actually evaluating the operands as temporaries was the first version
@@ -136,7 +141,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
     passed ASan, but cost up to 6x on a counter-and-sum `for_` loop and 11x on a saxpy loop over
     `subscript()`, against no measurable change for `variable_ref`. A stored pointer to a separate named
     object optimizes as the reference did; shared state reached through handles did not.
-  - `test/unit/variable_ref.cpp` and `test/integration/ownership.cpp` pin this; the latter needs ASan to
+  - `test/unit/node_ref.cpp` and `test/integration/ownership.cpp` pin this; the latter needs ASan to
     catch a regression.
 - **A named operand that owns state is a compile error**: `detail::deduce_deferred_type` has a
   `static_assert` for an lvalue operand for which `detail::owns_state` holds. The message names the two
@@ -144,17 +149,16 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   behaviour of by-value storage and was rejected: a user node with `mutable_state` lost its writes, and a
   named `invoke([n = 0]() mutable { ... })` used in two expressions ran two counters.
   - `owns_state` is true for a node with `mutable_state` that does not merely refer to state
-    (`detail::refers_to_state`: `variable_ref`, `variable_cref`, `assign_expression`), for an `expression_`
+    (`detail::refers_to_state`: `node_ref`, `assign_expression`), for an `expression_`
     whose callable cannot be called as const, and for any node that stores one of those. The callable is
     asked last, because asking evaluates the subexpressions as const.
   - Like the `immediate_assignment` check it is a hard error, so no test pins it; check it by hand (#74). Only an
     *lvalue* operand is checked. `conditional_builder::then_() const&` therefore copies its stored condition
     explicitly rather than passing the member, which would present it as a named operand.
-  - `std::ref` / `std::cref` need no node of their own: a `std::reference_wrapper` is a callable, so it is
-    stored as `expression_<std::reference_wrapper<N>>`. The `deferred_operand` concept lets the unary
-    operators, compound assignments, `subscript()` and `assign()` accept it, and `any_deferred` is defined
-    over it. A visitor is shown the node referred to: `expression_::visit` forwards to it, and
-    `detail::visits_tree` and `detail::is_nothrow_visitable` are specialized to match.
+  - `std::ref(x)` / `std::cref(x)` are stored as a `node_ref`. A `std::reference_wrapper` to something
+    that is not a node is still an ordinary callable. The `deferred_operand` concept lets the unary
+    operators, compound assignments, `subscript()` and `assign()` accept one, and `any_deferred` is defined
+    over it.
   - A user node outside `namespace deferred` is not found by the operators through ADL, with or without
     `std::ref`; such code needs `using namespace deferred`.
 - **Lazy operand types and temporaries**: an operator on `std::valarray` may return a proxy that refers to its
@@ -166,7 +170,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `if_(c).then_([&] { return dx + dy; })`, yields a proxy into copies that die with it. libstdc++ has held
   nested proxies by value since GCC 9, which is what fixed #2. `test/integration/operators.cpp` pins the safe
   case.
-- **Named access**: `constant`, `variable`, `variable_ref` and `variable_cref` have `get()`, a named spelling of `operator()` with the same
+- **Named access**: `constant` and `variable` have `get()`, and a `node_ref` to one forwards it, a named spelling of `operator()` with the same
   cv/ref-qualified overloads, return types and `noexcept`. It delegates to `operator()`, so the two cannot
   drift apart. No other node has it: `get()` reads a stored value, and the call evaluates an expression.
 - **Named evaluation**: every other node — `expression_`, `assign_expression`, `logical_expression`,
@@ -174,10 +178,10 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `default_expression`, and the three loops — has `eval()`, a named spelling of `operator()`. Each class defines
   a const and a non-const overload that return `(*this)()`, so result type and `noexcept` are the operator's. A
   new node must define both. `expression_` also has an rvalue overload of each. `eval()` is not
-  `[[nodiscard]]`, for the same reason the operator is not. `constant`, `variable`, `variable_ref`,
-  `variable_cref` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
+  `[[nodiscard]]`, for the same reason the operator is not. `constant`, `variable`, `node_ref` and
+  the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
 - **Node interface**: every node has `subexpression_types` and `subexpressions()`, which returns a tuple of
-  references in the same order; a named variable appears there as its `variable_ref`. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
+  references in the same order; a named variable appears there as its `node_ref`. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
   `operator_type` / `operator_()`, and `is_constant_expression` checks it through `operator_type`. Nodes whose
   result does not depend on constness name it `result_type`.
 - **Builders construct the last operand in place**: `then_`, `else_` and `default_` forward their argument

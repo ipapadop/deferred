@@ -185,14 +185,16 @@ int result = ex();            // 15
   uses it. ``std::move`` moves it in when it is no longer needed.
 - A temporary is moved in.
 - A named variable is **referred to**: the expression stores a
-  ``deferred::variable_ref``, which is a pointer to the variable, so it sees
-  every later change. The variable must outlive the expression. A copy of the
-  expression refers to the same variable. A variable that is ``const`` where it
-  is used is stored as a ``deferred::variable_cref``, which can only read it.
+  ``deferred::node_ref``, which is a pointer to the variable, so it sees every
+  later change. The variable must outlive the expression. A copy of the
+  expression refers to the same variable. ``variable_ref<T>`` names the
+  ``node_ref`` to a ``variable<T>``, and ``variable_cref<T>`` the one to a
+  variable that is ``const`` where it is used, which can only read it.
 
 So the type of ``v * factor`` above is
-``expression_<std::multiplies<>, variable_ref<int>, constant<int>>``; no
-expression type contains a reference.
+``expression_<std::multiplies<>, variable_ref<int>, constant<int>>``, which a
+compiler prints as ``node_ref<variable<int>>``; no expression type contains a
+reference.
 
 An expression may yield a reference into an operand it owns, such as an element
 of a table held in a constant. That reference is valid for as long as the
@@ -244,7 +246,9 @@ auto d = std::move(next) + deferred::constant(0);   // d owns next from here on
 ```
 
 ``std::ref(x)`` makes the expression refer to ``x``, which must then outlive
-it, and ``std::cref(x)`` does the same for reading only. They work with every
+it, and ``std::cref(x)`` does the same for reading only. Either is stored as a
+``node_ref`` to ``x``, exactly as a named variable is, so ``std::ref(v) + 1``
+and ``v + 1`` are the same expression. They work with every
 operator, including ``++std::ref(x)`` and ``std::ref(x) += 1``, and with any
 node, a variable included. A variable needs neither: naming it already refers
 to it.
@@ -649,9 +653,9 @@ auto sum = i + deferred::constant(2);
 auto const& [left, right] = sum.subexpressions();   // left is a variable_ref to i
 ```
 
-A named variable appears among the subexpressions as the ``variable_ref`` or
-``variable_cref`` that refers to it. A visitor is called with the variable itself, and with the node
-behind a ``std::ref`` or ``std::cref`` operand.
+A named variable, and a node passed with ``std::ref`` or ``std::cref``, appears
+among the subexpressions as the ``node_ref`` that refers to it. A visitor is
+called with the node itself.
 
 ``deferred::type_name<T>()`` returns a readable name for a type, which helps
 when printing an expression tree.

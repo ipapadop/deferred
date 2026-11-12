@@ -14,6 +14,7 @@
 #include "for.hpp"
 #include "invoke.hpp"
 #include "logical.hpp"
+#include "node_ref.hpp"
 #include "operators.hpp"
 #include "seq.hpp"
 #include "switch.hpp"
@@ -21,7 +22,6 @@
 #include "type_traits/expression_visitor.hpp"
 #include "type_traits/is_constant_expression.hpp"
 #include "variable.hpp"
-#include "variable_ref.hpp"
 #include "while.hpp"
 
 #endif

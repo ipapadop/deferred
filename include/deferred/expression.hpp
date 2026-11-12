@@ -21,7 +21,7 @@
 #include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
 
-#include "variable_ref.hpp"
+#include "node_ref.hpp"
 
 namespace deferred {
 
@@ -183,33 +183,12 @@ public:
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, expression_, subexpression_types>)
   {
-    if constexpr (sizeof...(Expressions) == 0 && detail::is_reference_to_deferred<operator_type>)
-    {
-      // std::ref(node) or std::cref(node): the visitor is shown the node referred to,
-      // as it is shown the variable behind a variable_ref.
-      m_op.get().visit(v, nesting);
-    }
-    else
-    {
-      v(*this, nesting);
-      detail::visit_children(m_expressions, v, nesting + 1);
-    }
+    v(*this, nesting);
+    detail::visit_children(m_expressions, v, nesting + 1);
   }
 };
 
 namespace detail {
-
-// A visitor is called with the node a std::reference_wrapper operand refers to.
-template<typename Visitor, deferred_expression Node>
-struct visits_tree<Visitor, expression_<std::reference_wrapper<Node>>> :
-  visits_tree<Visitor, std::remove_const_t<Node>>
-{ };
-
-template<typename Visitor, deferred_expression Node>
-struct is_nothrow_visitable<Visitor, expression_<std::reference_wrapper<Node>>, std::tuple<>> :
-  std::bool_constant<noexcept(
-    std::declval<Node const&>().visit(std::declval<Visitor&>(), std::size_t{}))>
-{ };
 
 /**
  * @brief Whether evaluating @p Node needs it to be non-const.
@@ -286,18 +265,19 @@ consteval auto deduce_deferred_type()
   static_assert(!std::is_same_v<U, immediate_assignment>,
                 "`v = value` assigns immediately and is not an expression; to assign when "
                 "the expression is evaluated, write `v = deferred::constant(value)`");
-  if constexpr (requires { typename variable_ref_for<T>::type; })
-  {
-    return variable_ref_for<T>{};
-  }
-  else if constexpr (requires { typename variable_ref_for<U&>::type; })
+  if constexpr (is_variable<U>)
   {
     // The condition is spelled with T so that it is checked only when this branch is
     // taken.
     static_assert(std::is_lvalue_reference_v<T>,
                   "a temporary variable cannot be used in an expression, which would refer "
                   "to it after it is destroyed: give the variable a name");
-    return std::type_identity<U>{};
+    return std::type_identity<node_ref<std::remove_reference_t<T>>>{};
+  }
+  else if constexpr (is_reference_to_deferred<U>)
+  {
+    // std::ref(node) or std::cref(node).
+    return std::type_identity<node_ref<typename U::type>>{};
   }
   else if constexpr (deferred_expression<T>)
   {

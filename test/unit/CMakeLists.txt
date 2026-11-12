@@ -16,12 +16,12 @@ set(SOURCES
   is_deferred.cpp
   logical.cpp
   main.cpp
+  node_ref.cpp
   operators.cpp
   seq.cpp
   switch.cpp
   type_name.cpp
   variable.cpp
-  variable_ref.cpp
   visitor.cpp
   while.cpp
   detail/apply_evaluated.cpp
