@@ -45,9 +45,6 @@ struct counted
   counted& operator=(counted const&) = default;
 };
 
-template<typename Variable, typename Value>
-concept chainable = requires(Variable variable, Value value) { variable = value; };
-
 } // namespace
 
 TEST_CASE("assigning a value stores it immediately", "[assign]")
@@ -292,13 +289,11 @@ TEST_CASE("an assignment target must yield an lvalue", "[assign]")
 
 TEST_CASE("an immediate assignment cannot be chained", "[assign]")
 {
-  using V = deferred::variable_<int>;
-
-  // `b = 7` has already assigned and yields no value, so there is nothing for the outer
-  // `=` to assign; the deferred spelling chains.
-  static_assert(!chainable<V&, decltype(std::declval<V&>() = 7)>);
-  static_assert(chainable<V&, decltype(std::declval<V&>() = deferred::constant(7))>);
-
+  // `b = 7` has already assigned and yields no value, so `a = (b = 7)` does not
+  // compile; the deferred spelling chains. The rejection is not asserted here: compilers
+  // that substitute the return type of `operator=` before checking its constraint (Clang
+  // before 20, MSVC) report it through the static_assert behind make_deferred_t, which
+  // is a hard error rather than a failed requirement.
   auto a = deferred::variable<int>();
   auto b = deferred::variable<int>();
   a      = 1;
