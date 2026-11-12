@@ -97,6 +97,12 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   One gap remains, the price of `variable w{v}`: a by-copy capture direct-initializes, so a bare
   `[=] { return v(); }` over a non-const `v` compiles and snapshots it. The closure cannot be copied or moved,
   so it cannot be passed to `invoke()` or stored in a node.
+- **Lazy operand types and temporaries**: an operator on `std::valarray` may return a proxy that refers to its
+  operands. A node evaluates its operands inside its own call, so a proxy over a *temporary* operand —
+  `invoke([] { return std::valarray<float>(...); }) * constant(2.0f)` — dangles once the node returns, where
+  the plain C++ statement would be fine. Operands stored in a `constant` or `variable` are safe, and nested
+  expressions over them are too: libstdc++ has held nested proxies by value since GCC 9, which is what fixed
+  #2. `test/integration/operators.cpp` pins the safe case; the temporary case is not fixed (#68).
 - **Named access**: `constant` and `variable` have `get()`, a named spelling of `operator()` with the same
   cv/ref-qualified overloads, return types and `noexcept`. It delegates to `operator()`, so the two cannot
   drift apart. No other node has it: `get()` reads a stored value, and the call evaluates an expression.

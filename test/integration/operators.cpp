@@ -6,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <type_traits>
+#include <valarray>
 
 #include "deferred/constant.hpp"
 #include "deferred/invoke.hpp"
@@ -445,4 +446,32 @@ TEST_CASE("deferred subscripting", "[operators-subscript]")
   CHECK(ex() == 20);
   index = 2;
   CHECK(ex() == 30);
+}
+
+TEST_CASE("nested std::valarray expressions over stored operands", "[operators-valarray]")
+{
+  // The standard library may evaluate valarray arithmetic lazily, through a proxy that
+  // refers to its operands. Every operand here is stored in a node, so the proxies stay
+  // valid for as long as the expression does (#2); ASan checks that.
+  auto a = deferred::constant(2.0f);
+  auto x = deferred::constant(std::valarray<float>(0.5f, 100));
+  auto y = deferred::variable(std::valarray<float>(1.0f, 100));
+
+  auto partial = a * x;
+  auto saxpy   = partial + y;
+  auto deeper  = (saxpy * y - x) / a;
+
+  std::valarray<float> const r1 = saxpy();
+  std::valarray<float> const r2 = deeper();
+  REQUIRE(r1.size() == 100);
+  REQUIRE(r2.size() == 100);
+  CHECK(r1[0] == 2.0f);
+  CHECK(r1[99] == 2.0f);
+  CHECK(r2[0] == 0.75f);
+  CHECK(r2[99] == 0.75f);
+
+  // The expression reads the variable anew on every evaluation.
+  y()                           = std::valarray<float>(3.0f, 100);
+  std::valarray<float> const r3 = saxpy();
+  CHECK(r3[0] == 4.0f);
 }
