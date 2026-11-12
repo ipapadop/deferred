@@ -93,7 +93,7 @@ public:
             && detail::evaluates_to<U, T>
   constexpr explicit variable(U&& u) noexcept(
     noexcept(detail::evaluate_for_node(std::declval<U>()))
-    && std::is_nothrow_constructible_v<T, decltype(detail::evaluate_for_node(std::declval<U>()))>) :
+    && std::is_nothrow_constructible_v<T, detail::node_argument_t<U>>) :
     m_t(detail::evaluate_for_node(std::forward<U>(u)))
   { }
 

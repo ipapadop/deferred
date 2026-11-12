@@ -157,27 +157,27 @@ TEST_CASE("a builder constructs the operand it is given in place", "[ownership]"
   CHECK(moves == 0);
 
   reset();
-  auto with_else = deferred::if_(flag).then_(1).else_(c);
+  [[maybe_unused]] auto with_else = deferred::if_(flag).then_(1).else_(c);
   CHECK(copies == 1);
   CHECK(moves == 0);
 
   reset();
-  auto extended = with_then.else_(c);
+  [[maybe_unused]] auto extended = with_then.else_(c);
   CHECK(copies == 2);
   CHECK(moves == 0);
 
   reset();
-  auto with_default = deferred::switch_(i).default_(c);
+  [[maybe_unused]] auto with_default = deferred::switch_(i).default_(c);
   CHECK(copies == 1);
   CHECK(moves == 0);
 
   reset();
-  auto with_case = deferred::switch_(i).case_(1).then_(c);
+  [[maybe_unused]] auto with_case = deferred::switch_(i).case_(1).then_(c);
   CHECK(copies == 1);
   CHECK(moves == 0);
 
   reset();
-  auto case_and_default = deferred::switch_(i).case_(1).then_(2).default_(c);
+  [[maybe_unused]] auto case_and_default = deferred::switch_(i).case_(1).then_(2).default_(c);
   CHECK(copies == 1);
   CHECK(moves == 0);
 }
@@ -196,6 +196,40 @@ TEST_CASE("a reference from a temporary expression over a named constant is safe
   auto text                = deferred::constant(std::optional<std::string>(std::string(40, 'x')));
   std::string const& value = (*text)();
   CHECK(value == std::string(40, 'x'));
+}
+
+TEST_CASE("evaluating a temporary expression does not move its operands out", "[ownership]")
+{
+  int copies = 0;
+  int moves  = 0;
+  auto c     = deferred::constant(counted(copies, moves, 1));
+  auto sum   = c + c;
+  copies     = 0;
+  moves      = 0;
+
+  // The operands are read where they are stored, as for a stored expression.
+  CHECK(std::move(sum)() == 2);
+  CHECK(copies == 0);
+  CHECK(moves == 0);
+  CHECK((c + c)() == 2);
+  CHECK(moves == 0);
+}
+
+TEST_CASE("a callable that returns a reference to its argument works in a temporary expression",
+          "[ownership]")
+{
+  auto same = [](std::string const& text) -> std::string const& {
+    return text;
+  };
+
+  // The argument lives in the temporary expression until the end of the statement, so
+  // the reference the callable returns can still be read; ASan checks that.
+  std::string const copy = deferred::invoke(same, deferred::constant(std::string(40, 'r')))();
+  CHECK(copy == std::string(40, 'r'));
+
+  auto named                = deferred::constant(std::string(40, 'n'));
+  std::string const through = deferred::invoke(same, named)();
+  CHECK(through == std::string(40, 'n'));
 }
 
 TEST_CASE("a variable of a const type and a const variable are both read through", "[ownership]")

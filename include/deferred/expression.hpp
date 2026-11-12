@@ -43,6 +43,25 @@ private:
   DEFERRED_NO_UNIQUE_ADDRESS operator_type m_op;
   DEFERRED_NO_UNIQUE_ADDRESS subexpression_types m_expressions;
 
+  // Whether evaluating a temporary expression cannot throw; see operator()() &&.
+  static consteval bool temporary_is_nothrow()
+  {
+    using stored         = decltype(detail::apply_evaluated(std::declval<operator_type&>(),
+                                                            std::declval<subexpression_types&>()));
+    using temporary      = decltype(detail::apply_evaluated(std::declval<operator_type&>(),
+                                                            std::declval<subexpression_types>()));
+    bool const evaluates = noexcept(detail::apply_evaluated(std::declval<operator_type&>(),
+                                                            std::declval<subexpression_types&>()));
+    if constexpr (std::is_reference_v<stored> && !std::is_reference_v<temporary>)
+    {
+      return evaluates && std::is_nothrow_constructible_v<std::remove_cvref_t<stored>, stored>;
+    }
+    else
+    {
+      return evaluates;
+    }
+  }
+
 public:
   /**
    * @brief Constructs an expression.
@@ -87,17 +106,31 @@ public:
   /**
    * @brief Evaluates a temporary expression.
    *
-   * The subexpressions are evaluated as temporaries too. One that owns its value then
-   * yields the value rather than a reference to it, so the result cannot refer into
-   * this expression, which is about to be destroyed. A @ref variable_ref still yields
-   * a reference, because the variable it refers to outlives the expression.
+   * A stored expression may yield a reference into an operand it owns. A temporary one
+   * is about to be destroyed, so where its result would be such a reference it yields
+   * a copy of the value instead.
    *
-   * @return The result of the operator.
+   * Which results are such references is read from the type the operator would yield
+   * if the subexpressions were evaluated as temporaries too: an owned @ref constant
+   * then yields a value, and a @ref variable_ref still yields a reference. The
+   * subexpressions are nevertheless evaluated as they are stored. Evaluating them as
+   * temporaries would move every owned value out, and a callable that returns a
+   * reference to its argument would return one to a value that is already gone.
+   *
+   * @return The result of the operator, by value if it would refer into this expression.
    */
-  constexpr decltype(auto)
-  operator()() && noexcept(noexcept(detail::apply_evaluated(m_op, std::move(m_expressions))))
+  constexpr decltype(auto) operator()() && noexcept(temporary_is_nothrow())
   {
-    return detail::apply_evaluated(m_op, std::move(m_expressions));
+    using stored    = decltype(detail::apply_evaluated(m_op, m_expressions));
+    using temporary = decltype(detail::apply_evaluated(m_op, std::move(m_expressions)));
+    if constexpr (std::is_reference_v<stored> && !std::is_reference_v<temporary>)
+    {
+      return std::remove_cvref_t<stored>(detail::apply_evaluated(m_op, m_expressions));
+    }
+    else
+    {
+      return detail::apply_evaluated(m_op, m_expressions);
+    }
   }
 
   /**
@@ -178,10 +211,6 @@ struct is_nothrow_visitable<Visitor, expression_<std::reference_wrapper<Node>>, 
     std::declval<Node const&>().visit(std::declval<Visitor&>(), std::size_t{}))>
 { };
 
-} // namespace detail
-
-namespace detail {
-
 /**
  * @brief Whether evaluating @p Node needs it to be non-const.
  *
@@ -197,6 +226,13 @@ template<typename Operator, typename... Expressions>
 inline constexpr bool callable_needs_mutable<expression_<Operator, Expressions...>> =
   !std::is_invocable_v<Operator const&, decltype(std::declval<Expressions const&>()())...>;
 
+// A callable with no members has no state to change, and asking is costly: it
+// instantiates the const evaluation of every subexpression. Every operator object of
+// the library is empty.
+template<typename Operator, typename... Expressions>
+  requires std::is_empty_v<Operator>
+inline constexpr bool callable_needs_mutable<expression_<Operator, Expressions...>> = false;
+
 template<typename Node>
 consteval bool owns_state();
 
@@ -204,7 +240,7 @@ consteval bool owns_state();
 template<typename... Children>
 consteval bool any_owns_state(std::type_identity<std::tuple<Children...>>)
 {
-  return (owns_state<std::remove_cvref_t<Children>>() || ...);
+  return (owns_state<Children>() || ...);
 }
 
 /**
@@ -221,11 +257,8 @@ consteval bool any_owns_state(std::type_identity<std::tuple<Children...>>)
 template<typename Node>
 consteval bool owns_state()
 {
-  if constexpr (has_mutable_state<Node> && !refers_to_state<Node>)
-  {
-    return true;
-  }
-  else if constexpr (any_owns_state(std::type_identity<typename Node::subexpression_types>{}))
+  if constexpr ((has_mutable_state<Node> && !refers_to_state<Node>)
+                || any_owns_state(std::type_identity<typename Node::subexpression_types>{}))
   {
     return true;
   }
@@ -238,16 +271,10 @@ consteval bool owns_state()
 }
 
 /**
- * @brief Deduce the deferred type for @p T.
+ * @brief Deduce the deferred type for @p T , by the rules of @ref make_deferred_t.
  *
- * - If @p T is an lvalue reference to a @ref variable , it is transformed to a
- *   @ref variable_ref , so the expression refers to the variable.
- * - If @p T is any other @c deferred type, it is transformed to that type without
- *   reference or cv-qualifier, so the expression owns a copy of the operand.
- * - If @p T is a callable type, it is transformed to an @ref expression_.
- * - If @p T is not a callable type, it is transformed to an @ref constant.
- *
- * The result is never a reference.
+ * An operand that cannot be stored is rejected here, with a message that names the
+ * fix, because every construct stores its operands through this function.
  *
  * @tparam T Type to transform.
  * @return A @c std::type_identity containing the deduced deferred type.
@@ -274,16 +301,25 @@ consteval auto deduce_deferred_type()
   }
   else if constexpr (deferred_expression<T>)
   {
-    if constexpr (std::is_lvalue_reference_v<T>)
+    // A named operand would be copied into the expression. The condition of each
+    // assertion repeats that of its branch so that it is checked only when the branch is
+    // taken.
+    if constexpr (!std::is_lvalue_reference_v<T>)
     {
-      static_assert(owns_state<U>() || std::is_copy_constructible_v<U>,
-                    "this operand cannot be copied into the expression: write std::move(x) "
-                    "to give x to the expression, or std::ref(x) for the expression to "
-                    "refer to x");
+    }
+    else if constexpr (owns_state<U>())
+    {
       static_assert(!owns_state<U>(),
                     "this operand has state of its own, and an expression would take a copy "
                     "of it: write std::ref(x) for the expression to refer to x, or "
                     "std::move(x) to give x to the expression");
+    }
+    else
+    {
+      static_assert(std::is_copy_constructible_v<U>,
+                    "this operand cannot be copied into the expression: write std::move(x) "
+                    "to give x to the expression, or std::ref(x) for the expression to "
+                    "refer to x");
     }
     return std::type_identity<U>{};
   }
@@ -303,7 +339,8 @@ consteval auto deduce_deferred_type()
  * @brief Transforms @p T into a @c deferred type.
  *
  * - If @p T is an lvalue reference to a @ref variable , it is transformed to a
- *   @ref variable_ref , so the expression refers to the variable.
+ *   @ref variable_ref , or to a @ref variable_cref when the variable is @c const , so
+ *   the expression refers to the variable.
  * - If @p T is any other @c deferred type, it is transformed to that type without
  *   reference or cv-qualifier, so the expression owns a copy of the operand.
  * - If @p T is a callable type, it is transformed to an @ref expression_.

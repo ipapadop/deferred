@@ -78,7 +78,7 @@ public:
     requires(!std::same_as<std::remove_cvref_t<U>, constant>) && detail::evaluates_to<U, T>
   [[nodiscard]] constexpr explicit constant(U&& u) noexcept(
     noexcept(detail::evaluate_for_node(std::declval<U>()))
-    && std::is_nothrow_constructible_v<T, decltype(detail::evaluate_for_node(std::declval<U>()))>) :
+    && std::is_nothrow_constructible_v<T, detail::node_argument_t<U>>) :
     m_t(detail::evaluate_for_node(std::forward<U>(u)))
   { }
 

@@ -138,24 +138,10 @@ private:
 
 public:
   /**
-   * @brief Constructs a case_expression.
-   * @tparam LabelEx Type of the label expression.
-   * @tparam BodyEx Type of the body expression.
-   * @param label The label expression.
-   * @param body The body expression.
-   */
-  template<typename LabelEx, typename BodyEx>
-  constexpr explicit case_expression(LabelEx&& label, BodyEx&& body) noexcept(
-    std::is_nothrow_constructible_v<LabelExpression, LabelEx&&>
-    && std::is_nothrow_constructible_v<BodyExpression, BodyEx&&>) :
-    m_label(std::forward<LabelEx>(label)), m_body(std::forward<BodyEx>(body))
-  { }
-
-  /**
-   * @brief Constructs a case_expression in place from the arguments of its expressions.
+   * @brief Constructs a case_expression from the arguments of its two expressions.
    *
    * The arguments arrive as one @ref detail::forwarded_pair , so that a @c std::tuple of
-   * cases can construct this one directly, without a temporary case to move from.
+   * cases can construct this one in place, without a temporary case to move from.
    *
    * @tparam LabelEx Type of the label argument.
    * @tparam BodyEx Type of the body argument.
@@ -747,10 +733,8 @@ class switch_builder
     switch_case_builder<ConditionExpression, detail::no_default, make_deferred_t<LabelEx>>;
 
   template<typename DefaultEx>
-  using default_type = default_expression<make_deferred_t<DefaultEx>>;
-
-  template<typename DefaultEx>
-  using finalized_type = switch_expression<ConditionExpression, default_type<DefaultEx>>;
+  using finalized_type =
+    switch_expression<ConditionExpression, default_expression<make_deferred_t<DefaultEx>>>;
 
   /** @brief Whether finalizing the switch with @p DefaultEx cannot throw. */
   template<typename Condition, typename DefaultEx>

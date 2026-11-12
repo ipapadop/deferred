@@ -112,12 +112,20 @@ This project is a C++23 header-only library for creating deferred evaluation exp
     `variable<T const>` is a distinct, valid variable and needs `variable_ref<T const>` for itself.
   - A visitor is called with the *variable*, not the `variable_ref`; `detail::visits_tree` is specialized
     to match. `subexpressions()` does hand back the `variable_ref` (#72).
-  - **A temporary `expression_` evaluates its operands as temporaries** (`operator()() &&`, and `eval()`
-    likewise). An owned `constant` then yields its value, not a reference, and `operand_result_t` returns
-    a copy; a `variable_ref` still yields a reference. Without this,
-    `auto const& s = subscript(table, i)();` over a named constant refers into the temporary node's copy.
-    Only `expression_` needs it: every other node returns through `evaluate()`, which decays, or yields
-    the target of an assignment.
+  - **A temporary `expression_` yields a value where a stored one would yield a reference into itself**
+    (`operator()() &&`, and `eval()` likewise). Whether a result is such a reference is read from the
+    *type* the operator would yield if the operands were evaluated as temporaries: an owned `constant`
+    then yields a value, so `operand_result_t` gives a decayed type, while a `variable_ref` still gives a
+    reference. The operands are nevertheless evaluated as stored, and the result is copied when the two
+    types disagree. Without this, `auto const& s = subscript(table, i)();` over a named constant refers
+    into the temporary node's copy. Actually evaluating the operands as temporaries was the first version
+    and was wrong twice: it moved every owned value out on each evaluation (a full copy for an array),
+    and `invoke(f, constant(s))()` with an `f` that returns a reference to its argument returned one to a
+    value already destroyed. Only `expression_` needs the overload: every other node returns through
+    `evaluate()`, which decays, or yields the target of an assignment.
+  - `detail::callable_needs_mutable` is `false` without asking when the callable is an empty class. Asking
+    instantiates the const evaluation of every subexpression, which was about 12% of the compile time of
+    a translation unit made of long chains of named operands.
   - A temporary variable cannot enter an expression, and a named operand that cannot be copied must be
     moved in or passed with `std::ref`. Each has its own `static_assert` in `deduce_deferred_type` that
     names the fix; they used to fail inside `std::tuple`'s constructor. They are hard errors, so no test

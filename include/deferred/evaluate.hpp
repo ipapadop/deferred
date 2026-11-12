@@ -226,6 +226,13 @@ constexpr decltype(auto) evaluate_for_node(U&& u) //
 }
 
 /**
+ * @brief Type a leaf node is constructed from when its argument @p U is evaluated.
+ * @tparam U Node argument type; it must be callable with no arguments.
+ */
+template<typename U>
+using node_argument_t = decltype(evaluate_for_node(std::declval<U>()));
+
+/**
  * @brief Whether @p U is callable with no arguments and evaluating it yields a @p T .
  *
  * A leaf node evaluates such an argument and stores the result; any other argument is
@@ -238,8 +245,7 @@ constexpr decltype(auto) evaluate_for_node(U&& u) //
  * @tparam T Type the node stores.
  */
 template<typename U, typename T>
-concept evaluates_to =
-  std::invocable<U> && std::convertible_to<decltype(evaluate_for_node(std::declval<U>())), T>;
+concept evaluates_to = std::invocable<U> && std::convertible_to<node_argument_t<U>, T>;
 
 } // namespace detail
 
