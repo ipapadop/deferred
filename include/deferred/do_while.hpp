@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
@@ -24,8 +23,7 @@ namespace deferred {
  * @tparam ConditionExpression Type of the condition expression.
  */
 template<Deferred BodyExpression, Deferred ConditionExpression>
-class do_while_expression :
-  public detail::eval_mixin<do_while_expression<BodyExpression, ConditionExpression>>
+class do_while_expression
 {
 public:
   using subexpression_types = std::tuple<BodyExpression, ConditionExpression>;
@@ -73,6 +71,24 @@ public:
       evaluate_ref(m_body);
     }
     while (evaluate_ref(m_condition));
+  }
+
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc do_while_expression::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
   }
 
   /**

@@ -54,12 +54,10 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   drift apart. No other node has it: `get()` reads a stored value, and the call evaluates an expression.
 - **Named evaluation**: every other node — `expression_`, `assign_expression`, `logical_expression`,
   `seq_expression`, `conditional_expression`, `switch_expression` with its `case_expression` and
-  `default_expression`, and the three loops — has `eval()`, a named spelling of `operator()`. It comes from the
-  CRTP base `detail::eval_mixin`, which forwards to the call operator of the same constness, so result type and
-  `noexcept` are the operator's. A new node must derive from it. `eval()` is not `[[nodiscard]]`, for the same
-  reason the operator is not. `constant_`, `variable_` and the builders have no `eval()`; `test/unit/eval.cpp`
-  pins all of this. The mixin is used rather than an explicit object parameter because GCC 13 has no
-  deducing `this`.
+  `default_expression`, and the three loops — has `eval()`, a named spelling of `operator()`. Each class defines
+  a const and a non-const overload that return `(*this)()`, so result type and `noexcept` are the operator's. A
+  new node must define both. `eval()` is not `[[nodiscard]]`, for the same reason the operator is not.
+  `constant_`, `variable_` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
 - **Node interface**: every node has `subexpression_types` and `subexpressions()`, which returns a tuple of
   references in the same order. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
   `operator_type` / `operator_()`, and `is_constant_expression` checks it through `operator_type`. Nodes whose

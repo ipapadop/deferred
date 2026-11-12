@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "detail/tuple_references.hpp"
@@ -51,7 +50,7 @@ consteval bool sequence_is_nothrow()
  */
 template<Deferred... Expressions>
   requires(sizeof...(Expressions) > 0)
-class seq_expression : public detail::eval_mixin<seq_expression<Expressions...>>
+class seq_expression
 {
 public:
   using subexpression_types = std::tuple<Expressions...>;
@@ -108,6 +107,24 @@ public:
   constexpr decltype(auto) operator()() noexcept(detail::sequence_is_nothrow<Expressions&...>())
   {
     return evaluate_impl(*this, std::make_index_sequence<last_index>{});
+  }
+
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc seq_expression::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
   }
 
   /**

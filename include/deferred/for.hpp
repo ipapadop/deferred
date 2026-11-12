@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
@@ -34,9 +33,7 @@ template<Deferred InitExpression,
          Deferred ConditionExpression,
          Deferred StepExpression,
          Deferred BodyExpression>
-class for_expression :
-  public detail::eval_mixin<
-    for_expression<InitExpression, ConditionExpression, StepExpression, BodyExpression>>
+class for_expression
 {
 public:
   using subexpression_types =
@@ -95,6 +92,24 @@ public:
     {
       evaluate_ref(m_body);
     }
+  }
+
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc for_expression::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
   }
 
   /**

@@ -10,7 +10,6 @@
 
 #include "constant.hpp"
 #include "detail/apply_evaluated.hpp"
-#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "detail/tuple_references.hpp"
@@ -27,7 +26,7 @@ namespace deferred {
  * @tparam Expressions Types of the subexpressions.
  */
 template<typename Operator, Deferred... Expressions>
-class expression_ : public detail::eval_mixin<expression_<Operator, Expressions...>>
+class expression_
 {
 public:
   using operator_type       = Operator;
@@ -76,6 +75,24 @@ public:
   operator()() noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
     return detail::apply_evaluated(m_op, m_expressions);
+  }
+
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc expression_::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
   }
 
   /// @brief Returns the operator.

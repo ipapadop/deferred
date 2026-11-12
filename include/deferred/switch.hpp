@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "detail/eval_mixin.hpp"
 #include "detail/expression_reference.hpp"
 #include "detail/homogenized_type.hpp"
 #include "detail/is_nothrow_evaluable.hpp"
@@ -43,7 +42,7 @@ struct no_default
  * @tparam Expression Type of the underlying expression.
  */
 template<Deferred Expression>
-class default_expression : public detail::eval_mixin<default_expression<Expression>>
+class default_expression
 {
 public:
   using subexpression_types = std::tuple<Expression>;
@@ -72,6 +71,24 @@ public:
   constexpr decltype(auto) operator()() noexcept(noexcept(evaluate(m_expression)))
   {
     return evaluate(m_expression);
+  }
+
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc default_expression::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
   }
 
   /**
@@ -104,7 +121,7 @@ public:
  * @tparam BodyExpression Type of the body expression.
  */
 template<Deferred LabelExpression, Deferred BodyExpression>
-class case_expression : public detail::eval_mixin<case_expression<LabelExpression, BodyExpression>>
+class case_expression
 {
 public:
   using subexpression_types = std::tuple<LabelExpression, BodyExpression>;
@@ -154,6 +171,24 @@ public:
   constexpr decltype(auto) operator()() noexcept(noexcept(evaluate(m_body)))
   {
     return evaluate(m_body);
+  }
+
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc case_expression::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
   }
 
   /**
@@ -398,9 +433,7 @@ public:
  * @tparam CaseExpression Types of the case expressions.
  */
 template<Deferred ConditionExpression, typename DefaultExpression, Deferred... CaseExpression>
-class switch_expression :
-  public detail::eval_mixin<
-    switch_expression<ConditionExpression, DefaultExpression, CaseExpression...>>
+class switch_expression
 {
   constexpr static inline bool finalized = !std::is_same_v<DefaultExpression, detail::no_default>;
 
@@ -615,6 +648,24 @@ public:
   constexpr result_type operator()() noexcept(detail::is_nothrow_evaluable_v<switch_expression&>)
   {
     return choose_case<0>(*this, evaluate(m_condition));
+  }
+
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc switch_expression::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
   }
 
   /**

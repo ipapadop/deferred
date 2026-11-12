@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "detail/eval_mixin.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
@@ -104,8 +103,7 @@ struct assign_to
  * @tparam ValueExpression Type of the assigned value expression.
  */
 template<typename Operation, Deferred TargetExpression, Deferred ValueExpression>
-class assign_expression :
-  public detail::eval_mixin<assign_expression<Operation, TargetExpression, ValueExpression>>
+class assign_expression
 {
 public:
   /// @brief Assigning mutates its target, so an assignment is never constant.
@@ -153,6 +151,24 @@ public:
   {
     decltype(auto) value = detail::assigned_value(m_value);
     return Operation{}(m_target(), std::forward<decltype(value)>(value));
+  }
+
+  /**
+   * @brief Evaluates the expression.
+   *
+   * A named spelling of <tt>operator()</tt>.
+   *
+   * @return The result of calling the expression.
+   */
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
+  {
+    return (*this)();
+  }
+
+  /// @copydoc assign_expression::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
+  {
+    return (*this)();
   }
 
   /**
