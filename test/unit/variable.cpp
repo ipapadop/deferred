@@ -373,7 +373,8 @@ TEST_CASE("a view-typed variable built from a variable views what that variable 
   // The view is constructed from the string the source holds, not from a copy of it.
   deferred::variable<std::string_view> view{text};
   CHECK(view().data() == text().data());
-  CHECK(view() == std::string(40, 'a'));
+  // Compared as a std::string: Catch2 is not always built with std::string_view support.
+  CHECK(std::string(view()) == std::string(40, 'a'));
 
   deferred::variable<std::vector<int>> numbers{std::vector<int>{1, 2, 3}};
   deferred::variable<std::span<int>> writable{numbers};
