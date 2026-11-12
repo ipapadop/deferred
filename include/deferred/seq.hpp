@@ -15,6 +15,7 @@
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
 
@@ -143,6 +144,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, seq_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, seq_expression, subexpression_types>)
   {

@@ -37,6 +37,12 @@ struct throwing_copy
 
   throwing_copy(throwing_copy&&) noexcept
   { }
+
+  // Lets the type be a condition.
+  explicit operator bool() const noexcept
+  {
+    return true;
+  }
 };
 
 struct throwing_boolean

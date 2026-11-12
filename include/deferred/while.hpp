@@ -8,10 +8,12 @@
 #include <type_traits>
 #include <utility>
 
+#include "concepts.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
 
@@ -104,6 +106,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, while_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, while_expression, subexpression_types>)
   {
@@ -181,7 +184,7 @@ public:
  * @param condition Condition expression.
  * @return A @ref while_builder awaiting the body expression.
  */
-template<typename ConditionExpression>
+template<condition ConditionExpression>
 [[nodiscard]] constexpr auto while_(ConditionExpression&& condition) noexcept(
   std::is_nothrow_constructible_v<make_deferred_t<ConditionExpression>, ConditionExpression&&>)
 {

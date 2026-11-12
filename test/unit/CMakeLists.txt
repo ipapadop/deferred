@@ -1,6 +1,7 @@
 set(SOURCES
   apply.cpp
   assign.cpp
+  concepts.cpp
   conditional.cpp
   constant.cpp
   discarded_evaluation.cpp
@@ -8,6 +9,7 @@ set(SOURCES
   eval.cpp
   evaluate.cpp
   expression.cpp
+  expression_visitor.cpp
   for.cpp
   invoke.cpp
   is_constant_expression.cpp

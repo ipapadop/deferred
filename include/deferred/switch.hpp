@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "concepts.hpp"
 #include "detail/expression_reference.hpp"
 #include "detail/homogenized_type.hpp"
 #include "detail/is_nothrow_evaluable.hpp"
@@ -21,6 +22,7 @@
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
 
@@ -109,6 +111,7 @@ public:
    * @param nesting The nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, default_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, default_expression, subexpression_types>)
   {
@@ -209,6 +212,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, case_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, case_expression, subexpression_types>)
   {
@@ -546,7 +550,7 @@ public:
    * @param label Label expression to compare the condition against.
    * @return A @ref switch_case_builder awaiting the body expression.
    */
-  template<typename LabelEx>
+  template<case_label_for<ConditionExpression> LabelEx>
   [[nodiscard]] constexpr auto case_(LabelEx&& label) && //
     noexcept(case_is_nothrow<ConditionExpression&&, DefaultExpression&&, case_types&&, LabelEx>())
   {
@@ -560,7 +564,7 @@ public:
   }
 
   /// @copydoc case_
-  template<typename LabelEx>
+  template<case_label_for<ConditionExpression> LabelEx>
   [[nodiscard]] constexpr auto case_(LabelEx&& label) const& //
     noexcept(case_is_nothrow<ConditionExpression const&,
                              DefaultExpression const&,
@@ -696,6 +700,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, switch_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, switch_expression, subexpression_types>)
   {
@@ -758,7 +763,7 @@ public:
    * @param label Label expression to compare the condition against.
    * @return A @ref switch_case_builder awaiting the body expression.
    */
-  template<typename LabelEx>
+  template<case_label_for<ConditionExpression> LabelEx>
   [[nodiscard]] constexpr auto case_(LabelEx&& label) && //
     noexcept(std::is_nothrow_constructible_v<case_builder<LabelEx>,
                                              ConditionExpression&&,
@@ -773,7 +778,7 @@ public:
   }
 
   /// @copydoc case_
-  template<typename LabelEx>
+  template<case_label_for<ConditionExpression> LabelEx>
   [[nodiscard]] constexpr auto case_(LabelEx&& label) const& //
     noexcept(std::is_nothrow_constructible_v<case_builder<LabelEx>,
                                              ConditionExpression const&,

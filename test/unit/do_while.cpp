@@ -21,6 +21,12 @@ struct throwing_expression
 
   throwing_expression(throwing_expression&&) noexcept(false)
   { }
+
+  // Lets the type be a condition.
+  explicit operator bool() const noexcept
+  {
+    return false;
+  }
 };
 
 /// @brief Records whether it was moved from, to catch a builder that steals its body.

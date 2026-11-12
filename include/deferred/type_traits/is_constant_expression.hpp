@@ -8,6 +8,8 @@
 #include <tuple>
 #include <type_traits>
 
+#include "is_deferred.hpp"
+
 namespace deferred {
 
 template<typename T>
@@ -86,6 +88,17 @@ using is_constant_expression_t = typename is_constant_expression<T>::type;
  */
 template<typename T>
 inline constexpr bool is_constant_expression_v = is_constant_expression<T>::value;
+
+/**
+ * @brief Concept for a @c deferred expression that is a constant expression.
+ *
+ * The concept form of @ref is_constant_expression_v , restricted to @c deferred
+ * expressions: the trait is also @c true for an empty type that is not an expression.
+ *
+ * @tparam T The type to check against the concept.
+ */
+template<typename T>
+concept constant_expression = deferred_expression<T> && is_constant_expression_v<T>;
 
 } // namespace deferred
 

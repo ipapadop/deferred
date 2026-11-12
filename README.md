@@ -380,6 +380,12 @@ Concepts are named in lower case, like those of the standard library:
 | ``deferred::any_deferred<T...>`` | a pack in which at least one type is a ``deferred_expression`` |
 | ``deferred::has_subexpression_types<T>`` | a type that names ``subexpression_types``; cv-qualifiers and references are not ignored |
 | ``deferred::has_mutable_state<T>`` | a node whose own stored value can change between evaluations, such as a variable |
+| ``deferred::constant_expression<T>`` | a ``deferred_expression`` for which ``is_constant_expression_v`` is true |
+| ``deferred::expression_yielding<T, R>`` | a ``deferred_expression`` whose result, when called, converts to ``R`` |
+| ``deferred::lvalue_expression<T>`` | a ``deferred_expression`` whose result is an lvalue, such as a variable or ``++i`` |
+| ``deferred::condition<T>`` | an argument whose result converts to ``bool``, explicitly or implicitly |
+| ``deferred::case_label_for<L, C>`` | an argument whose result can be compared with ``==`` to the result of the switch condition ``C`` |
+| ``deferred::expression_visitor<V, N>`` | a visitor that can be called with ``N`` and with every node below it |
 
 ```C++
 template<deferred::deferred_expression T>
@@ -388,6 +394,20 @@ auto twice(T&& t)
   return std::forward<T>(t) * deferred::constant(2);
 }
 ```
+
+``condition`` and ``case_label_for`` take the argument as it is passed to the
+construct, so a plain value or a callable satisfies them as well as a deferred
+expression. The library applies them where they matter, so a mistake is
+reported at the call that makes it:
+
+```C++
+deferred::if_(deferred::constant(std::string{}));  // error: not a condition
+deferred::switch_(i).case_("one");                 // error: an int is not comparable to a string literal
+i.visit([](int) { });                              // error: not a visitor for this expression
+```
+
+``assign()`` and the compound assignments require an ``lvalue_expression``
+target, since their result refers into it.
 
 The traits ``is_deferred`` and ``is_constant_expression``, with their ``_v`` and
 ``_t`` forms, are unchanged.

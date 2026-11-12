@@ -86,3 +86,21 @@ TEST_CASE("a variable reports an empty subexpression list", "[is-constant-expres
   STATIC_CHECK(std::is_same_v<deferred::variable_<int>::subexpression_types, std::tuple<>>);
   STATIC_CHECK(std::is_same_v<deferred::constant_<int>::subexpression_types, std::tuple<>>);
 }
+
+TEST_CASE("constant_expression is the concept form of the trait", "[is-constant-expression]")
+{
+  using deferred::constant_expression;
+
+  STATIC_CHECK(constant_expression<deferred::constant_<int>>);
+  STATIC_CHECK(constant_expression<deferred::constant_<int> const&>);
+  STATIC_CHECK(!constant_expression<deferred::variable_<int>>);
+  STATIC_CHECK(!constant_expression<deferred::variable_<int>&>);
+  STATIC_CHECK(!constant_expression<mutable_node>);
+
+  // The trait is true for an empty type that is not an expression; the concept is not.
+  struct empty
+  { };
+  STATIC_CHECK(deferred::is_constant_expression_v<empty>);
+  STATIC_CHECK(!constant_expression<empty>);
+  STATIC_CHECK(!constant_expression<int>);
+}

@@ -9,10 +9,12 @@
 #include <type_traits>
 #include <utility>
 
+#include "concepts.hpp"
 #include "detail/is_nothrow_visitable.hpp"
 #include "detail/no_unique_address.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
 
@@ -70,20 +72,6 @@ struct disjunction
 };
 
 /**
- * @brief Whether the result of evaluating @p T can be tested as a condition.
- *
- * Short-circuiting means testing the left operand on its own, which is only possible for
- * a result that converts to @c bool. An operand that instead overloads @c && or @c ||
- * elementwise -- @c std::valarray, and expression types like it -- keeps the eager,
- * operand-wise meaning, which is also what C++ does for an overloaded @c && .
- *
- * @tparam T Expression argument type.
- */
-template<typename T>
-concept boolean_testable =
-  requires(evaluated_result_t<make_deferred_t<T>&> value) { static_cast<bool>(value); };
-
-/**
  * @brief Whether @p Operation on @p T and @p U short-circuits.
  *
  * It does when both results can be tested as conditions and their types do not overload
@@ -97,7 +85,7 @@ concept boolean_testable =
  */
 template<typename Operation, typename T, typename U>
 concept short_circuits =
-  boolean_testable<T> && boolean_testable<U>
+  condition<T> && condition<U>
   && !Operation::template overloaded<evaluated_result_t<make_deferred_t<T>&>,
                                      evaluated_result_t<make_deferred_t<U>&>>;
 
@@ -205,6 +193,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, logical_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, logical_expression, subexpression_types>)
   {

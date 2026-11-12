@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "concepts.hpp"
 #include "detail/expression_reference.hpp"
 #include "detail/homogenized_type.hpp"
 #include "detail/is_nothrow_evaluable.hpp"
@@ -21,6 +22,7 @@
 #include "detail/visit_children.hpp"
 #include "evaluate.hpp"
 #include "expression.hpp"
+#include "type_traits/expression_visitor.hpp"
 
 namespace deferred {
 
@@ -89,6 +91,7 @@ struct conditional_branch
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, conditional_branch>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, conditional_branch, subexpression_types>)
   {
@@ -428,7 +431,7 @@ public:
    * @param condition Condition expression.
    * @return A @ref conditional_builder awaiting the @c then expression.
    */
-  template<typename C>
+  template<condition C>
   [[nodiscard]] constexpr auto else_if_(C&& condition) && //
     noexcept(std::is_nothrow_constructible_v<builder_type<C>, branch_types&&, C&&, Else&&>)
   {
@@ -438,7 +441,7 @@ public:
   }
 
   /// @copydoc else_if_
-  template<typename C>
+  template<condition C>
   [[nodiscard]] constexpr auto else_if_(C&& condition) const& //
     noexcept(std::is_nothrow_constructible_v<builder_type<C>, branch_types const&, C&&, Else const&>)
   {
@@ -526,6 +529,7 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
+    requires expression_visitor<Visitor, conditional_expression>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
     noexcept(detail::is_nothrow_visitable_v<Visitor, conditional_expression, subexpression_types>)
   {
@@ -552,7 +556,7 @@ public:
  * @param condition Condition expression.
  * @return A @ref conditional_builder awaiting the @c then expression.
  */
-template<typename Condition>
+template<condition Condition>
 [[nodiscard]] constexpr auto if_(Condition&& condition) noexcept(
   std::is_nothrow_constructible_v<make_deferred_t<Condition>, Condition&&>)
 {
