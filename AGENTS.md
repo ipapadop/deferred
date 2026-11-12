@@ -97,11 +97,31 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   One gap remains, the price of `variable w{v}`: a by-copy capture direct-initializes, so a bare
   `[=] { return v(); }` over a non-const `v` compiles and snapshots it. The closure cannot be copied or moved,
   so it cannot be passed to `invoke()` or stored in a node.
+- **A node stores every operand by value** (#26). `make_deferred_t` never yields a reference: a named
+  constant or expression is copied into the node, a temporary is moved in, and a named variable becomes a
+  `variable_ref<T>` — `variable_ref<T const>` for a const variable — which is a pointer to it. So an
+  expression can be copied, returned and kept in a container; only its variables must outlive it. They used
+  to be held as `X&`, and `auto c2 = c * 2; return c2;` dangled.
+  - `variable_ref` (`variable_ref.hpp`) forward-declares `variable`, so `expression.hpp` can include it.
+    `detail::variable_ref_for` maps an operand type to it and is what `deduce_deferred_type` asks first.
+  - A visitor is called with the *variable*, not the `variable_ref`; `detail::visits_tree` is specialized
+    to match. `subexpressions()` does hand back the `variable_ref`.
+  - A temporary variable still cannot enter an expression: `make_deferred_t<variable<T>>` is `variable<T>`,
+    which is not movable. An operand that cannot be copied must be moved in. Both fail inside
+    `std::tuple`'s constructor, as a hard error, so neither can be pinned by a test.
+  - A variable local to a function still cannot be used by an expression the function returns.
+  - Rejected, with measurements (GCC 15 and Clang 22, `-O2`, minimum of 9 runs): making `variable` a
+    handle to shared state, so that it too is owned. Linked handles with no heap, and a heap count, both
+    passed ASan, but cost up to 6x on a counter-and-sum `for_` loop and 11x on a saxpy loop over
+    `subscript()`, against no measurable change for `variable_ref`. A stored pointer to a separate named
+    object optimizes as the reference did; shared state reached through handles did not.
+  - `test/unit/variable_ref.cpp` and `test/integration/ownership.cpp` pin this; the latter needs ASan to
+    catch a regression.
 - **Lazy operand types and temporaries**: an operator on `std::valarray` may return a proxy that refers to its
   operands. A node evaluates its operands inside its own call, so a proxy over a *temporary* operand —
   `invoke([] { return std::valarray<float>(...); }) * constant(2.0f)` — dangles once the node returns, where
-  the plain C++ statement would be fine. Operands stored in a `constant` or `variable` are safe, and nested
-  expressions over them are too: libstdc++ has held nested proxies by value since GCC 9, which is what fixed
+  the plain C++ statement would be fine. Operands stored in a `constant` or `variable` are safe (a
+  `variable` is not copied into the node), and nested expressions over them are too: libstdc++ has held nested proxies by value since GCC 9, which is what fixed
   #2. `test/integration/operators.cpp` pins the safe case; the temporary case is not fixed (#68).
 - **Named access**: `constant` and `variable` have `get()`, a named spelling of `operator()` with the same
   cv/ref-qualified overloads, return types and `noexcept`. It delegates to `operator()`, so the two cannot
@@ -113,7 +133,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   new node must define both. `eval()` is not `[[nodiscard]]`, for the same reason the operator is not.
   `constant`, `variable` and the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
 - **Node interface**: every node has `subexpression_types` and `subexpressions()`, which returns a tuple of
-  references in the same order. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
+  references in the same order; a named variable appears there as its `variable_ref`. `expression_`'s operator is *not* in `subexpression_types`; it is exposed as
   `operator_type` / `operator_()`, and `is_constant_expression` checks it through `operator_type`. Nodes whose
   result does not depend on constness name it `result_type`.
 - **Every entry point returns a builder**: `if_`, `switch_`, `while_`, `do_` and `for_` return a type with no

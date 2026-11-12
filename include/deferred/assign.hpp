@@ -205,15 +205,15 @@ namespace detail {
  * @brief Assignment expression type produced for an operation and its operands.
  * @tparam Operation Type of the assigning operation.
  *
- * @p Target is always a deferred expression, so it is used as is. Passing it through
- * @ref make_deferred_t would also re-enter that deduction when @ref variable names this
- * type in its own @c operator= .
+ * Both operands are stored as @ref make_deferred_t gives them: a @ref variable target
+ * as a @ref variable_ref , any other target by value.
  *
  * @tparam Target Assignment target argument type.
  * @tparam Value Assigned value argument type.
  */
 template<typename Operation, typename Target, typename Value>
-using assign_expression_t = assign_expression<Operation, Target, make_deferred_t<Value>>;
+using assign_expression_t =
+  assign_expression<Operation, make_deferred_t<Target>, make_deferred_t<Value>>;
 
 /**
  * @brief Checks whether building a deferred assignment cannot throw.

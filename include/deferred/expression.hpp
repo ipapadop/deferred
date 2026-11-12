@@ -18,6 +18,8 @@
 #include "type_traits/expression_visitor.hpp"
 #include "type_traits/is_deferred.hpp"
 
+#include "variable_ref.hpp"
+
 namespace deferred {
 
 /**
@@ -133,9 +135,14 @@ namespace detail {
 /**
  * @brief Deduce the deferred type for @p T.
  *
- * - If @p T is already a @c deferred type, it does not change.
+ * - If @p T is an lvalue reference to a @ref variable , it is transformed to a
+ *   @ref variable_ref , so the expression refers to the variable.
+ * - If @p T is any other @c deferred type, it is transformed to that type without
+ *   reference or cv-qualifier, so the expression owns a copy of the operand.
  * - If @p T is a callable type, it is transformed to an @ref expression_.
  * - If @p T is not a callable type, it is transformed to an @ref constant.
+ *
+ * The result is never a reference.
  *
  * @tparam T Type to transform.
  * @return A @c std::type_identity containing the deduced deferred type.
@@ -147,9 +154,13 @@ consteval auto deduce_deferred_type()
   static_assert(!std::is_same_v<U, immediate_assignment>,
                 "`v = value` assigns immediately and is not an expression; to assign when "
                 "the expression is evaluated, write `v = deferred::constant(value)`");
-  if constexpr (deferred_expression<T>)
+  if constexpr (requires { typename variable_ref_for<T>::type; })
   {
-    return std::type_identity<T>{};
+    return variable_ref_for<T>{};
+  }
+  else if constexpr (deferred_expression<T>)
+  {
+    return std::type_identity<U>{};
   }
   else if constexpr (std::is_invocable_v<U>)
   {
@@ -166,9 +177,14 @@ consteval auto deduce_deferred_type()
 /**
  * @brief Transforms @p T into a @c deferred type.
  *
- * - If @p T is already a @c deferred type, it does not change.
+ * - If @p T is an lvalue reference to a @ref variable , it is transformed to a
+ *   @ref variable_ref , so the expression refers to the variable.
+ * - If @p T is any other @c deferred type, it is transformed to that type without
+ *   reference or cv-qualifier, so the expression owns a copy of the operand.
  * - If @p T is a callable type, it is transformed to an @ref expression_.
  * - If @p T is not a callable type, it is transformed to an @ref constant.
+ *
+ * The result is never a reference.
  *
  * @tparam T Type to transform.
  */

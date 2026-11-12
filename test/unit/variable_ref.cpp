@@ -1,0 +1,195 @@
+// SPDX-FileCopyrightText: 2026 Yiannis Papadopoulos <giannis.papadopoulos@gmail.com>
+// SPDX-License-Identifier: MIT
+
+#include <catch2/catch_test_macros.hpp>
+
+#include <cstddef>
+#include <functional>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+
+#include "deferred/constant.hpp"
+#include "deferred/operators.hpp"
+#include "deferred/type_traits/expression_visitor.hpp"
+#include "deferred/type_traits/is_constant_expression.hpp"
+#include "deferred/type_traits/is_deferred.hpp"
+#include "deferred/variable.hpp"
+#include "deferred/variable_ref.hpp"
+
+namespace {
+
+using V   = deferred::variable<int>;
+using R   = deferred::variable_ref<int>;
+using CR  = deferred::variable_ref<int const>;
+using Sum = deferred::expression_<std::plus<>, R, deferred::constant<int>>;
+
+/// @brief Records the address of every variable it is called with.
+struct variable_address_visitor
+{
+  void const* seen  = nullptr;
+  std::size_t calls = 0;
+
+  template<typename T>
+  void operator()(deferred::variable<T> const& v, std::size_t)
+  {
+    seen = &v;
+    ++calls;
+  }
+
+  template<typename T>
+  void operator()(T const&, std::size_t)
+  {
+    ++calls;
+  }
+};
+
+/// @brief Accepts a variable only, so it cannot be called with a variable_ref.
+struct variable_only_visitor
+{
+  void operator()(V const&, std::size_t) const noexcept
+  { }
+};
+
+} // namespace
+
+TEST_CASE("a variable_ref is a leaf node with mutable state", "[variable-ref]")
+{
+  static_assert(deferred::deferred_expression<R>);
+  static_assert(std::is_same_v<R::value_type, int>);
+  static_assert(std::is_same_v<R::variable_type, V>);
+  static_assert(std::is_same_v<R::subexpression_types, std::tuple<>>);
+  static_assert(R::mutable_state);
+  static_assert(!deferred::is_constant_expression_v<R>);
+
+  static_assert(std::is_same_v<CR::value_type, int const>);
+  static_assert(std::is_same_v<CR::variable_type, V const>);
+  static_assert(!deferred::is_constant_expression_v<CR>);
+
+  // It is a pointer, and copying it is trivial.
+  static_assert(sizeof(R) == sizeof(void*));
+  static_assert(std::is_trivially_copy_constructible_v<R>);
+}
+
+TEST_CASE("a variable_ref is built from a named variable only", "[variable-ref]")
+{
+  static_assert(std::is_constructible_v<R, V&>);
+  static_assert(std::is_nothrow_constructible_v<R, V&>);
+
+  // A temporary would not outlive the reference.
+  static_assert(!std::is_constructible_v<R, V>);
+  static_assert(!std::is_constructible_v<R, V&&>);
+  static_assert(!std::is_constructible_v<CR, V const&&>);
+
+  // A const variable is referred to as const.
+  static_assert(!std::is_constructible_v<R, V const&>);
+  static_assert(std::is_constructible_v<CR, V const&>);
+  static_assert(std::is_constructible_v<CR, V&>);
+
+  // Never by accident.
+  static_assert(!std::is_convertible_v<V&, R>);
+  static_assert(!std::is_default_constructible_v<R>);
+}
+
+TEST_CASE("a variable_ref reads and writes the variable it refers to", "[variable-ref]")
+{
+  V v{1};
+  R r{v};
+
+  static_assert(std::is_same_v<decltype(r()), int&>);
+  static_assert(std::is_same_v<decltype(std::as_const(r)()), int&>);
+  static_assert(noexcept(r()));
+
+  CHECK(&r() == &v());
+
+  v = 2;
+  CHECK(r() == 2);
+
+  r() = 3;
+  CHECK(v() == 3);
+}
+
+TEST_CASE("a variable_ref to a const variable is read-only", "[variable-ref]")
+{
+  V const v{4};
+  CR r{v};
+
+  static_assert(std::is_same_v<decltype(r()), int const&>);
+  CHECK(&r() == &v());
+}
+
+TEST_CASE("copies of a variable_ref refer to the same variable", "[variable-ref]")
+{
+  V v{1};
+  R r{v};
+  R copy{r};
+
+  copy() = 5;
+  CHECK(r() == 5);
+  CHECK(v() == 5);
+
+  // Like every node, it is not assignable.
+  static_assert(!std::is_copy_assignable_v<R>);
+  static_assert(!std::is_move_assignable_v<R>);
+}
+
+TEST_CASE("an expression stores a variable_ref for a named variable", "[variable-ref]")
+{
+  V v{1};
+  V const cv{2};
+  auto c = deferred::constant(10);
+
+  static_assert(std::is_same_v<decltype(v + c), Sum>);
+  static_assert(std::is_same_v<decltype(cv + c),
+                               deferred::expression_<std::plus<>, CR, deferred::constant<int>>>);
+  static_assert(
+    std::is_same_v<decltype(++v), deferred::expression_<deferred::detail::pre_increment, R>>);
+  static_assert(
+    std::is_same_v<
+      decltype(v = c),
+      deferred::assign_expression<deferred::detail::assign_to, R, deferred::constant<int>>>);
+
+  auto sum = v + c;
+  CHECK(sum() == 11);
+  v = 5;
+  CHECK(sum() == 15);
+
+  // A copy of the expression refers to the same variable.
+  auto copy = sum;
+  v         = 7;
+  CHECK(copy() == 17);
+}
+
+TEST_CASE("a visitor is called with the variable, not the variable_ref", "[variable-ref]")
+{
+  V v{1};
+  R r{v};
+
+  variable_address_visitor visitor;
+  r.visit(visitor);
+  CHECK(visitor.seen == &v);
+  CHECK(visitor.calls == 1);
+
+  // The whole tree is checked against the variable too.
+  static_assert(deferred::expression_visitor<variable_only_visitor, R>);
+  static_assert(deferred::expression_visitor<variable_address_visitor, Sum>);
+  static_assert(!deferred::expression_visitor<variable_only_visitor, Sum>);
+  static_assert(noexcept(r.visit(variable_only_visitor{})));
+  static_assert(!noexcept(r.visit(visitor)));
+
+  auto sum = v + deferred::constant(1);
+  variable_address_visitor tree_visitor;
+  sum.visit(tree_visitor);
+  CHECK(tree_visitor.seen == &v);
+  CHECK(tree_visitor.calls == 3);
+}
+
+TEST_CASE("a variable_ref works for a class type", "[variable-ref]")
+{
+  deferred::variable<std::string> v{std::string("a")};
+  deferred::variable_ref<std::string> r{v};
+
+  r() += "b";
+  CHECK(v() == "ab");
+}

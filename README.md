@@ -152,6 +152,48 @@ because they now construct the class. Two kinds of code must change:
   is now the stored type, and a reference is rejected. Write
   ``deferred::constant(i)``.
 
+What an expression owns
+-----------------------
+
+An expression stores its operands by value, so it can be copied, returned from
+the function that built it, and kept in a container:
+
+```C++
+auto scaled(deferred::variable<int>& v)
+{
+  auto factor = deferred::constant(3);
+  auto ex     = v * factor;   // factor is copied into ex
+  return ex;                  // ex does not refer to anything local
+}
+
+deferred::variable x{2};
+auto ex = scaled(x);
+x = 5;
+int result = ex();            // 15
+```
+
+- A named constant or a named expression is **copied** into the expression that
+  uses it. ``std::move`` moves it in when it is no longer needed.
+- A temporary is moved in.
+- A named variable is **referred to**: the expression stores a
+  ``deferred::variable_ref``, which is a pointer to the variable, so it sees
+  every later change. The variable must outlive the expression. A copy of the
+  expression refers to the same variable.
+
+So the type of ``v * factor`` above is
+``expression_<std::multiplies<>, variable_ref<int>, constant<int>>``; no
+expression type contains a reference.
+
+Three consequences:
+
+- A variable declared in a function cannot be used by an expression that the
+  function returns. Declare it in the caller and pass it by reference.
+- A large value in a ``constant`` is copied each time the constant is named.
+  Hold it in a ``variable`` instead -- a ``const`` one if it must not change --
+  and expressions refer to it without copying.
+- An operand that cannot be copied, such as a
+  ``constant<std::unique_ptr<int>>``, must be moved in with ``std::move``.
+
 Control flow
 ------------
 
@@ -356,7 +398,8 @@ Lazily evaluated operand types
 
 Some types evaluate their own operators lazily: arithmetic on ``std::valarray``
 may return a proxy that refers to its operands. Store such operands in a
-``constant`` or a ``variable``, and expressions over them nest freely:
+``constant`` or a ``variable``, and expressions over them nest freely. A
+``variable`` avoids copying the array into each expression that names it:
 
 ```C++
 auto a = deferred::constant(2.0f);
@@ -536,8 +579,11 @@ names the type it stores as ``value_type``.
 
 ```C++
 auto sum = i + deferred::constant(2);
-auto const& [left, right] = sum.subexpressions();   // left is i itself
+auto const& [left, right] = sum.subexpressions();   // left is a variable_ref to i
 ```
+
+A named variable appears among the subexpressions as the ``variable_ref`` that
+refers to it. A visitor is called with the variable itself.
 
 ``deferred::type_name<T>()`` returns a readable name for a type, which helps
 when printing an expression tree.

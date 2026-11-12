@@ -11,14 +11,45 @@
 
 #include "deferred/deferred.hpp"
 
-TEST_CASE("make_deferred_t leaves a deferred type alone", "[expression]")
+TEST_CASE("make_deferred_t stores a deferred operand by value", "[expression]")
 {
-  static_assert(
-    std::is_same_v<deferred::make_deferred_t<deferred::constant<int>>, deferred::constant<int>>);
+  using C  = deferred::constant<int>;
+  using Ex = deferred::expression_<std::plus<>, C, C>;
 
-  // A deferred lvalue keeps its reference, so the expression refers to the original.
+  static_assert(std::is_same_v<deferred::make_deferred_t<C>, C>);
+
+  // A named operand is copied, so the expression does not refer to it.
+  static_assert(std::is_same_v<deferred::make_deferred_t<C&>, C>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<C const&>, C>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<Ex&>, Ex>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<Ex const&>, Ex>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<Ex&&>, Ex>);
+}
+
+TEST_CASE("make_deferred_t refers to a named variable through a variable_ref", "[expression]")
+{
+  using V = deferred::variable<int>;
+
+  static_assert(std::is_same_v<deferred::make_deferred_t<V&>, deferred::variable_ref<int>>);
   static_assert(
-    std::is_same_v<deferred::make_deferred_t<deferred::variable<int>&>, deferred::variable<int>&>);
+    std::is_same_v<deferred::make_deferred_t<V const&>, deferred::variable_ref<int const>>);
+
+  // A temporary variable is not referred to. It cannot be stored either, since a
+  // variable is not movable, so an expression over one does not compile.
+  static_assert(std::is_same_v<deferred::make_deferred_t<V>, V>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<V&&>, V>);
+}
+
+TEST_CASE("make_deferred_t never yields a reference", "[expression]")
+{
+  auto callable = [] {
+    return 1;
+  };
+
+  static_assert(!std::is_reference_v<deferred::make_deferred_t<int&>>);
+  static_assert(!std::is_reference_v<deferred::make_deferred_t<decltype(callable)&>>);
+  static_assert(!std::is_reference_v<deferred::make_deferred_t<deferred::constant<int>&>>);
+  static_assert(!std::is_reference_v<deferred::make_deferred_t<deferred::variable<int>&>>);
 }
 
 TEST_CASE("make_deferred_t wraps a callable in an expression", "[expression]")
@@ -151,10 +182,10 @@ TEST_CASE("every node exposes its subexpressions", "[expression]")
   static_assert(subexpressions_match<decltype(open_sw)>());
   static_assert(subexpressions_match<decltype(full_sw)>());
 
-  // A leaf has none; a variable held by reference is handed back as that variable.
+  // A leaf has none; a variable is handed back as the variable_ref that refers to it.
   static_assert(std::tuple_size_v<decltype(i.subexpressions())> == 0);
-  CHECK(&std::get<0>(sum.subexpressions()) == &i);
-  CHECK(&std::get<0>(assigned.subexpressions()) == &i);
+  CHECK(&std::get<0>(sum.subexpressions())() == &i());
+  CHECK(&std::get<0>(assigned.subexpressions())() == &i());
   CHECK(std::get<1>(sum.subexpressions())() == 2);
 
   // The children of a branch and of a case are reachable the same way.

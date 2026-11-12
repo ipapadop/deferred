@@ -21,6 +21,7 @@ set(SOURCES
   switch.cpp
   type_name.cpp
   variable.cpp
+  variable_ref.cpp
   visitor.cpp
   while.cpp
   detail/apply_evaluated.cpp
