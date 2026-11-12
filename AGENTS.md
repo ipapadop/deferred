@@ -117,20 +117,22 @@ This project is a C++23 header-only library for creating deferred evaluation exp
     visits the node it refers to, and has `get()` when that node has. `detail::visits_tree` is
     specialized so that a visitor is checked against, and shown, the node; `subexpressions()` does hand
     back the `node_ref` (#72).
-  - **A temporary `expression_` yields a value where a stored one would yield a reference into itself**
-    (`operator()() &&`, and `eval()` likewise). Whether a result is such a reference is read from the
-    *type* the operator would yield if the operands were evaluated as temporaries: an owned `constant`
-    then yields a value, so `operand_result_t` gives a decayed type, while a `node_ref` still gives a
-    reference. The operands are nevertheless evaluated as stored, and the result is copied when the two
-    types disagree. Without this, `auto const& s = subscript(table, i)();` over a named constant refers
-    into the temporary node's copy. Actually evaluating the operands as temporaries was the first version
-    and was wrong twice: it moved every owned value out on each evaluation (a full copy for an array),
-    and `invoke(f, constant(s))()` with an `f` that returns a reference to its argument returned one to a
-    value already destroyed. Only `expression_` needs the overload: every other node returns through
-    `evaluate()`, which decays, or yields the target of an assignment.
+  - **A temporary expression is evaluated exactly as a stored one**; there is no rvalue overload of
+    `operator()`. A reference it yields into an operand it owns is valid until the end of the statement,
+    as for any C++ temporary, so `auto const& s = subscript(table, i)();` over a named constant dangles
+    where it was safe when the node referred to `table`. Two rules that tried to prevent this were built
+    and removed; do not reintroduce either.
+    - Evaluating the operands as temporaries moved every owned value out on each evaluation, and
+      `invoke(f, constant(s))()` with an `f` returning a reference to its argument returned one to a
+      destroyed value.
+    - Reading from the *type* a temporary evaluation would yield whether the result refers into the
+      expression cannot tell `*optional`, which does, from `*shared_ptr`, which does not: it sliced
+      `(*sp)()` for a `shared_ptr<Base>`, rejected callables that take an lvalue and results that cannot
+      be copied, and still dangled for `invoke(&S::x, c)()`.
   - `detail::callable_needs_mutable` is `false` without asking when the callable is an empty class. Asking
-    instantiates the const evaluation of every subexpression, which was about 12% of the compile time of
-    a translation unit made of long chains of named operands.
+    instantiates an evaluation of every subexpression, which was about 12% of the compile time of a
+    translation unit made of long chains of named operands. It evaluates the subexpressions as stored,
+    not as const: one may be callable only as non-const without owning state.
   - A temporary variable cannot enter an expression, and a named operand that cannot be copied must be
     moved in or passed with `std::ref`. Each has its own `static_assert` in `deduce_deferred_type` that
     names the fix; they used to fail inside `std::tuple`'s constructor. They are hard errors, so no test
@@ -177,7 +179,7 @@ This project is a C++23 header-only library for creating deferred evaluation exp
   `seq_expression`, `conditional_expression`, `switch_expression` with its `case_expression` and
   `default_expression`, and the three loops — has `eval()`, a named spelling of `operator()`. Each class defines
   a const and a non-const overload that return `(*this)()`, so result type and `noexcept` are the operator's. A
-  new node must define both. `expression_` also has an rvalue overload of each. `eval()` is not
+  new node must define both. `eval()` is not
   `[[nodiscard]]`, for the same reason the operator is not. `constant`, `variable`, `node_ref` and
   the builders have no `eval()`; `test/unit/eval.cpp` pins all of this.
 - **Node interface**: every node has `subexpression_types` and `subexpressions()`, which returns a tuple of

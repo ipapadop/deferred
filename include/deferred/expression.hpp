@@ -43,25 +43,6 @@ private:
   DEFERRED_NO_UNIQUE_ADDRESS operator_type m_op;
   DEFERRED_NO_UNIQUE_ADDRESS subexpression_types m_expressions;
 
-  // Whether evaluating a temporary expression cannot throw; see operator()() &&.
-  static consteval bool temporary_is_nothrow()
-  {
-    using stored         = decltype(detail::apply_evaluated(std::declval<operator_type&>(),
-                                                            std::declval<subexpression_types&>()));
-    using temporary      = decltype(detail::apply_evaluated(std::declval<operator_type&>(),
-                                                            std::declval<subexpression_types>()));
-    bool const evaluates = noexcept(detail::apply_evaluated(std::declval<operator_type&>(),
-                                                            std::declval<subexpression_types&>()));
-    if constexpr (std::is_reference_v<stored> && !std::is_reference_v<temporary>)
-    {
-      return evaluates && std::is_nothrow_constructible_v<std::remove_cvref_t<stored>, stored>;
-    }
-    else
-    {
-      return evaluates;
-    }
-  }
-
 public:
   /**
    * @brief Constructs an expression.
@@ -91,46 +72,16 @@ public:
    * @return The result of the operator.
    */
   constexpr decltype(auto)
-  operator()() const& noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
+  operator()() const noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
     return detail::apply_evaluated(m_op, m_expressions);
   }
 
-  /// @copydoc operator()() const&
+  /// @copydoc operator()() const
   constexpr decltype(auto)
-  operator()() & noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
+  operator()() noexcept(noexcept(detail::apply_evaluated(m_op, m_expressions)))
   {
     return detail::apply_evaluated(m_op, m_expressions);
-  }
-
-  /**
-   * @brief Evaluates a temporary expression.
-   *
-   * A stored expression may yield a reference into an operand it owns. A temporary one
-   * is about to be destroyed, so where its result would be such a reference it yields
-   * a copy of the value instead.
-   *
-   * Which results are such references is read from the type the operator would yield
-   * if the subexpressions were evaluated as temporaries too: an owned @ref constant
-   * then yields a value, and a @ref variable_ref still yields a reference. The
-   * subexpressions are nevertheless evaluated as they are stored. Evaluating them as
-   * temporaries would move every owned value out, and a callable that returns a
-   * reference to its argument would return one to a value that is already gone.
-   *
-   * @return The result of the operator, by value if it would refer into this expression.
-   */
-  constexpr decltype(auto) operator()() && noexcept(temporary_is_nothrow())
-  {
-    using stored    = decltype(detail::apply_evaluated(m_op, m_expressions));
-    using temporary = decltype(detail::apply_evaluated(m_op, std::move(m_expressions)));
-    if constexpr (std::is_reference_v<stored> && !std::is_reference_v<temporary>)
-    {
-      return std::remove_cvref_t<stored>(detail::apply_evaluated(m_op, m_expressions));
-    }
-    else
-    {
-      return detail::apply_evaluated(m_op, m_expressions);
-    }
   }
 
   /**
@@ -140,21 +91,15 @@ public:
    *
    * @return The result of calling the expression.
    */
-  constexpr decltype(auto) eval() const& noexcept(noexcept((*this)()))
+  constexpr decltype(auto) eval() const noexcept(noexcept((*this)()))
   {
     return (*this)();
   }
 
-  /// @copydoc expression_::eval() const&
-  constexpr decltype(auto) eval() & noexcept(noexcept((*this)()))
+  /// @copydoc expression_::eval() const
+  constexpr decltype(auto) eval() noexcept(noexcept((*this)()))
   {
     return (*this)();
-  }
-
-  /// @copydoc expression_::eval() const&
-  constexpr decltype(auto) eval() && noexcept(noexcept(std::move(*this)()))
-  {
-    return std::move(*this)();
   }
 
   /// @brief Returns the operator.

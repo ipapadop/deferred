@@ -159,18 +159,6 @@ TEST_CASE("loops have eval", "[eval]")
   CHECK(i() == 1);
 }
 
-TEST_CASE("eval on a temporary expression evaluates it as a temporary", "[eval]")
-{
-  auto c = deferred::constant(1);
-  auto v = deferred::variable(2);
-
-  // As the call does: operator() and eval() agree for every value category.
-  static_assert(std::is_same_v<decltype((v + c).eval()), decltype((v + c)())>);
-  static_assert(std::is_same_v<decltype((++v).eval()), decltype((++v)())>);
-  static_assert(noexcept((v + c).eval()) == noexcept((v + c)()));
-  CHECK((v + c).eval() == 3);
-}
-
 TEST_CASE("eval adds no storage to an expression", "[eval]")
 {
   auto ex = deferred::constant(1) + deferred::constant(2);

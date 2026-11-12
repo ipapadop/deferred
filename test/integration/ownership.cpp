@@ -182,19 +182,24 @@ TEST_CASE("a builder constructs the operand it is given in place", "[ownership]"
   CHECK(moves == 0);
 }
 
-TEST_CASE("a reference from a temporary expression over a named constant is safe", "[ownership]")
+TEST_CASE("a result of a temporary expression is read within the statement", "[ownership]")
 {
   auto table =
     deferred::constant(std::vector<std::string>{std::string(40, 'a'), std::string(40, 'b')});
   auto index = deferred::variable(std::size_t{1});
 
-  // The temporary expression owns a copy of the table and dies with the statement, so
-  // it yields the element by value.
-  auto const& element = deferred::subscript(table, index)();
+  // The temporary expression owns a copy of the table until the end of the statement,
+  // so the element is copied out here, not referred to afterwards.
+  std::string const element = deferred::subscript(table, index)();
   CHECK(element == std::string(40, 'b'));
 
-  auto text                = deferred::constant(std::optional<std::string>(std::string(40, 'x')));
-  std::string const& value = (*text)();
+  // Storing the expression keeps what it owns alive for as long as the reference.
+  auto stored                   = deferred::subscript(table, index);
+  std::string const& referenced = stored();
+  CHECK(referenced == std::string(40, 'b'));
+
+  auto text               = deferred::constant(std::optional<std::string>(std::string(40, 'x')));
+  std::string const value = (*text)();
   CHECK(value == std::string(40, 'x'));
 }
 

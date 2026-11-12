@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -188,66 +189,85 @@ TEST_CASE("every node exposes its subexpressions", "[expression]")
   CHECK(std::get<0>(first_case.subexpressions())() == 1);
 }
 
-TEST_CASE("a temporary expression yields a value where a stored one yields a reference",
-          "[expression-temporary]")
+TEST_CASE("a temporary expression is evaluated as a stored one is", "[expression-temporary]")
 {
   auto table =
     deferred::constant(std::vector<std::string>{std::string(40, 'a'), std::string(40, 'b')});
   auto index = deferred::variable(std::size_t{1});
+  auto count = deferred::variable(0);
 
-  // A stored expression owns a copy of the table and may refer into it.
   auto stored = deferred::subscript(table, index);
+
+  // The result type does not depend on whether the expression is a temporary.
   static_assert(std::is_same_v<decltype(stored()), std::string const&>);
-  static_assert(std::is_same_v<decltype(stored.eval()), std::string const&>);
-  CHECK(stored() == std::string(40, 'b'));
-
-  // A temporary one is destroyed at the end of the statement, with its copy.
-  static_assert(std::is_same_v<decltype(deferred::subscript(table, index)()), std::string>);
-  static_assert(std::is_same_v<decltype(deferred::subscript(table, index).eval()), std::string>);
-  static_assert(std::is_same_v<decltype(std::move(stored)()), std::string>);
-
-  // The reference is to a value that lives as long as it does; ASan checks that.
-  auto const& element = deferred::subscript(table, index)();
-  CHECK(element == std::string(40, 'b'));
-
-  auto const& named = deferred::subscript(table, index).eval();
-  CHECK(named == std::string(40, 'b'));
-}
-
-TEST_CASE("a temporary expression still yields a reference into a variable",
-          "[expression-temporary]")
-{
-  auto values = deferred::variable(std::vector<int>{1, 2, 3});
-  auto index  = deferred::variable(std::size_t{1});
-  auto count  = deferred::variable(0);
-
-  // The variable outlives the expression, so the reference is valid.
-  static_assert(std::is_same_v<decltype(deferred::subscript(values, index)()), int&>);
+  static_assert(std::is_same_v<decltype(deferred::subscript(table, index)()), decltype(stored())>);
+  static_assert(std::is_same_v<decltype(std::move(stored)()), decltype(stored())>);
   static_assert(std::is_same_v<decltype((++count)()), int&>);
-  static_assert(std::is_same_v<decltype((count += deferred::constant(1))()), int&>);
 
-  deferred::subscript(values, index)() = 20;
-  CHECK(values()[1] == 20);
+  // A reference into an operand the temporary owns is valid until the end of the
+  // statement, as for any C++ temporary, so it is read or copied within it.
+  CHECK(deferred::subscript(table, index)() == std::string(40, 'b'));
+  std::string const copy = deferred::subscript(table, index)();
+  CHECK(copy == std::string(40, 'b'));
 
+  // A reference into a variable outlives the temporary.
   int& incremented = (++count)();
   CHECK(&incremented == &count());
-  CHECK(count() == 1);
 }
 
-TEST_CASE("a temporary expression over temporaries yields a value", "[expression-temporary]")
+TEST_CASE("a temporary expression reaches through a handle it owns", "[expression-temporary]")
 {
-  auto index = deferred::variable(std::size_t{0});
+  struct base
+  {
+    virtual ~base() = default;
 
-  static_assert(
-    std::is_same_v<decltype(deferred::subscript(deferred::constant(std::vector<int>{4, 5}), index)()),
-                   int>);
-  CHECK(deferred::subscript(deferred::constant(std::vector<int>{4, 5}), index)() == 4);
+    virtual int id() const
+    {
+      return 1;
+    }
+  };
 
-  // Nested temporaries are evaluated as temporaries all the way down.
-  auto text = deferred::constant(std::optional<std::string>(std::string(40, 'x')));
-  static_assert(std::is_same_v<decltype((*text)()), std::string>);
-  auto const& value = (*text)();
-  CHECK(value == std::string(40, 'x'));
+  struct derived : base
+  {
+    int id() const override
+    {
+      return 2;
+    }
+  };
+
+  auto pointer = deferred::constant(std::shared_ptr<base>(std::make_shared<derived>()));
+
+  // The result refers to the object pointed at, and is not a sliced copy of it.
+  static_assert(std::is_same_v<decltype((*pointer)()), base&>);
+  CHECK((*pointer)().id() == 2);
+
+  auto value = deferred::constant(std::make_shared<int>(1));
+  (*value)() = 5;
+  CHECK(*value() == 5);
+}
+
+TEST_CASE("a temporary expression accepts what a stored one does", "[expression-temporary]")
+{
+  struct point
+  {
+    int x;
+  };
+
+  // A callable that takes an lvalue.
+  auto size = [](auto& text) {
+    return text.size();
+  };
+  CHECK(deferred::invoke(size, deferred::constant(std::string("abc")))() == 3);
+
+  // A result that cannot be copied.
+  std::vector<std::unique_ptr<int>> owners;
+  owners.push_back(std::make_unique<int>(7));
+  auto elements = deferred::constant(std::move(owners));
+  CHECK((*deferred::subscript(std::move(elements), 0))() == 7);
+
+  // A member reached through a named constant, read within the statement.
+  auto p = deferred::constant(point{42});
+  CHECK(deferred::invoke(&point::x, p)() == 42);
 }
 
 namespace {

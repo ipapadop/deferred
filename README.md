@@ -198,16 +198,19 @@ reference.
 
 An expression may yield a reference into an operand it owns, such as an element
 of a table held in a constant. That reference is valid for as long as the
-expression is. A temporary expression is destroyed at the end of the statement,
-so evaluating one yields a value instead:
+expression is. A temporary expression lives until the end of the statement, as
+any C++ temporary does, so read or copy its result within that statement, or
+store the expression first:
 
 ```C++
 auto table = deferred::constant(std::vector<std::string>{"a", "b"});
 auto index = deferred::variable(std::size_t{1});
 
+std::string copied = deferred::subscript(table, index)();          // fine: copied within the statement
+std::string const& dangling = deferred::subscript(table, index)(); // wrong: refers into a destroyed temporary
+
 auto element = deferred::subscript(table, index);
-std::string const& stored = element();                               // refers into element
-std::string const& copied = deferred::subscript(table, index)();     // a value, kept alive by the reference
+std::string const& stored = element();                             // fine: element owns the table
 ```
 
 A reference into a variable is unaffected: ``int& r = (++i)();`` refers to ``i``.
