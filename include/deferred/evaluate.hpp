@@ -4,6 +4,7 @@
 #ifndef DEFERRED_EVALUATE_HPP
 #define DEFERRED_EVALUATE_HPP
 
+#include <concepts>
 #include <type_traits>
 #include <utility>
 
@@ -107,7 +108,7 @@ consteval bool reference_evaluation_is_nothrow()
  * @brief Evaluates a deferred expression, keeping a reference result as a reference.
  *
  * @ref evaluate() returns by value, so a subexpression that already yields a reference --
- * a @ref variable_ or a @ref constant_ -- is copied. Where the result is only read within
+ * a @ref variable or a @ref constant -- is copied. Where the result is only read within
  * the same full expression, such as a loop condition or the right-hand side of an
  * assignment, that copy is pure waste and this avoids it.
  *
@@ -197,18 +198,19 @@ template<typename T>
 using node_result_t = std::decay_t<decltype(recursive_evaluate(std::declval<T>()))>;
 
 /**
- * @brief Checks whether creating a leaf node from an argument cannot throw.
- * @tparam Node Leaf node template, such as @ref constant_ or @ref variable_.
- * @tparam T Node argument type.
- * @return @c true when the value can be stored without throwing.
+ * @brief Whether @p U is callable with no arguments and evaluating it yields a @p T .
+ *
+ * A leaf node evaluates such an argument and stores the result; any other argument is
+ * stored as it is. Whether @p U is callable is asked first, so the result type of
+ * @ref recursive_evaluate is never formed for an argument that is merely a value --
+ * its return type is deduced, and forming it for an lvalue that cannot be copied is an
+ * error, not a failed requirement.
+ *
+ * @tparam U Node argument type.
+ * @tparam T Type the node stores.
  */
-template<template<typename> class Node, typename T>
-consteval bool make_node_is_nothrow()
-{
-  using evaluated_type = decltype(recursive_evaluate(std::declval<T>()));
-  return noexcept(recursive_evaluate(std::declval<T>()))
-         && std::is_nothrow_constructible_v<Node<node_result_t<T>>, evaluated_type>;
-}
+template<typename U, typename T>
+concept evaluates_to = std::invocable<U> && std::convertible_to<node_result_t<U>, T>;
 
 } // namespace detail
 

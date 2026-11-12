@@ -24,9 +24,9 @@ concept subscriptable = requires(T t) { deferred::subscript(t, 0); };
 
 TEST_CASE("dereference and subscript accept an operand that yields a prvalue", "[operators]")
 {
-  using owned_pointer       = deferred::constant_<int*>&;
+  using owned_pointer       = deferred::constant<int*>&;
   using temporary_pointer   = decltype(deferred::invoke([] { return std::make_unique<int>(1); }))&;
-  using owned_container     = deferred::constant_<std::vector<int>>&;
+  using owned_container     = deferred::constant<std::vector<int>>&;
   using temporary_container = decltype(deferred::invoke([] { return std::vector<int>{1}; }))&;
 
   static_assert(dereferenceable<owned_pointer>);

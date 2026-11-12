@@ -14,11 +14,11 @@
 TEST_CASE("make_deferred_t leaves a deferred type alone", "[expression]")
 {
   static_assert(
-    std::is_same_v<deferred::make_deferred_t<deferred::constant_<int>>, deferred::constant_<int>>);
+    std::is_same_v<deferred::make_deferred_t<deferred::constant<int>>, deferred::constant<int>>);
 
   // A deferred lvalue keeps its reference, so the expression refers to the original.
   static_assert(
-    std::is_same_v<deferred::make_deferred_t<deferred::variable_<int>&>, deferred::variable_<int>&>);
+    std::is_same_v<deferred::make_deferred_t<deferred::variable<int>&>, deferred::variable<int>&>);
 }
 
 TEST_CASE("make_deferred_t wraps a callable in an expression", "[expression]")
@@ -33,21 +33,21 @@ TEST_CASE("make_deferred_t wraps a callable in an expression", "[expression]")
 
 TEST_CASE("make_deferred_t wraps a value in a constant", "[expression]")
 {
-  static_assert(std::is_same_v<deferred::make_deferred_t<int>, deferred::constant_<int>>);
-  static_assert(std::is_same_v<deferred::make_deferred_t<int&>, deferred::constant_<int>>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<int>, deferred::constant<int>>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<int&>, deferred::constant<int>>);
 }
 
 TEST_CASE("expression exposes its operator and subexpressions", "[expression]")
 {
-  auto ex = deferred::expression_<std::plus<>, deferred::constant_<int>, deferred::constant_<int>>(
+  auto ex = deferred::expression_<std::plus<>, deferred::constant<int>, deferred::constant<int>>(
     std::plus<>{},
-    deferred::constant_<int>(1),
-    deferred::constant_<int>(2));
+    deferred::constant<int>(1),
+    deferred::constant<int>(2));
 
   static_assert(std::is_same_v<decltype(ex)::operator_type, std::plus<>>);
   // Only the visited children are subexpressions; the operator is not one of them.
   static_assert(std::is_same_v<decltype(ex)::subexpression_types,
-                               std::tuple<deferred::constant_<int>, deferred::constant_<int>>>);
+                               std::tuple<deferred::constant<int>, deferred::constant<int>>>);
 
   CHECK(std::get<0>(ex.subexpressions())() == 1);
   CHECK(ex() == 3);
@@ -56,10 +56,10 @@ TEST_CASE("expression exposes its operator and subexpressions", "[expression]")
 TEST_CASE("expression evaluates its subexpressions on every evaluation", "[expression]")
 {
   auto v  = deferred::variable(1);
-  auto ex = deferred::expression_<std::plus<>, deferred::variable_<int>&, deferred::constant_<int>>(
+  auto ex = deferred::expression_<std::plus<>, deferred::variable<int>&, deferred::constant<int>>(
     std::plus<>{},
     v,
-    deferred::constant_<int>(10));
+    deferred::constant<int>(10));
 
   CHECK(ex() == 11);
   v = 5;
@@ -92,7 +92,7 @@ TEST_CASE("an expression requires deferred subexpressions", "[expression]")
 {
   // A template argument that is not a deferred expression is rejected at the class,
   // not when the expression is evaluated.
-  static_assert(nameable<deferred::expression_, std::plus<>, deferred::constant_<int>>);
+  static_assert(nameable<deferred::expression_, std::plus<>, deferred::constant<int>>);
   static_assert(!nameable<deferred::expression_, std::plus<>, int>);
   static_assert(!nameable<deferred::conditional_expression, deferred::detail::no_else, int>);
 }

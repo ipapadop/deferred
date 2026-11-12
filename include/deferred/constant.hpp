@@ -4,6 +4,7 @@
 #ifndef DEFERRED_CONSTANT_HPP
 #define DEFERRED_CONSTANT_HPP
 
+#include <concepts>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -18,34 +19,70 @@ namespace deferred {
 
 /**
  * @brief Stores a constant value.
+ *
+ * The type is usually deduced: <tt>constant c{42};</tt> or <tt>auto c = constant(42);</tt>.
+ *
  * @tparam T Type of the constant.
  */
 template<typename T>
-class constant_
+class constant
 {
 public:
   using value_type          = T;
   using subexpression_types = std::tuple<>;
+
+  static_assert(!std::is_reference_v<T>,
+                "a constant owns its value, so T cannot be a reference; write constant(x) and "
+                "let T be deduced");
 
 private:
   DEFERRED_NO_UNIQUE_ADDRESS T m_t;
 
 public:
   /**
-   * @brief Constructs a constant_ from @p u.
-   * @tparam U Type of the value to initialize the constant with.
-   * @param u Value to initialize the constant with.
+   * @brief Constructs a constant holding a copy of @p t.
+   *
+   * The parameter does not take part in deducing @p T , so that a deduced
+   * <tt>constant(x)</tt> always goes through the deduction guide.
+   *
+   * @param t Value to store.
    */
-  template<std::convertible_to<T> U>
-  constexpr explicit constant_(U&& u) noexcept(std::is_nothrow_constructible_v<T, U&&>) :
-    m_t(std::forward<U>(u))
+  [[nodiscard]] constexpr explicit constant(std::type_identity_t<T> const& t) //
+    noexcept(std::is_nothrow_copy_constructible_v<T>) : m_t(t)
   { }
 
-  constant_(constant_ const&) = default;
-  constant_(constant_&&)      = default;
+  /**
+   * @brief Constructs a constant holding @p t , moved.
+   * @param t Value to store.
+   */
+  [[nodiscard]] constexpr explicit constant(std::type_identity_t<T>&& t) //
+    noexcept(std::is_nothrow_move_constructible_v<T>) : m_t(std::move(t))
+  { }
 
-  constant_& operator=(constant_ const&) = delete;
-  constant_& operator=(constant_&&)      = delete;
+  /**
+   * @brief Constructs a constant from the result of evaluating @p u.
+   *
+   * Chosen when @p u is callable with no arguments and the result of evaluating it
+   * converts to @p T . It is called, and the result called again until it is not
+   * callable; this applies to a @c deferred expression too. An argument that is not
+   * callable, or whose result is not a @p T , is stored by the constructors above.
+   *
+   * @tparam U Type of the callable.
+   * @param u Callable yielding the value to store.
+   */
+  template<typename U>
+    requires(!std::same_as<std::remove_cvref_t<U>, constant>) && detail::evaluates_to<U, T>
+  [[nodiscard]] constexpr explicit constant(U&& u) noexcept(
+    noexcept(recursive_evaluate(std::declval<U>()))
+    && std::is_nothrow_constructible_v<T, detail::node_result_t<U>>) :
+    m_t(recursive_evaluate(std::forward<U>(u)))
+  { }
+
+  constant(constant const&) = default;
+  constant(constant&&)      = default;
+
+  constant& operator=(constant const&) = delete;
+  constant& operator=(constant&&)      = delete;
 
   /// @brief Returns the stored value.
   [[nodiscard]] constexpr T const& operator()() const& noexcept
@@ -92,30 +129,25 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
-    requires expression_visitor<Visitor, constant_>
+    requires expression_visitor<Visitor, constant>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
-    noexcept(detail::is_nothrow_visitable_v<Visitor, constant_, subexpression_types>)
+    noexcept(detail::is_nothrow_visitable_v<Visitor, constant, subexpression_types>)
   {
     v(*this, nesting);
   }
 };
 
 /**
- * @brief Creates a constant for use in @c deferred expressions.
+ * @brief Deduces the type of a constant from the value it is constructed with.
  *
- * If @p t is a callable type, this function will force its evaluation through
- * <tt>t()</tt>. This applies even if @p t is a @c deferred expression.
+ * The stored type is the decayed type of the value, so an array is held as a pointer
+ * and a reference is never retained. A callable is evaluated first, as the constructor
+ * does, so <tt>constant([] { return 1; })</tt> is a <tt>constant<int></tt>.
  *
  * @tparam T Type of the value to wrap.
- * @param t Value to wrap in a constant.
- * @return A constant_ object containing the evaluated value.
  */
 template<typename T>
-[[nodiscard]] constexpr auto
-constant(T&& t) noexcept(detail::make_node_is_nothrow<constant_, T&&>())
-{
-  return constant_<detail::node_result_t<T&&>>(recursive_evaluate(std::forward<T>(t)));
-}
+constant(T&&) -> constant<detail::node_result_t<T&&>>;
 
 } // namespace deferred
 

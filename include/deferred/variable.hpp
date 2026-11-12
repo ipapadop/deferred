@@ -4,6 +4,7 @@
 #ifndef DEFERRED_VARIABLE_HPP
 #define DEFERRED_VARIABLE_HPP
 
+#include <concepts>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -20,10 +21,14 @@ namespace deferred {
 
 /**
  * @brief Stores a variable value.
+ *
+ * The type is usually deduced: <tt>variable v{42};</tt> or <tt>auto v = variable(42);</tt>.
+ * A variable with no initial value names its type: <tt>variable<int> v;</tt>.
+ *
  * @tparam T Type of the variable to store.
  */
 template<typename T>
-class [[nodiscard]] variable_
+class [[nodiscard]] variable
 {
 public:
   using value_type          = T;
@@ -32,33 +37,67 @@ public:
   /// @brief The stored value can change between evaluations.
   static constexpr bool mutable_state = true;
 
+  static_assert(!std::is_reference_v<T>,
+                "a variable owns its value, so T cannot be a reference; write variable(x) and "
+                "let T be deduced");
+
 private:
   DEFERRED_NO_UNIQUE_ADDRESS T m_t{};
 
 public:
-  variable_() = default;
+  variable() = default;
 
   /**
-   * @brief Constructs a variable_ with a copy of @p t.
-   * @param t Value to initialize the variable with.
+   * @brief Constructs a variable holding a copy of @p t.
+   *
+   * The parameter does not take part in deducing @p T , so that a deduced
+   * <tt>variable(x)</tt> always goes through the deduction guide.
+   *
+   * @param t Value to store.
    */
-  constexpr explicit variable_(T const& t) noexcept(std::is_nothrow_copy_constructible_v<T>) :
-    m_t(t)
+  constexpr explicit variable(std::type_identity_t<T> const& t) //
+    noexcept(std::is_nothrow_copy_constructible_v<T>) : m_t(t)
   { }
 
   /**
-   * @brief Constructs a variable_ by moving @p t.
-   * @param t Value to initialize the variable with.
+   * @brief Constructs a variable holding @p t , moved.
+   * @param t Value to store.
    */
-  constexpr explicit variable_(T&& t) noexcept(std::is_nothrow_move_constructible_v<T>) :
-    m_t(std::move(t))
+  constexpr explicit variable(std::type_identity_t<T>&& t) //
+    noexcept(std::is_nothrow_move_constructible_v<T>) : m_t(std::move(t))
   { }
 
-  variable_(variable_ const&) = delete;
-  variable_(variable_&&)      = delete;
+  /**
+   * @brief Constructs a variable from the result of evaluating @p u.
+   *
+   * Chosen when @p u is callable with no arguments and the result of evaluating it
+   * converts to @p T . It is called, and the result called again until it is not
+   * callable; this applies to a @c deferred expression too. An argument that is not
+   * callable, or whose result is not a @p T , is stored by the constructors above.
+   *
+   * A variable is such an expression, so <tt>variable w{v};</tt> makes a new,
+   * independent variable holding the current value of @c v . The source must be a
+   * non-const lvalue: a const or temporary variable selects the deleted copy or move
+   * constructor instead, and <tt>variable w{v()};</tt> is the spelling for those.
+   *
+   * @tparam U Type of the callable.
+   * @param u Callable yielding the value to store.
+   */
+  template<typename U>
+    requires(!std::same_as<std::remove_cvref_t<U>, variable>
+             || (std::same_as<U, variable&> && std::copy_constructible<T>))
+            && detail::evaluates_to<U, T>
+  constexpr explicit variable(U&& u) noexcept(
+    noexcept(recursive_evaluate(std::declval<U>()))
+    && std::is_nothrow_constructible_v<T, detail::node_result_t<U>>) :
+    m_t(recursive_evaluate(std::forward<U>(u)))
+  { }
 
-  variable_& operator=(variable_ const&) = delete;
-  variable_& operator=(variable_&&)      = delete;
+  variable(variable const&) = delete;
+  variable(variable&&)      = delete;
+
+  variable& operator=(variable const&) = delete;
+  variable& operator=(variable&&)      = delete;
 
   /**
    * @brief Assigns a value to the variable, at once.
@@ -78,7 +117,7 @@ public:
     return {};
   }
 
-  /// @copydoc variable_::operator=(T const&)
+  /// @copydoc variable::operator=(T const&)
   constexpr detail::immediate_assignment
   operator=(T&& t) noexcept(std::is_nothrow_move_assignable_v<T>)
   {
@@ -104,13 +143,13 @@ public:
    * @return An expression assigning to the variable when evaluated.
    */
   template<deferred_expression E>
-  [[nodiscard]] constexpr detail::assign_expression_t<detail::assign_to, variable_&, E>
-  operator=(E&& e) & noexcept(detail::assign_is_nothrow<detail::assign_to, variable_&, E>())
+  [[nodiscard]] constexpr detail::assign_expression_t<detail::assign_to, variable&, E>
+  operator=(E&& e) & noexcept(detail::assign_is_nothrow<detail::assign_to, variable&, E>())
   {
     // The return type is spelled out rather than deduced. Asking whether a variable
     // reference is assignable -- which std::tuple does for every expression holding
     // one -- must be answerable without instantiating this body.
-    return detail::assign_expression_t<detail::assign_to, variable_&, E>(*this, std::forward<E>(e));
+    return detail::assign_expression_t<detail::assign_to, variable&, E>(*this, std::forward<E>(e));
   }
 
   /// @brief Returns the stored value.
@@ -175,41 +214,25 @@ public:
    * @param nesting Nesting level.
    */
   template<typename Visitor>
-    requires expression_visitor<Visitor, variable_>
+    requires expression_visitor<Visitor, variable>
   constexpr void visit(Visitor&& v, std::size_t nesting = 0) const
-    noexcept(detail::is_nothrow_visitable_v<Visitor, variable_, subexpression_types>)
+    noexcept(detail::is_nothrow_visitable_v<Visitor, variable, subexpression_types>)
   {
     v(*this, nesting);
   }
 };
 
 /**
- * @brief Creates a new @ref variable_ that holds a default-initialized @p T.
- * @tparam T Type of the variable.
- * @return A newly constructed variable.
- */
-template<typename T>
-[[nodiscard]] constexpr auto variable() noexcept(std::is_nothrow_default_constructible_v<T>)
-{
-  return variable_<T>{};
-}
-
-/**
- * @brief Creates a variable for use in @c deferred expressions.
+ * @brief Deduces the type of a variable from the value it is constructed with.
  *
- * If @p t is a callable type, this function will force its evaluation through
- * <tt>t()</tt>. This applies even if @p t is a @c deferred expression.
+ * The stored type is the decayed type of the value, so an array is held as a pointer
+ * and a reference is never retained. A callable is evaluated first, as the constructor
+ * does. A variable with no initial value names its type: <tt>variable<int> v;</tt>.
  *
  * @tparam T Type of the value to deduce.
- * @param t Value to wrap in a @ref variable_.
- * @return A variable representing the evaluated type of @p t.
  */
 template<typename T>
-[[nodiscard]] constexpr auto
-variable(T&& t) noexcept(detail::make_node_is_nothrow<variable_, T&&>())
-{
-  return variable_<detail::node_result_t<T&&>>(recursive_evaluate(std::forward<T>(t)));
-}
+variable(T&&) -> variable<detail::node_result_t<T&&>>;
 
 } // namespace deferred
 

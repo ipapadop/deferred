@@ -170,8 +170,8 @@ TEST_CASE("eval adds no storage to an expression", "[eval]")
 
 TEST_CASE("constants, variables and builders have no eval", "[eval]")
 {
-  static_assert(!HasEval<deferred::constant_<int>>);
-  static_assert(!HasEval<deferred::variable_<int>>);
+  static_assert(!HasEval<deferred::constant<int>>);
+  static_assert(!HasEval<deferred::variable<int>>);
 
   auto i = deferred::variable(0);
   static_assert(!HasEval<decltype(deferred::if_(i > 0))>);

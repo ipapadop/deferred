@@ -35,7 +35,7 @@ template<typename T>
 concept usable_in_do_while = requires(T t) { deferred::do_(1).while_(t); };
 
 template<typename T>
-concept usable_in_for = requires(T t, deferred::variable_<int>& i) { deferred::for_(++i, t, ++i); };
+concept usable_in_for = requires(T t, deferred::variable<int>& i) { deferred::for_(++i, t, ++i); };
 
 template<typename Label, typename Condition>
 concept usable_as_first_case =
@@ -53,7 +53,7 @@ TEST_CASE("expression_yielding checks the result of calling the expression", "[c
   using deferred::expression_yielding;
 
   using C = decltype(deferred::constant(42));
-  using V = deferred::variable_<int>;
+  using V = deferred::variable<int>;
 
   static_assert(expression_yielding<C, int>);
   static_assert(expression_yielding<C, int const&>);
@@ -139,8 +139,8 @@ TEST_CASE("condition is satisfied by anything whose result converts to bool", "[
 
 TEST_CASE("the constructs that take a condition reject anything else", "[concepts]")
 {
-  using good = deferred::constant_<bool>;
-  using bad  = deferred::constant_<std::string>;
+  using good = deferred::constant<bool>;
+  using bad  = deferred::constant<std::string>;
 
   static_assert(usable_in_if<good>);
   static_assert(usable_in_if<bool>);
@@ -164,12 +164,12 @@ TEST_CASE("case_label_for is satisfied by a label comparable to the condition", 
 {
   using deferred::case_label_for;
 
-  using I = deferred::variable_<int>&;
-  using S = deferred::variable_<std::string>&;
+  using I = deferred::variable<int>&;
+  using S = deferred::variable<std::string>&;
 
   static_assert(case_label_for<int, I>);
   static_assert(case_label_for<long, I>);
-  static_assert(case_label_for<deferred::constant_<int>, I>);
+  static_assert(case_label_for<deferred::constant<int>, I>);
   static_assert(case_label_for<I, I>);
   static_assert(case_label_for<int, int>);
 
@@ -184,10 +184,10 @@ TEST_CASE("case_label_for is satisfied by a label comparable to the condition", 
 
 TEST_CASE("case_ rejects a label that cannot be compared to the condition", "[concepts]")
 {
-  using I = deferred::variable_<int>&;
+  using I = deferred::variable<int>&;
 
   static_assert(usable_as_first_case<int, I>);
-  static_assert(usable_as_first_case<deferred::constant_<long>, I>);
+  static_assert(usable_as_first_case<deferred::constant<long>, I>);
   static_assert(!usable_as_first_case<std::string, I>);
   static_assert(!usable_as_first_case<char const*, I>);
 

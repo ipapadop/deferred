@@ -46,7 +46,7 @@ consteval bool invoke_is_nothrow()
  * @brief Invoke the callable object @p f with the parameters @p args....
  *
  * If @p args... are not @c deferred objects, then they will be tranformed to
- * @ref constant_ objects.
+ * @ref constant objects.
  *
  * @tparam F Type of the callable object.
  * @tparam Args Types of the parameters.
