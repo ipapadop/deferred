@@ -236,3 +236,47 @@ TEST_CASE("evaluate_ref is noexcept unless the evaluation can throw", "[evaluate
   // A non-deferred rvalue is moved into the result.
   static_assert(!noexcept(deferred::evaluate_ref(throwing_move{})));
 }
+
+TEST_CASE("evaluate_for_node keeps an lvalue result as a reference", "[evaluate-for-node]")
+{
+  auto v       = deferred::variable(1);
+  auto const c = deferred::constant(2);
+
+  static_assert(std::is_same_v<decltype(deferred::detail::evaluate_for_node(v)), int&>);
+  static_assert(std::is_same_v<decltype(deferred::detail::evaluate_for_node(c)), int const&>);
+  CHECK(&deferred::detail::evaluate_for_node(v) == &v());
+
+  int i          = 3;
+  auto reference = [&i]() -> int& {
+    return i;
+  };
+  static_assert(std::is_same_v<decltype(deferred::detail::evaluate_for_node(reference)), int&>);
+  CHECK(&deferred::detail::evaluate_for_node(reference) == &i);
+}
+
+TEST_CASE("evaluate_for_node evaluates everything else as recursive_evaluate does",
+          "[evaluate-for-node]")
+{
+  // A prvalue result is a value.
+  static_assert(
+    std::is_same_v<decltype(deferred::detail::evaluate_for_node(throwing_node{})), int>);
+  static_assert(
+    std::is_same_v<decltype(deferred::detail::evaluate_for_node(deferred::constant(1))), int>);
+
+  // A reference to something callable is called again, down to a value.
+  auto inner = [] {
+    return 7;
+  };
+  auto outer = [&inner]() -> decltype(inner)& {
+    return inner;
+  };
+  static_assert(std::is_same_v<decltype(deferred::detail::evaluate_for_node(outer)), int>);
+  CHECK(deferred::detail::evaluate_for_node(outer) == 7);
+
+  static_assert(noexcept(deferred::detail::evaluate_for_node(deferred::constant(1))));
+  static_assert(!noexcept(deferred::detail::evaluate_for_node(throwing_node{})));
+
+  // A reference result is not copied, so a throwing copy or move does not matter.
+  auto v = deferred::variable<throwing_move>();
+  static_assert(noexcept(deferred::detail::evaluate_for_node(v)));
+}

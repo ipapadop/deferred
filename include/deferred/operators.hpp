@@ -321,7 +321,7 @@ operator-(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::minus<>, T, U>()
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator+(T&& t) noexcept(detail::invoke_is_nothrow<detail::unary_plus, T>())
 {
@@ -334,7 +334,7 @@ operator+(T&& t) noexcept(detail::invoke_is_nothrow<detail::unary_plus, T>())
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator-(T&& t) noexcept(detail::invoke_is_nothrow<std::negate<>, T>())
 {
@@ -395,7 +395,7 @@ operator%(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::modulus<>, T, U>
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator++(T&& t) noexcept(detail::invoke_is_nothrow<detail::pre_increment, T>())
 {
@@ -409,7 +409,7 @@ operator++(T&& t) noexcept(detail::invoke_is_nothrow<detail::pre_increment, T>()
  * @param \<unnamed\> An int for postfix differentiation.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator++(T&& t, int) noexcept(detail::invoke_is_nothrow<detail::post_increment, T>())
 {
@@ -422,7 +422,7 @@ operator++(T&& t, int) noexcept(detail::invoke_is_nothrow<detail::post_increment
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator--(T&& t) noexcept(detail::invoke_is_nothrow<detail::pre_decrement, T>())
 {
@@ -436,7 +436,7 @@ operator--(T&& t) noexcept(detail::invoke_is_nothrow<detail::pre_decrement, T>()
  * @param \<unnamed\> An int for postfix differentiation.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator--(T&& t, int) noexcept(detail::invoke_is_nothrow<detail::post_decrement, T>())
 {
@@ -627,7 +627,7 @@ operator||(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::logical_or<>, T
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator!(T&& t) noexcept(detail::invoke_is_nothrow<std::logical_not<>, T>())
 {
@@ -688,7 +688,7 @@ operator^(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<std::bit_xor<>, T, U>
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator~(T&& t) noexcept(detail::invoke_is_nothrow<std::bit_not<>, T>())
 {
@@ -903,7 +903,7 @@ operator>>=(T&& t, U&& u) noexcept(detail::assign_is_nothrow<detail::shift_right
  * @param t Operand.
  * @return A deferred expression representing the operation.
  */
-template<deferred_expression T>
+template<deferred_operand T>
 [[nodiscard]] constexpr auto
 operator*(T&& t) noexcept(detail::invoke_is_nothrow<detail::dereference, T>())
 {
@@ -923,7 +923,7 @@ operator*(T&& t) noexcept(detail::invoke_is_nothrow<detail::dereference, T>())
  * @param u Index.
  * @return A deferred expression representing the subscripting.
  */
-template<deferred_expression T, typename U>
+template<deferred_operand T, typename U>
 [[nodiscard]] constexpr auto
 subscript(T&& t, U&& u) noexcept(detail::invoke_is_nothrow<detail::subscript_at, T, U>())
 {

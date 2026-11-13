@@ -88,13 +88,10 @@ struct assign_to
  * exactly as a built-in assignment would, so a later change to the right-hand side
  * does not affect the target.
  *
- * This is a node of its own rather than an @ref expression_ over an assigning operator,
- * for two independent reasons. An @ref expression_ evaluates its subexpressions as the
- * arguments of one call, which are only indeterminately sequenced, so it cannot give the
- * right-before-left ordering a built-in assignment guarantees. And it holds them in a
- * @c std::tuple, so instantiating one that holds a @ref variable reference asks whether
- * that reference is assignable -- the question this operator answers -- re-entering the
- * type while it is still incomplete. Both were reproduced on GCC and Clang.
+ * This is a node of its own rather than an @ref expression_ over an assigning operator.
+ * An @ref expression_ evaluates its subexpressions as the arguments of one call, which
+ * are only indeterminately sequenced, so it cannot give the right-before-left ordering a
+ * built-in assignment guarantees.
  *
  * @p Operation selects which assignment is performed: @ref detail::assign_to for a
  * plain assignment, or one of the compound assigning operations in @ref operators.hpp.
@@ -201,19 +198,24 @@ public:
 
 namespace detail {
 
+// An assignment changes its target, not state of its own.
+template<typename Operation, typename TargetExpression, typename ValueExpression>
+inline constexpr bool
+  refers_to_state<assign_expression<Operation, TargetExpression, ValueExpression>> = true;
+
 /**
  * @brief Assignment expression type produced for an operation and its operands.
  * @tparam Operation Type of the assigning operation.
  *
- * @p Target is always a deferred expression, so it is used as is. Passing it through
- * @ref make_deferred_t would also re-enter that deduction when @ref variable names this
- * type in its own @c operator= .
+ * Both operands are stored as @ref make_deferred_t gives them: a @ref variable target
+ * as a @ref variable_ref , any other target by value.
  *
  * @tparam Target Assignment target argument type.
  * @tparam Value Assigned value argument type.
  */
 template<typename Operation, typename Target, typename Value>
-using assign_expression_t = assign_expression<Operation, Target, make_deferred_t<Value>>;
+using assign_expression_t =
+  assign_expression<Operation, make_deferred_t<Target>, make_deferred_t<Value>>;
 
 /**
  * @brief Checks whether building a deferred assignment cannot throw.

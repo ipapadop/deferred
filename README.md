@@ -129,6 +129,15 @@ its result is what the type stores:
 deferred::variable<std::function<int()>> f{[] { return 1; }};   // stores the callable
 ```
 
+A constant or a variable of a view type that is built from another one views
+the value its source holds, as it would in plain C++. The source must outlive
+it:
+
+```C++
+deferred::variable<std::string> text{"some text"};
+deferred::variable<std::string_view> view{text};   // views the string text holds
+```
+
 A constant can be copied. A variable cannot be copied or moved, so that an
 expression never holds a stale copy of it. Building a variable from another one
 makes a new, independent variable; a const or temporary source passes its value:
@@ -151,6 +160,112 @@ because they now construct the class. Two kinds of code must change:
   ``deferred::constant<int const&>(i)``, named the *argument* type. That argument
   is now the stored type, and a reference is rejected. Write
   ``deferred::constant(i)``.
+
+What an expression owns
+-----------------------
+
+An expression stores its operands by value, so it can be copied, returned from
+the function that built it, and kept in a container:
+
+```C++
+auto scaled(deferred::variable<int>& v)
+{
+  auto factor = deferred::constant(3);
+  auto ex     = v * factor;   // factor is copied into ex
+  return ex;                  // ex does not refer to anything local
+}
+
+deferred::variable x{2};
+auto ex = scaled(x);
+x = 5;
+int result = ex();            // 15
+```
+
+- A named constant or a named expression is **copied** into the expression that
+  uses it. ``std::move`` moves it in when it is no longer needed.
+- A temporary is moved in.
+- A named variable is **referred to**: the expression stores a
+  ``deferred::node_ref``, which is a pointer to the variable, so it sees every
+  later change. The variable must outlive the expression. A copy of the
+  expression refers to the same variable. ``variable_ref<T>`` names the
+  ``node_ref`` to a ``variable<T>``, and ``variable_cref<T>`` the one to a
+  variable that is ``const`` where it is used, which can only read it.
+
+So the type of ``v * factor`` above is
+``expression_<std::multiplies<>, variable_ref<int>, constant<int>>``, which a
+compiler prints as ``node_ref<variable<int>>``; no expression type contains a
+reference.
+
+An expression may yield a reference into an operand it owns, such as an element
+of a table held in a constant. That reference is valid for as long as the
+expression is. A temporary expression lives until the end of the statement, as
+any C++ temporary does, so read or copy its result within that statement, or
+store the expression first:
+
+```C++
+auto table = deferred::constant(std::vector<std::string>{"a", "b"});
+auto index = deferred::variable(std::size_t{1});
+
+std::string copied = deferred::subscript(table, index)();          // fine: copied within the statement
+std::string const& dangling = deferred::subscript(table, index)(); // wrong: refers into a destroyed temporary
+
+auto element = deferred::subscript(table, index);
+std::string const& stored = element();                             // fine: element owns the table
+```
+
+A reference into a variable is unaffected: ``int& r = (++i)();`` refers to ``i``.
+
+Some consequences of owning operands:
+
+- A variable declared in a function cannot be used by an expression that the
+  function returns. Declare it in the caller and pass it by reference.
+- A large value in a ``constant`` is copied each time the constant is named.
+  Hold it in a ``variable`` instead -- a ``const`` one if it must not change --
+  and expressions refer to it without copying.
+- An operand that cannot be copied, such as a
+  ``constant<std::unique_ptr<int>>``, must be moved in with ``std::move`` or
+  referred to with ``std::ref``. Naming it is a compile error that says so.
+- A temporary variable, as in ``variable(1) + c``, is a compile error: the
+  expression would refer to it after it is destroyed.
+
+Operands that have state of their own
+-------------------------------------
+
+Copying a constant cannot be observed, so an expression copies one freely. A
+node that holds state is different: a copy would be a second, independent state.
+Such a node is a callable that changes what it holds, a node you wrote that
+declares ``mutable_state``, or an expression that stores one of those.
+
+Using one by name in an expression is a compile error, whose message asks you
+to say which you mean:
+
+```C++
+auto next = deferred::invoke([count = 0]() mutable { return ++count; });
+
+auto a = next + deferred::constant(0);              // error: next has state of its own
+auto b = std::ref(next) + deferred::constant(0);    // b refers to next
+auto c = std::ref(next) + deferred::constant(0);    // so does c: b() and c() share the count
+auto d = std::move(next) + deferred::constant(0);   // d owns next from here on
+```
+
+``std::ref(x)`` makes the expression refer to ``x``, which must then outlive
+it, and ``std::cref(x)`` does the same for reading only. Either is stored as a
+``node_ref`` to ``x``, exactly as a named variable is, so ``std::ref(v) + 1``
+and ``v + 1`` are the same expression. They work with every
+operator, including ``++std::ref(x)`` and ``std::ref(x) += 1``, and with any
+node, a variable included. A variable needs neither: naming it already refers
+to it.
+
+A node of your own that is not in ``namespace deferred`` is not found by the
+operators, with or without ``std::ref``. Bring them into scope where you build
+the expression:
+
+```C++
+using namespace deferred;
+auto increment = ++std::ref(my_node);
+```
+
+Copying a whole expression, as in ``auto e2 = e;``, copies the state it owns.
 
 Control flow
 ------------
@@ -356,11 +471,12 @@ Lazily evaluated operand types
 
 Some types evaluate their own operators lazily: arithmetic on ``std::valarray``
 may return a proxy that refers to its operands. Store such operands in a
-``constant`` or a ``variable``, and expressions over them nest freely:
+``variable``, and expressions over them nest freely. An expression refers to a
+variable, so the array is not copied and the proxy stays valid:
 
 ```C++
 auto a = deferred::constant(2.0f);
-auto x = deferred::constant(std::valarray<float>(0.5f, 100));
+auto x = deferred::variable(std::valarray<float>(0.5f, 100));
 auto y = deferred::variable(std::valarray<float>(1.0f, 100));
 
 auto saxpy = a * x + y;
@@ -481,7 +597,8 @@ Concepts are named in lower case, like those of the standard library:
 | Concept | Satisfied by |
 | --- | --- |
 | ``deferred::deferred_expression<T>`` | a deferred expression, ignoring cv-qualifiers and references |
-| ``deferred::any_deferred<T...>`` | a pack in which at least one type is a ``deferred_expression`` |
+| ``deferred::deferred_operand<T>`` | a ``deferred_expression``, or a ``std::reference_wrapper`` to one |
+| ``deferred::any_deferred<T...>`` | a pack in which at least one type is a ``deferred_operand`` |
 | ``deferred::has_subexpression_types<T>`` | a type that names ``subexpression_types``; cv-qualifiers and references are not ignored |
 | ``deferred::has_mutable_state<T>`` | a node whose own stored value can change between evaluations, such as a variable |
 | ``deferred::constant_expression<T>`` | a ``deferred_expression`` for which ``is_constant_expression_v`` is true |
@@ -536,8 +653,12 @@ names the type it stores as ``value_type``.
 
 ```C++
 auto sum = i + deferred::constant(2);
-auto const& [left, right] = sum.subexpressions();   // left is i itself
+auto const& [left, right] = sum.subexpressions();   // left is a variable_ref to i
 ```
+
+A named variable, and a node passed with ``std::ref`` or ``std::cref``, appears
+among the subexpressions as the ``node_ref`` that refers to it. A visitor is
+called with the node itself.
 
 ``deferred::type_name<T>()`` returns a readable name for a type, which helps
 when printing an expression tree.

@@ -4,6 +4,8 @@
 #ifndef DEFERRED_EXPRESSION_HPP
 #define DEFERRED_EXPRESSION_HPP
 
+#include <cstddef>
+#include <functional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -16,7 +18,10 @@
 #include "detail/tuple_references.hpp"
 #include "detail/visit_children.hpp"
 #include "type_traits/expression_visitor.hpp"
+#include "type_traits/is_constant_expression.hpp"
 #include "type_traits/is_deferred.hpp"
+
+#include "node_ref.hpp"
 
 namespace deferred {
 
@@ -131,11 +136,69 @@ public:
 namespace detail {
 
 /**
- * @brief Deduce the deferred type for @p T.
+ * @brief Whether evaluating @p Node needs it to be non-const.
  *
- * - If @p T is already a @c deferred type, it does not change.
- * - If @p T is a callable type, it is transformed to an @ref expression_.
- * - If @p T is not a callable type, it is transformed to an @ref constant.
+ * True for an @ref expression_ whose callable cannot be called as @c const , such as a
+ * lambda declared @c mutable : calling it changes state it holds.
+ *
+ * @tparam Node Node type.
+ */
+template<typename Node>
+inline constexpr bool callable_needs_mutable = false;
+
+template<typename Operator, typename... Expressions>
+inline constexpr bool callable_needs_mutable<expression_<Operator, Expressions...>> =
+  !std::is_invocable_v<Operator const&, decltype(std::declval<Expressions&>()())...>;
+
+// A callable with no members has no state to change, whatever its operator() is
+// qualified with. Every operator object of the library is empty, so this also spares
+// most expressions the question.
+template<typename Operator, typename... Expressions>
+  requires std::is_empty_v<Operator>
+inline constexpr bool callable_needs_mutable<expression_<Operator, Expressions...>> = false;
+
+template<typename Node>
+consteval bool owns_state();
+
+// Whether any of the node types in a tuple owns state.
+template<typename... Children>
+consteval bool any_owns_state(std::type_identity<std::tuple<Children...>>)
+{
+  return (owns_state<Children>() || ...);
+}
+
+/**
+ * @brief Whether @p Node , or a node it stores, has state of its own.
+ *
+ * A copy of such a node is a second, independent state, so an expression does not take
+ * one silently. A node has state of its own when it declares @c mutable_state and
+ * does not merely refer to state (@ref refers_to_state), when its callable can only
+ * be called as non-const, or when it stores a node that has.
+ *
+ * @tparam Node Node type, without reference or cv-qualifier.
+ * @return @c true when copying @p Node copies state.
+ */
+template<typename Node>
+consteval bool owns_state()
+{
+  if constexpr ((has_mutable_state<Node> && !refers_to_state<Node>)
+                || any_owns_state(std::type_identity<typename Node::subexpression_types>{}))
+  {
+    return true;
+  }
+  else
+  {
+    // Asked last, and with the subexpressions evaluated as they are stored rather than
+    // as const: a subexpression may be callable only as non-const without owning state.
+    return callable_needs_mutable<Node>;
+  }
+}
+
+/**
+ * @brief Deduce the deferred type for @p T , by the rules of @ref make_deferred_t.
+ *
+ * An operand that cannot be stored is rejected here, with a message that names the
+ * fix, because every construct stores its operands through this function.
  *
  * @tparam T Type to transform.
  * @return A @c std::type_identity containing the deduced deferred type.
@@ -147,9 +210,43 @@ consteval auto deduce_deferred_type()
   static_assert(!std::is_same_v<U, immediate_assignment>,
                 "`v = value` assigns immediately and is not an expression; to assign when "
                 "the expression is evaluated, write `v = deferred::constant(value)`");
-  if constexpr (deferred_expression<T>)
+  if constexpr (is_variable<U>)
   {
-    return std::type_identity<T>{};
+    // The condition is spelled with T so that it is checked only when this branch is
+    // taken.
+    static_assert(std::is_lvalue_reference_v<T>,
+                  "a temporary variable cannot be used in an expression, which would refer "
+                  "to it after it is destroyed: give the variable a name");
+    return std::type_identity<node_ref<std::remove_reference_t<T>>>{};
+  }
+  else if constexpr (is_reference_to_deferred<U>)
+  {
+    // std::ref(node) or std::cref(node).
+    return std::type_identity<node_ref<typename U::type>>{};
+  }
+  else if constexpr (deferred_expression<T>)
+  {
+    // A named operand would be copied into the expression. The condition of each
+    // assertion repeats that of its branch so that it is checked only when the branch is
+    // taken.
+    if constexpr (!std::is_lvalue_reference_v<T>)
+    {
+    }
+    else if constexpr (owns_state<U>())
+    {
+      static_assert(!owns_state<U>(),
+                    "this operand has state of its own, and an expression would take a copy "
+                    "of it: write std::ref(x) for the expression to refer to x, or "
+                    "std::move(x) to give x to the expression");
+    }
+    else
+    {
+      static_assert(std::is_copy_constructible_v<U>,
+                    "this operand cannot be copied into the expression: write std::move(x) "
+                    "to give x to the expression, or std::ref(x) for the expression to "
+                    "refer to x");
+    }
+    return std::type_identity<U>{};
   }
   else if constexpr (std::is_invocable_v<U>)
   {
@@ -166,9 +263,15 @@ consteval auto deduce_deferred_type()
 /**
  * @brief Transforms @p T into a @c deferred type.
  *
- * - If @p T is already a @c deferred type, it does not change.
+ * - If @p T is an lvalue reference to a @ref variable , it is transformed to a
+ *   @ref variable_ref , or to a @ref variable_cref when the variable is @c const , so
+ *   the expression refers to the variable.
+ * - If @p T is any other @c deferred type, it is transformed to that type without
+ *   reference or cv-qualifier, so the expression owns a copy of the operand.
  * - If @p T is a callable type, it is transformed to an @ref expression_.
  * - If @p T is not a callable type, it is transformed to an @ref constant.
+ *
+ * The result is never a reference.
  *
  * @tparam T Type to transform.
  */

@@ -157,11 +157,6 @@ class for_builder
   /**
    * @brief The loop this builder completes with a body of type @p Body.
    *
-   * Naming the loop type fixes its template arguments, so the constructor cannot deduce
-   * this builder's members as references into a builder that does not outlive the call.
-   * `test/unit/for.cpp`'s "a loop outlives the builder" catches a regression here, and
-   * only under AddressSanitizer.
-   *
    * @tparam Body Type of the body expression.
    */
   template<typename Body>

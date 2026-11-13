@@ -16,6 +16,7 @@ set(SOURCES
   is_deferred.cpp
   logical.cpp
   main.cpp
+  node_ref.cpp
   operators.cpp
   seq.cpp
   switch.cpp
@@ -26,6 +27,7 @@ set(SOURCES
   detail/apply_evaluated.cpp
   detail/callable_storage.cpp
   detail/expression_reference.cpp
+  detail/forwarded_pair.cpp
   detail/homogenized_type.cpp
   detail/immediate_assignment.cpp
   detail/is_nothrow_evaluable.cpp

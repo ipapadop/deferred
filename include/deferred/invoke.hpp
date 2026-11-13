@@ -30,9 +30,9 @@ using invoke_expression_t = expression_<std::decay_t<F>, make_deferred_t<Args>..
 template<typename F, typename... Args>
 consteval bool invoke_is_nothrow()
 {
-  if constexpr (deferred_expression<F>)
+  if constexpr (deferred_operand<F>)
   {
-    return std::is_nothrow_constructible_v<std::decay_t<F>, F&&>;
+    return std::is_nothrow_constructible_v<make_deferred_t<F>, F&&>;
   }
   else
   {
@@ -58,10 +58,12 @@ template<typename F, typename... Args>
 [[nodiscard]] constexpr auto
 invoke(F&& f, Args&&... args) noexcept(detail::invoke_is_nothrow<F, Args...>())
 {
-  if constexpr (deferred_expression<F>)
+  if constexpr (deferred_operand<F>)
   {
+    // A node is stored as any operand is: a variable or a std::ref is referred to, a
+    // named node that owns state is rejected, anything else is copied or moved in.
     static_assert(sizeof...(Args) == 0);
-    return std::forward<F>(f);
+    return make_deferred_t<F>(std::forward<F>(f));
   }
   else
   {

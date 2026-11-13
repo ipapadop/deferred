@@ -75,6 +75,10 @@ public:
    * callable; this applies to a @c deferred expression too. An argument that is not
    * callable, or whose result is not a @p T , is stored by the constructors above.
    *
+   * When evaluating @p u yields an lvalue, @p T is constructed from that lvalue and
+   * not from a copy of it. A view type such as @c std::string_view therefore views
+   * the value the source holds, which must then outlive this node.
+   *
    * A variable is such an expression, so <tt>variable w{v};</tt> makes a new,
    * independent variable holding the current value of @c v . The source must be a
    * non-const lvalue: a const or temporary variable selects the deleted copy or move
@@ -88,9 +92,9 @@ public:
              || (std::same_as<U, variable&> && std::copy_constructible<T>))
             && detail::evaluates_to<U, T>
   constexpr explicit variable(U&& u) noexcept(
-    noexcept(recursive_evaluate(std::declval<U>()))
-    && std::is_nothrow_constructible_v<T, detail::node_result_t<U>>) :
-    m_t(recursive_evaluate(std::forward<U>(u)))
+    noexcept(detail::evaluate_for_node(std::declval<U>()))
+    && std::is_nothrow_constructible_v<T, detail::node_argument_t<U>>) :
+    m_t(detail::evaluate_for_node(std::forward<U>(u)))
   { }
 
   variable(variable const&) = delete;
@@ -136,19 +140,16 @@ public:
    * auto ex = for_(i = constant(0), i < 10, ++i);  // assigns when ex is evaluated
    * @endcode
    *
-   * The variable is captured by reference, so the expression must not outlive it.
+   * The expression refers to the variable, so it must not outlive it.
    *
    * @tparam E Type of the assigned expression.
    * @param e Expression whose value is assigned to the variable.
    * @return An expression assigning to the variable when evaluated.
    */
   template<deferred_expression E>
-  [[nodiscard]] constexpr detail::assign_expression_t<detail::assign_to, variable&, E>
+  [[nodiscard]] constexpr auto
   operator=(E&& e) & noexcept(detail::assign_is_nothrow<detail::assign_to, variable&, E>())
   {
-    // The return type is spelled out rather than deduced. Asking whether a variable
-    // reference is assignable -- which std::tuple does for every expression holding
-    // one -- must be answerable without instantiating this body.
     return detail::assign_expression_t<detail::assign_to, variable&, E>(*this, std::forward<E>(e));
   }
 

@@ -5,20 +5,51 @@
 
 #include <cstddef>
 #include <functional>
+#include <memory>
+#include <optional>
+#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "deferred/deferred.hpp"
 
-TEST_CASE("make_deferred_t leaves a deferred type alone", "[expression]")
+TEST_CASE("make_deferred_t stores a deferred operand by value", "[expression]")
 {
-  static_assert(
-    std::is_same_v<deferred::make_deferred_t<deferred::constant<int>>, deferred::constant<int>>);
+  using C  = deferred::constant<int>;
+  using Ex = deferred::expression_<std::plus<>, C, C>;
 
-  // A deferred lvalue keeps its reference, so the expression refers to the original.
-  static_assert(
-    std::is_same_v<deferred::make_deferred_t<deferred::variable<int>&>, deferred::variable<int>&>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<C>, C>);
+
+  // A named operand is copied, so the expression does not refer to it.
+  static_assert(std::is_same_v<deferred::make_deferred_t<C&>, C>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<C const&>, C>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<Ex&>, Ex>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<Ex const&>, Ex>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<Ex&&>, Ex>);
+}
+
+TEST_CASE("make_deferred_t refers to a named variable through a variable_ref", "[expression]")
+{
+  using V = deferred::variable<int>;
+
+  static_assert(std::is_same_v<deferred::make_deferred_t<V&>, deferred::variable_ref<int>>);
+  static_assert(std::is_same_v<deferred::make_deferred_t<V const&>, deferred::variable_cref<int>>);
+
+  // A temporary variable is rejected with a static_assert, which a test cannot pin.
+}
+
+TEST_CASE("make_deferred_t never yields a reference", "[expression]")
+{
+  auto callable = [] {
+    return 1;
+  };
+
+  static_assert(!std::is_reference_v<deferred::make_deferred_t<int&>>);
+  static_assert(!std::is_reference_v<deferred::make_deferred_t<decltype(callable)&>>);
+  static_assert(!std::is_reference_v<deferred::make_deferred_t<deferred::constant<int>&>>);
+  static_assert(!std::is_reference_v<deferred::make_deferred_t<deferred::variable<int>&>>);
 }
 
 TEST_CASE("make_deferred_t wraps a callable in an expression", "[expression]")
@@ -39,10 +70,7 @@ TEST_CASE("make_deferred_t wraps a value in a constant", "[expression]")
 
 TEST_CASE("expression exposes its operator and subexpressions", "[expression]")
 {
-  auto ex = deferred::expression_<std::plus<>, deferred::constant<int>, deferred::constant<int>>(
-    std::plus<>{},
-    deferred::constant<int>(1),
-    deferred::constant<int>(2));
+  auto ex = deferred::constant(1) + deferred::constant(2);
 
   static_assert(std::is_same_v<decltype(ex)::operator_type, std::plus<>>);
   // Only the visited children are subexpressions; the operator is not one of them.
@@ -56,10 +84,7 @@ TEST_CASE("expression exposes its operator and subexpressions", "[expression]")
 TEST_CASE("expression evaluates its subexpressions on every evaluation", "[expression]")
 {
   auto v  = deferred::variable(1);
-  auto ex = deferred::expression_<std::plus<>, deferred::variable<int>&, deferred::constant<int>>(
-    std::plus<>{},
-    v,
-    deferred::constant<int>(10));
+  auto ex = v + deferred::constant(10);
 
   CHECK(ex() == 11);
   v = 5;
@@ -151,10 +176,10 @@ TEST_CASE("every node exposes its subexpressions", "[expression]")
   static_assert(subexpressions_match<decltype(open_sw)>());
   static_assert(subexpressions_match<decltype(full_sw)>());
 
-  // A leaf has none; a variable held by reference is handed back as that variable.
+  // A leaf has none; a variable is handed back as the variable_ref that refers to it.
   static_assert(std::tuple_size_v<decltype(i.subexpressions())> == 0);
-  CHECK(&std::get<0>(sum.subexpressions()) == &i);
-  CHECK(&std::get<0>(assigned.subexpressions()) == &i);
+  CHECK(&std::get<0>(sum.subexpressions())() == &i());
+  CHECK(&std::get<0>(assigned.subexpressions())() == &i());
   CHECK(std::get<1>(sum.subexpressions())() == 2);
 
   // The children of a branch and of a case are reachable the same way.
@@ -162,4 +187,269 @@ TEST_CASE("every node exposes its subexpressions", "[expression]")
   CHECK(std::get<1>(branch.subexpressions())() == 2);
   auto const& first_case = std::get<2>(full_sw.subexpressions());
   CHECK(std::get<0>(first_case.subexpressions())() == 1);
+}
+
+TEST_CASE("a temporary expression is evaluated as a stored one is", "[expression-temporary]")
+{
+  auto table =
+    deferred::constant(std::vector<std::string>{std::string(40, 'a'), std::string(40, 'b')});
+  auto index = deferred::variable(std::size_t{1});
+  auto count = deferred::variable(0);
+
+  auto stored = deferred::subscript(table, index);
+
+  // The result type does not depend on whether the expression is a temporary.
+  static_assert(std::is_same_v<decltype(stored()), std::string const&>);
+  static_assert(std::is_same_v<decltype(deferred::subscript(table, index)()), decltype(stored())>);
+  static_assert(std::is_same_v<decltype(std::move(stored)()), decltype(stored())>);
+  static_assert(std::is_same_v<decltype((++count)()), int&>);
+
+  // A reference into an operand the temporary owns is valid until the end of the
+  // statement, as for any C++ temporary, so it is read or copied within it.
+  CHECK(deferred::subscript(table, index)() == std::string(40, 'b'));
+  std::string const copy = deferred::subscript(table, index)();
+  CHECK(copy == std::string(40, 'b'));
+
+  // A reference into a variable outlives the temporary.
+  int& incremented = (++count)();
+  CHECK(&incremented == &count());
+}
+
+TEST_CASE("a temporary expression reaches through a handle it owns", "[expression-temporary]")
+{
+  struct base
+  {
+    virtual ~base() = default;
+
+    virtual int id() const
+    {
+      return 1;
+    }
+  };
+
+  struct derived : base
+  {
+    int id() const override
+    {
+      return 2;
+    }
+  };
+
+  auto pointer = deferred::constant(std::shared_ptr<base>(std::make_shared<derived>()));
+
+  // The result refers to the object pointed at, and is not a sliced copy of it.
+  static_assert(std::is_same_v<decltype((*pointer)()), base&>);
+  CHECK((*pointer)().id() == 2);
+
+  auto value = deferred::constant(std::make_shared<int>(1));
+  (*value)() = 5;
+  CHECK(*value() == 5);
+}
+
+TEST_CASE("a temporary expression accepts what a stored one does", "[expression-temporary]")
+{
+  struct point
+  {
+    int x;
+  };
+
+  // A callable that takes an lvalue.
+  auto size = [](auto& text) {
+    return text.size();
+  };
+  CHECK(deferred::invoke(size, deferred::constant(std::string("abc")))() == 3);
+
+  // A result that cannot be copied.
+  std::vector<std::unique_ptr<int>> owners;
+  owners.push_back(std::make_unique<int>(7));
+  auto elements = deferred::constant(std::move(owners));
+  CHECK((*deferred::subscript(std::move(elements), 0))() == 7);
+
+  // A member reached through a named constant, read within the statement.
+  auto p = deferred::constant(point{42});
+  CHECK(deferred::invoke(&point::x, p)() == 42);
+}
+
+namespace {
+
+/// @brief A node that declares state of its own.
+struct stateful_leaf
+{
+  using subexpression_types = std::tuple<>;
+
+  static constexpr bool mutable_state = true;
+
+  int operator()() const noexcept
+  {
+    return 0;
+  }
+};
+
+template<typename T>
+inline constexpr bool owns_state_v = deferred::detail::owns_state<std::remove_cvref_t<T>>();
+
+} // namespace
+
+TEST_CASE("owns_state finds the nodes whose copy would be a second state", "[owns-state]")
+{
+  auto c = deferred::constant(1);
+  auto v = deferred::variable(1);
+
+  // Constants, references to variables and expressions over them do not.
+  static_assert(!owns_state_v<deferred::constant<int>>);
+  static_assert(!owns_state_v<deferred::variable_ref<int>>);
+  static_assert(!owns_state_v<deferred::variable_cref<int>>);
+  static_assert(!owns_state_v<decltype(v + c)>);
+  static_assert(!owns_state_v<decltype(++v)>);
+  static_assert(!owns_state_v<decltype(v = c)>);
+  static_assert(!owns_state_v<decltype(v += c)>);
+  static_assert(!owns_state_v<decltype(deferred::if_(v > c).then_(c).else_(v))>);
+  static_assert(!owns_state_v<decltype(deferred::for_(v = c, v < c, ++v).do_(v += c))>);
+
+  // A variable does, as does a node that says so.
+  static_assert(owns_state_v<deferred::variable<int>>);
+  static_assert(owns_state_v<stateful_leaf>);
+}
+
+TEST_CASE("owns_state follows callables and stored nodes", "[owns-state]")
+{
+  auto c        = deferred::constant(1);
+  auto counting = [n = 0]() mutable {
+    return ++n;
+  };
+  int external   = 0;
+  auto capturing = [&external] {
+    return ++external;
+  };
+
+  // A callable that can only be called as non-const changes state it holds.
+  static_assert(owns_state_v<decltype(deferred::invoke(counting))>);
+  // One that captures by reference holds none, and neither does a plain function object.
+  static_assert(!owns_state_v<decltype(deferred::invoke(capturing))>);
+  static_assert(!owns_state_v<decltype(deferred::invoke(std::plus<>{}, c, c))>);
+
+  // An expression that stores such a node owns its state too.
+  static_assert(owns_state_v<decltype(deferred::invoke(counting) + c)>);
+  static_assert(owns_state_v<decltype(deferred::if_(c).then_(deferred::invoke(counting)))>);
+  static_assert(owns_state_v<decltype(deferred::seq(c, stateful_leaf{}))>);
+
+  // A std::reference_wrapper refers to the node, so the expression owns nothing.
+  auto next = deferred::invoke(counting);
+  static_assert(!owns_state_v<decltype(std::ref(next) + c)>);
+  static_assert(
+    !owns_state_v<decltype(deferred::make_deferred_t<decltype(std::ref(next))>{std::ref(next)})>);
+}
+
+namespace {
+
+/// @brief Records the address of every node it is called with.
+struct address_visitor
+{
+  std::vector<void const*> seen;
+
+  template<typename Node>
+  void operator()(Node const& node, std::size_t)
+  {
+    seen.push_back(&node);
+  }
+};
+
+/// @brief Accepts a variable only.
+struct int_variable_visitor
+{
+  void operator()(deferred::variable<int> const&, std::size_t) const noexcept
+  { }
+};
+
+} // namespace
+
+TEST_CASE("a visitor is called with the node a std::ref operand refers to", "[expression-visit]")
+{
+  auto v    = deferred::variable(1);
+  auto next = deferred::invoke([count = 0]() mutable { return ++count; });
+
+  auto sum = std::ref(next) + std::cref(v);
+
+  address_visitor visitor;
+  sum.visit(visitor);
+
+  // The expression itself, then the two nodes referred to; not the reference_wrappers.
+  REQUIRE(visitor.seen.size() == 3);
+  CHECK(visitor.seen[0] == &sum);
+  CHECK(visitor.seen[1] == &next);
+  CHECK(visitor.seen[2] == &v);
+}
+
+TEST_CASE("visiting through std::ref is checked against the node referred to", "[expression-visit]")
+{
+  auto v = deferred::variable(1);
+  auto referred =
+    deferred::make_deferred_t<std::reference_wrapper<deferred::variable<int>>>(std::ref(v));
+
+  static_assert(deferred::expression_visitor<int_variable_visitor, decltype(referred)>);
+  static_assert(noexcept(referred.visit(int_variable_visitor{})));
+
+  address_visitor throwing;
+  static_assert(!noexcept(referred.visit(throwing)));
+
+  // A reference_wrapper to something that is not a node is an ordinary callable.
+  int i         = 0;
+  auto function = [&i] {
+    return ++i;
+  };
+  auto wrapped = deferred::invoke(std::ref(function));
+  address_visitor visitor;
+  wrapped.visit(visitor);
+  REQUIRE(visitor.seen.size() == 1);
+  CHECK(visitor.seen[0] == &wrapped);
+}
+
+namespace {
+
+/// @brief An empty callable whose operator() is not const.
+struct non_const_generator
+{
+  int operator()() noexcept
+  {
+    return 4;
+  }
+};
+
+} // namespace
+
+TEST_CASE("an empty callable owns no state whatever its operator() is qualified with",
+          "[owns-state]")
+{
+  auto generator = deferred::invoke(non_const_generator{});
+  static_assert(!owns_state_v<decltype(generator)>);
+
+  // An expression that stores it can still be asked, and can be named as an operand.
+  int offset   = 1;
+  auto shifted = deferred::invoke([offset](int x) { return x + offset; }, generator);
+  static_assert(!owns_state_v<decltype(shifted)>);
+
+  auto sum = shifted + deferred::constant(1);
+  CHECK(sum() == 6);
+}
+
+TEST_CASE("invoke stores a node as any other operand", "[expression]")
+{
+  auto v    = deferred::variable(1);
+  auto c    = deferred::constant(2);
+  auto next = deferred::invoke([count = 0]() mutable { return ++count; });
+
+  // A variable is referred to, a constant is copied, std::ref refers to any node.
+  static_assert(std::is_same_v<decltype(deferred::invoke(v)), deferred::variable_ref<int>>);
+  static_assert(std::is_same_v<decltype(deferred::invoke(c)), deferred::constant<int>>);
+  static_assert(
+    std::is_same_v<decltype(deferred::invoke(std::ref(next))), deferred::node_ref<decltype(next)>>);
+
+  auto shared = deferred::invoke(std::ref(next));
+  CHECK(shared() == 1);
+  CHECK(next() == 2);
+
+  address_visitor visitor;
+  shared.visit(visitor);
+  REQUIRE(visitor.seen.size() == 1);
+  CHECK(visitor.seen[0] == &next);
 }

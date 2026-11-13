@@ -24,16 +24,6 @@ TEST_CASE("tuple_references refers to the elements in order", "[tuple-references
   CHECK(&std::get<1>(refs) == &std::get<1>(t));
 }
 
-TEST_CASE("tuple_references keeps a reference element as it is", "[tuple-references]")
-{
-  int i        = 1;
-  auto const t = std::tuple<int&, int>(i, 2);
-
-  static_assert(
-    std::is_same_v<decltype(deferred::detail::tuple_references(t)), std::tuple<int&, int const&>>);
-  CHECK(&std::get<0>(deferred::detail::tuple_references(t)) == &i);
-}
-
 TEST_CASE("tuple_references is noexcept and usable in a constant expression", "[tuple-references]")
 {
   static constexpr auto t = std::tuple<int, int>(3, 4);

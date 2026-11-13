@@ -14,6 +14,7 @@
 #include "for.hpp"
 #include "invoke.hpp"
 #include "logical.hpp"
+#include "node_ref.hpp"
 #include "operators.hpp"
 #include "seq.hpp"
 #include "switch.hpp"

@@ -197,12 +197,61 @@ consteval bool evaluation_result_is_nothrow()
 template<typename T>
 using node_result_t = std::decay_t<decltype(recursive_evaluate(std::declval<T>()))>;
 
+// Whether evaluate_for_node() cannot throw for an argument of type U.
+template<typename U>
+consteval bool evaluate_for_node_is_nothrow()
+{
+  using result = decltype(std::declval<U>()());
+  if constexpr (std::is_lvalue_reference_v<result> && !std::is_invocable_v<result>)
+  {
+    return noexcept(std::declval<U>()());
+  }
+  else
+  {
+    return noexcept(recursive_evaluate(std::declval<U>()));
+  }
+}
+
+/**
+ * @brief Evaluates the callable @p u to the value a leaf node is constructed from.
+ *
+ * As @ref recursive_evaluate , except that a result which is an lvalue reference to
+ * something that is not callable is returned as that reference rather than as a
+ * copy. A node whose type is a view, such as a <tt>variable<std::string_view></tt>
+ * built from a <tt>variable<std::string></tt>, then views the string the source
+ * holds and not a temporary copy of it.
+ *
+ * @tparam U Type of the callable; it must be callable with no arguments.
+ * @param u Callable to evaluate.
+ * @return The reference @p u yields, or the value @ref recursive_evaluate yields.
+ */
+template<typename U>
+constexpr decltype(auto) evaluate_for_node(U&& u) noexcept(evaluate_for_node_is_nothrow<U>())
+{
+  using result = decltype(std::forward<U>(u)());
+  if constexpr (std::is_lvalue_reference_v<result> && !std::is_invocable_v<result>)
+  {
+    return std::forward<U>(u)();
+  }
+  else
+  {
+    return recursive_evaluate(std::forward<U>(u));
+  }
+}
+
+/**
+ * @brief Type a leaf node is constructed from when its argument @p U is evaluated.
+ * @tparam U Node argument type; it must be callable with no arguments.
+ */
+template<typename U>
+using node_argument_t = decltype(evaluate_for_node(std::declval<U>()));
+
 /**
  * @brief Whether @p U is callable with no arguments and evaluating it yields a @p T .
  *
  * A leaf node evaluates such an argument and stores the result; any other argument is
  * stored as it is. Whether @p U is callable is asked first, so the result type of
- * @ref recursive_evaluate is never formed for an argument that is merely a value --
+ * @ref evaluate_for_node is never formed for an argument that is merely a value --
  * its return type is deduced, and forming it for an lvalue that cannot be copied is an
  * error, not a failed requirement.
  *
@@ -210,7 +259,7 @@ using node_result_t = std::decay_t<decltype(recursive_evaluate(std::declval<T>()
  * @tparam T Type the node stores.
  */
 template<typename U, typename T>
-concept evaluates_to = std::invocable<U> && std::convertible_to<node_result_t<U>, T>;
+concept evaluates_to = std::invocable<U> && std::convertible_to<node_argument_t<U>, T>;
 
 } // namespace detail
 

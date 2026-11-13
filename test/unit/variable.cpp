@@ -8,6 +8,7 @@
 #include <mutex>
 #include <span>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -362,4 +363,30 @@ TEST_CASE("a variable stores a value that is not callable without evaluating it"
 
   // An lvalue that cannot be copied is a failed requirement, not an error.
   static_assert(!std::is_constructible_v<deferred::variable<int>, std::mutex&>);
+}
+
+TEST_CASE("a view-typed variable built from a variable views what that variable holds",
+          "[variable-ctad]")
+{
+  deferred::variable<std::string> text{std::string(40, 'a')};
+
+  // The view is constructed from the string the source holds, not from a copy of it.
+  deferred::variable<std::string_view> view{text};
+  CHECK(view().data() == text().data());
+  // Compared as a std::string: Catch2 is not always built with std::string_view support.
+  CHECK(std::string(view()) == std::string(40, 'a'));
+
+  deferred::variable<std::vector<int>> numbers{std::vector<int>{1, 2, 3}};
+  deferred::variable<std::span<int>> writable{numbers};
+  writable()[0] = 10;
+  CHECK(numbers()[0] == 10);
+
+  // A const source gives a read-only view.
+  deferred::variable<std::span<int const>> readable{std::as_const(numbers)()};
+  CHECK(readable().data() == numbers().data());
+
+  // A type that owns its value still copies it.
+  deferred::variable<std::string> copy{text};
+  CHECK(copy().data() != text().data());
+  CHECK(copy() == text());
 }

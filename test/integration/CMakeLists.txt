@@ -8,6 +8,7 @@ set(SOURCES
   logical.cpp
   main.cpp
   operators.cpp
+  ownership.cpp
   seq.cpp
   switch.cpp
   variable.cpp
